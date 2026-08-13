@@ -15,6 +15,13 @@
       "when": 1786652513858,
       "tag": "0001_abandoned_chamber",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786653210911,
+      "tag": "0002_outgoing_famine",
+      "breakpoints": true
     }
   ]
 }

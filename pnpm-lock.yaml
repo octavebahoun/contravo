@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@asteasolutions/zod-to-openapi':
+        specifier: ^9.1.0
+        version: 9.1.0(zod@3.24.4)
       '@tailwindcss/postcss':
         specifier: 4.1.7
         version: 4.1.7
@@ -20,6 +23,9 @@ importers:
       '@types/react-dom':
         specifier: 19.1.5
         version: 19.1.5(@types/react@19.1.4)
+      '@upstash/redis':
+        specifier: ^1.38.2
+        version: 1.38.2
       argon2:
         specifier: ^0.45.1
         version: 0.45.1
@@ -98,7 +104,7 @@ importers:
         version: 4.23.12
       vitest:
         specifier: ^4.1.10
-        version: 4.1.10(@types/node@22.15.18)(vite@8.2.1(@types/node@22.15.18)(esbuild@0.25.4)(jiti@2.4.2)(tsx@4.23.12))
+        version: 4.1.10(@types/node@22.15.18)(vite@8.2.1(@types/node@22.15.18)(esbuild@0.25.4)(jiti@2.4.2)(tsx@4.23.12)(yaml@2.9.0))
 
 packages:
 
@@ -109,6 +115,11 @@ packages:
   '@ampproject/remapping@2.3.0':
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
+
+  '@asteasolutions/zod-to-openapi@9.1.0':
+    resolution: {integrity: sha512-pLMeRgRYS7/vZIgAAkOe2P6+XGTifR1MT9pqDoxZ11EmcJJ+DPmdPqLN8ZZF4U8R9KHCCQCS9c2wtuE8wSrfkw==}
+    peerDependencies:
+      zod: ^4.0.0
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
@@ -1724,6 +1735,9 @@ packages:
   '@types/react@19.1.4':
     resolution: {integrity: sha512-EB1yiiYdvySuIITtD5lhW4yPyJ31RkJkkDw794LaQYrxCSaQV/47y5o1FMC4zF9ZyjUjzJMZwbovEnT5yHTW6g==}
 
+  '@upstash/redis@1.38.2':
+    resolution: {integrity: sha512-RZ+JaRCVIS+ZTGnjOnDMr+/0aqDxsBb5rV6aW+Pys4SGELwr5lwE3UbLHRCHqMQ5Ulxj0b/CFBHfbmE175Otog==}
+
   '@vitest/expect@4.1.10':
     resolution: {integrity: sha512-YsCn+qAk1GWjQOWFEsEcL2gNQ0zmVmQu3T03qP6UyjhtmdtwtbuI+DASn/7iQB3HGTXkdBwGddzxPlmiql5vlA==}
 
@@ -2306,6 +2320,9 @@ packages:
     resolution: {integrity: sha512-4a+OsYv9UktOJKE+l1A4OufDgdRF9PifWj+tJnHURo/P+WOxpG4GzUFL9qCalmWauao6ogiG+QvnCovwPoyAWA==}
     engines: {node: '>=12.20.0'}
 
+  openapi3-ts@4.6.1:
+    resolution: {integrity: sha512-XW9MOldkhoICNeXVzzmXzmOW5G73ppOEGmh7fLCqHjgfdEYCGGN+00MlVCeUZgovjjfC56j9tvtDt1zGabNjjA==}
+
   path-key@3.1.1:
     resolution: {integrity: sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q==}
     engines: {node: '>=8'}
@@ -2538,6 +2555,9 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
+  uncrypto@0.1.3:
+    resolution: {integrity: sha512-Ql87qFHB3s/De2ClA9e0gsnS6zXG27SkTiSJwjCc9MebbfapQfuPzumMIUMi38ezPZVNFcHI9sUIepeQfw8J8Q==}
+
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
@@ -2675,6 +2695,11 @@ packages:
     resolution: {integrity: sha512-YgvUTfwqyc7UXVMrB+SImsVYSmTS8X/tSrtdNZMImM+n7+QTriRXyXim0mBrTXNeqzVF0KWGgHPeiyViFFrNDw==}
     engines: {node: '>=18'}
 
+  yaml@2.9.0:
+    resolution: {integrity: sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
   zod@3.24.4:
     resolution: {integrity: sha512-OdqJE9UDRPwWsrHjLN2F8bPxvwJBK22EHLWtanu0LSYr5YqzsaaW3RMgmjwr8Rypg5k+meEJdSPXJZXE/yqOMg==}
 
@@ -2686,6 +2711,11 @@ snapshots:
     dependencies:
       '@jridgewell/gen-mapping': 0.3.8
       '@jridgewell/trace-mapping': 0.3.25
+
+  '@asteasolutions/zod-to-openapi@9.1.0(zod@3.24.4)':
+    dependencies:
+      openapi3-ts: 4.6.1
+      zod: 3.24.4
 
   '@drizzle-team/brocli@0.10.2': {}
 
@@ -3985,6 +4015,10 @@ snapshots:
     dependencies:
       csstype: 3.1.3
 
+  '@upstash/redis@1.38.2':
+    dependencies:
+      uncrypto: 0.1.3
+
   '@vitest/expect@4.1.10':
     dependencies:
       '@standard-schema/spec': 1.1.0
@@ -3994,13 +4028,13 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.1
 
-  '@vitest/mocker@4.1.10(vite@8.2.1(@types/node@22.15.18)(esbuild@0.25.4)(jiti@2.4.2)(tsx@4.23.12))':
+  '@vitest/mocker@4.1.10(vite@8.2.1(@types/node@22.15.18)(esbuild@0.25.4)(jiti@2.4.2)(tsx@4.23.12)(yaml@2.9.0))':
     dependencies:
       '@vitest/spy': 4.1.10
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 8.2.1(@types/node@22.15.18)(esbuild@0.25.4)(jiti@2.4.2)(tsx@4.23.12)
+      vite: 8.2.1(@types/node@22.15.18)(esbuild@0.25.4)(jiti@2.4.2)(tsx@4.23.12)(yaml@2.9.0)
 
   '@vitest/pretty-format@4.1.10':
     dependencies:
@@ -4473,6 +4507,10 @@ snapshots:
 
   obug@2.1.4: {}
 
+  openapi3-ts@4.6.1:
+    dependencies:
+      yaml: 2.9.0
+
   path-key@3.1.1: {}
 
   pathe@2.0.3: {}
@@ -4772,6 +4810,8 @@ snapshots:
 
   typescript@5.8.3: {}
 
+  uncrypto@0.1.3: {}
+
   undici-types@6.21.0: {}
 
   update-browserslist-db@1.1.3(browserslist@4.24.5):
@@ -4799,7 +4839,7 @@ snapshots:
     dependencies:
       react: 19.1.0
 
-  vite@8.2.1(@types/node@22.15.18)(esbuild@0.25.4)(jiti@2.4.2)(tsx@4.23.12):
+  vite@8.2.1(@types/node@22.15.18)(esbuild@0.25.4)(jiti@2.4.2)(tsx@4.23.12)(yaml@2.9.0):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.5
@@ -4812,11 +4852,12 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.4.2
       tsx: 4.23.12
+      yaml: 2.9.0
 
-  vitest@4.1.10(@types/node@22.15.18)(vite@8.2.1(@types/node@22.15.18)(esbuild@0.25.4)(jiti@2.4.2)(tsx@4.23.12)):
+  vitest@4.1.10(@types/node@22.15.18)(vite@8.2.1(@types/node@22.15.18)(esbuild@0.25.4)(jiti@2.4.2)(tsx@4.23.12)(yaml@2.9.0)):
     dependencies:
       '@vitest/expect': 4.1.10
-      '@vitest/mocker': 4.1.10(vite@8.2.1(@types/node@22.15.18)(esbuild@0.25.4)(jiti@2.4.2)(tsx@4.23.12))
+      '@vitest/mocker': 4.1.10(vite@8.2.1(@types/node@22.15.18)(esbuild@0.25.4)(jiti@2.4.2)(tsx@4.23.12)(yaml@2.9.0))
       '@vitest/pretty-format': 4.1.10
       '@vitest/runner': 4.1.10
       '@vitest/snapshot': 4.1.10
@@ -4833,7 +4874,7 @@ snapshots:
       tinyexec: 1.3.0
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.1
-      vite: 8.2.1(@types/node@22.15.18)(esbuild@0.25.4)(jiti@2.4.2)(tsx@4.23.12)
+      vite: 8.2.1(@types/node@22.15.18)(esbuild@0.25.4)(jiti@2.4.2)(tsx@4.23.12)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 22.15.18
@@ -4855,5 +4896,7 @@ snapshots:
       stackback: 0.0.2
 
   yallist@5.0.0: {}
+
+  yaml@2.9.0: {}
 
   zod@3.24.4: {}
