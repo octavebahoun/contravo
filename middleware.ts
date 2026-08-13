@@ -1,15 +1,22 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getSessionUser } from '@/lib/auth/session';
+import { verifyApiKey } from '@/lib/api-keys';
+import { verifyPublicToken } from '@/lib/public-tokens';
+import { rateLimit } from '@/lib/rate-limit';
+import { db } from '@/lib/db/drizzle';
+import { memberships, organizations } from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const requestId = crypto.randomUUID();
 
-  // Add x-request-id to request headers
+  // Create request headers to inject unified context
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-request-id', requestId);
 
+  // 1. Handle Dashboard routes
   const isProtectedRoute = pathname.startsWith('/dashboard');
   const sessionCookie = request.cookies.get('session');
 
@@ -17,7 +24,7 @@ export async function middleware(request: NextRequest) {
     if (!sessionCookie) {
       return NextResponse.redirect(new URL('/sign-in', request.url));
     }
-    
+
     try {
       const user = await getSessionUser(sessionCookie.value);
       if (!user) {
@@ -33,12 +40,251 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // 2. Handle API v1 routes (except docs and openapi.json)
+  const isApiRoute = pathname.startsWith('/api/v1');
+  const isDocsOrOpenApi =
+    pathname === '/api/v1/openapi.json' ||
+    pathname.startsWith('/api/v1/docs');
+
+  if (isApiRoute && !isDocsOrOpenApi) {
+    try {
+      // Resolve client IP
+      const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+
+      // Parse authorization header
+      const authHeader = request.headers.get('authorization');
+      let bearerToken: string | null = null;
+      if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
+        bearerToken = authHeader.substring(7).trim();
+      }
+
+      // Check query parameter for public token if not in headers
+      const queryToken = request.nextUrl.searchParams.get('token');
+      const token = bearerToken || queryToken;
+
+      let authContext: {
+        organizationId: string;
+        authType: 'session' | 'api_key' | 'public_token';
+        scopes: string[];
+        userId?: string;
+        role?: string;
+        apiKeyId?: string;
+        publicTokenId?: string;
+        recipientEmail?: string;
+      } | null = null;
+
+      if (token && token.startsWith('ak_')) {
+        // API Key Auth
+        const verifiedKey = await verifyApiKey(token, ip);
+        // Get organization's plan for rate limiting
+        const [org] = await db
+          .select()
+          .from(organizations)
+          .where(eq(organizations.id, verifiedKey.organizationId))
+          .limit(1);
+
+        authContext = {
+          organizationId: verifiedKey.organizationId,
+          authType: 'api_key',
+          scopes: verifiedKey.scopes,
+          apiKeyId: verifiedKey.apiKeyId,
+          role: org?.plan || 'free', // Use plan as role indicator for simple checks if needed
+        };
+      } else if (token && token.startsWith('pt_')) {
+        // Public Token Auth
+        const match = pathname.match(
+          /^\/api\/v1\/portal\/(quotes|contracts|invoices|deliverables|reviews)\/([^\/]+)/
+        );
+
+        if (!match) {
+          return new NextResponse(
+            JSON.stringify({
+              error: 'permission_denied',
+              message: 'Public token cannot access this route',
+            }),
+            {
+              status: 403,
+              headers: {
+                'Content-Type': 'application/json',
+                'x-request-id': requestId,
+              },
+            }
+          );
+        }
+
+        const resourceTypeMap: Record<string, 'quote' | 'contract' | 'invoice' | 'deliverable' | 'review_request'> = {
+          quotes: 'quote',
+          contracts: 'contract',
+          invoices: 'invoice',
+          deliverables: 'deliverable',
+          reviews: 'review_request',
+        };
+        const resourceType = resourceTypeMap[match[1]];
+        const resourceId = match[2];
+
+        const verifiedPt = await verifyPublicToken(token, resourceType, resourceId);
+
+        authContext = {
+          organizationId: verifiedPt.organizationId,
+          authType: 'public_token',
+          scopes: verifiedPt.actions,
+          publicTokenId: verifiedPt.id,
+          recipientEmail: verifiedPt.recipientEmail,
+        };
+      } else if (sessionCookie) {
+        // Session Auth (for frontend/dashboard calling API endpoints)
+        const user = await getSessionUser(sessionCookie.value);
+        if (user) {
+          let organizationId = request.headers.get('x-organization-id') || request.headers.get('x-org-id');
+          let membership = null;
+
+          if (organizationId) {
+            const ms = await db
+              .select({
+                membership: memberships,
+                organization: organizations,
+              })
+              .from(memberships)
+              .innerJoin(organizations, eq(memberships.organizationId, organizations.id))
+              .where(
+                and(
+                  eq(memberships.userId, user.id),
+                  eq(memberships.organizationId, organizationId)
+                )
+              )
+              .limit(1);
+            if (ms.length > 0) {
+              membership = ms[0];
+            }
+          } else {
+            // Fallback to first membership
+            const ms = await db
+              .select({
+                membership: memberships,
+                organization: organizations,
+              })
+              .from(memberships)
+              .innerJoin(organizations, eq(memberships.organizationId, organizations.id))
+              .where(eq(memberships.userId, user.id))
+              .limit(1);
+            if (ms.length > 0) {
+              membership = ms[0];
+              organizationId = membership.organization.id;
+            }
+          }
+
+          if (membership && organizationId) {
+            authContext = {
+              organizationId,
+              authType: 'session',
+              scopes: [], // session role-based logic handles this
+              userId: user.id,
+              role: membership.membership.role,
+            };
+          }
+        }
+      }
+
+      if (!authContext) {
+        return new NextResponse(
+          JSON.stringify({
+            error: 'unauthenticated',
+            message: 'Authentication required',
+          }),
+          {
+            status: 401,
+            headers: {
+              'Content-Type': 'application/json',
+              'x-request-id': requestId,
+            },
+          }
+        );
+      }
+
+      // Inject auth details into internal headers
+      requestHeaders.set('x-organization-id', authContext.organizationId);
+      requestHeaders.set('x-auth-type', authContext.authType);
+      requestHeaders.set('x-auth-scopes', JSON.stringify(authContext.scopes));
+      if (authContext.userId) requestHeaders.set('x-user-id', authContext.userId);
+      if (authContext.role) requestHeaders.set('x-auth-role', authContext.role);
+      if (authContext.apiKeyId) requestHeaders.set('x-api-key-id', authContext.apiKeyId);
+      if (authContext.publicTokenId) requestHeaders.set('x-public-token-id', authContext.publicTokenId);
+      if (authContext.recipientEmail) requestHeaders.set('x-recipient-email', authContext.recipientEmail);
+
+      // Fetch organization details for rate limiting
+      const [org] = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.id, authContext.organizationId))
+        .limit(1);
+
+      const plan = (org?.plan || 'free') as 'free' | 'pro' | 'enterprise';
+
+      // Run rate limiting
+      const limitResult = await rateLimit(authContext.organizationId, plan);
+
+      if (!limitResult.allowed) {
+        return new NextResponse(
+          JSON.stringify({
+            error: 'rate_limit_exceeded',
+            message: `Rate limit exceeded. Reset in ${Math.max(
+              0,
+              limitResult.reset - Math.floor(Date.now() / 1000)
+            )} seconds.`,
+          }),
+          {
+            status: 429,
+            headers: {
+              'Content-Type': 'application/json',
+              'x-request-id': requestId,
+              'X-RateLimit-Limit': String(limitResult.limit),
+              'X-RateLimit-Remaining': String(limitResult.remaining),
+              'X-RateLimit-Reset': String(limitResult.reset),
+            },
+          }
+        );
+      }
+
+      // Successful request handling
+      const response = NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
+
+      response.headers.set('x-request-id', requestId);
+      response.headers.set('X-RateLimit-Limit', String(limitResult.limit));
+      response.headers.set('X-RateLimit-Remaining', String(limitResult.remaining));
+      response.headers.set('X-RateLimit-Reset', String(limitResult.reset));
+
+      return response;
+    } catch (err: any) {
+      console.error('API authentication middleware error:', err);
+      const statusCode = err?.statusCode || 500;
+      const errorCode = err?.code || 'internal_server_error';
+      return new NextResponse(
+        JSON.stringify({
+          error: errorCode,
+          message: err?.message || 'An unexpected error occurred during authentication',
+        }),
+        {
+          status: statusCode,
+          headers: {
+            'Content-Type': 'application/json',
+            'x-request-id': requestId,
+          },
+        }
+      );
+    }
+  }
+
+  // Fallback for standard page requests
   const response = NextResponse.next({
     request: {
       headers: requestHeaders,
     },
   });
-  
+
   response.headers.set('x-request-id', requestId);
   return response;
 }
