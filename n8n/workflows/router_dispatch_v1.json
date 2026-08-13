@@ -1,0 +1,453 @@
+{
+  "id": "router_dispatch_v1",
+  "name": "Router Dispatch v1",
+  "nodes": [
+    {
+      "id": "a8c3b71e-1963-4380-b738-9dfd329d9f75",
+      "name": "Excellence Events Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "excellence-events",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "9e1853ce-cd61-4abb-8f2e-beaaea661e70"
+    },
+    {
+      "id": "0743be14-1c82-4c59-8df7-f9514c21fd41",
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        300
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "\nconst crypto = require('crypto');\nconst secret = process.env.N8N_EXCELLENCE_WEBHOOK_SECRET;\nconst item = $('Excellence Events Webhook').first().json;\nconst header = item.headers['x-webhook-signature'];\nconst rawBody = JSON.stringify(item.body);\nconst parts = (header || '').split(',');\nlet ts, v1;\nfor (const p of parts) { const [k, v] = p.split('='); if (k === 't') ts = v; if (k === 'v1') v1 = v; }\nconst now = Math.floor(Date.now() / 1000);\nlet valid = false;\nif (ts && v1 && Math.abs(now - Number(ts)) <= 300) {\n  const expected = crypto.createHmac('sha256', secret).update(ts + '.' + rawBody).digest('hex');\n  valid = crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(v1, 'hex'));\n}\nconst eventType = item.body?.type || item.headers['x-webhook-event'];\nreturn [{ json: { valid, event: eventType } }];\n"
+      }
+    },
+    {
+      "id": "db6dfd9e-163d-4590-ad70-4d279a15145e",
+      "name": "Signature OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.valid }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              },
+              "rightValue": true
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "4fb34f52-9657-459c-bc49-30205e394443",
+      "name": "Dispatch by Event",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        700,
+        300
+      ],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "outputKey": "quote_sent",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "quote.sent"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "quote_accepted",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "quote.accepted"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "quote_rejected",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "quote.rejected"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "contract_sent",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "contract.sent"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "contract_signed",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "contract.signed"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "invoice_sent",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "invoice.sent"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "invoice_paid",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "invoice.paid"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "invoice_overdue",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "invoice.overdue"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "invoice_payment_failed",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "invoice.payment_failed"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "deliverable_submitted",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "deliverable.submitted"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "deliverable_approved",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "deliverable.approved"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "review_requested",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "review.requested"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "review_created",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "review.created"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Unhandled"
+        }
+      }
+    },
+    {
+      "id": "013b502a-5ef0-42c9-8a73-72624e259e13",
+      "name": "Acknowledge 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        900,
+        300
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "received": true
+        },
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "8a660094-e05e-4318-852a-adac53b68d99",
+      "name": "Reject 401",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        700,
+        450
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "error": "invalid_signature"
+        },
+        "options": {
+          "responseCode": 401
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Excellence Events Webhook": {
+      "main": [
+        [
+          {
+            "node": "Verify Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Signature": {
+      "main": [
+        [
+          {
+            "node": "Signature OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signature OK?": {
+      "main": [
+        [
+          {
+            "node": "Dispatch by Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dispatch by Event": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

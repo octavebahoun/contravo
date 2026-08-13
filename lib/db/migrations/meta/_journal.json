@@ -29,6 +29,20 @@
       "when": 1786654265715,
       "tag": "0003_zippy_maximus",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786660998973,
+      "tag": "0004_dapper_ikaris",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786660999000,
+      "tag": "0005_n8n_endpoint",
+      "breakpoints": true
     }
   ]
 }
