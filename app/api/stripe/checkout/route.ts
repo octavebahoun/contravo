@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
-import { users, teams, teamMembers } from '@/lib/db/schema';
-import { setSession } from '@/lib/auth/session';
+import { users, organizations, memberships } from '@/lib/db/schema';
+import { setSessionCookie, createSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     const user = await db
       .select()
       .from(users)
-      .where(eq(users.id, Number(userId)))
+      .where(eq(users.id, userId))
       .limit(1);
 
     if (user.length === 0) {
@@ -66,10 +66,10 @@ export async function GET(request: NextRequest) {
 
     const userTeam = await db
       .select({
-        teamId: teamMembers.teamId,
+        teamId: memberships.organizationId,
       })
-      .from(teamMembers)
-      .where(eq(teamMembers.userId, user[0].id))
+      .from(memberships)
+      .where(eq(memberships.userId, user[0].id))
       .limit(1);
 
     if (userTeam.length === 0) {
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
     }
 
     await db
-      .update(teams)
+      .update(organizations)
       .set({
         stripeCustomerId: customerId,
         stripeSubscriptionId: subscriptionId,
@@ -86,9 +86,10 @@ export async function GET(request: NextRequest) {
         subscriptionStatus: subscription.status,
         updatedAt: new Date(),
       })
-      .where(eq(teams.id, userTeam[0].teamId));
+      .where(eq(organizations.id, userTeam[0].teamId));
 
-    await setSession(user[0]);
+    const sessionToken = await createSession(user[0].id);
+    await setSessionCookie(sessionToken);
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
     console.error('Error handling successful checkout:', error);

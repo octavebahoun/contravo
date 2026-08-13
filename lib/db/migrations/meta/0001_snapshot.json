@@ -1,6 +1,6 @@
 {
-  "id": "9eef70ac-449f-482d-850d-68de0bde8f71",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "86e56e0f-a782-4599-bd03-b1d815252890",
+  "prevId": "9eef70ac-449f-482d-850d-68de0bde8f71",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -327,6 +327,36 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "stripe_customer_id": {
+          "name": "stripe_customer_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stripe_subscription_id": {
+          "name": "stripe_subscription_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stripe_product_id": {
+          "name": "stripe_product_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "plan_name": {
+          "name": "plan_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "subscription_status": {
+          "name": "subscription_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
