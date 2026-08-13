@@ -49,7 +49,7 @@ export async function POST(
     const { signerName, signerEmail, signatureBase64 } = result.data;
 
     // Check identity
-    if (signerEmail.toLowerCase() !== ctx.recipientEmail.toLowerCase()) {
+    if (!ctx.recipientEmail || signerEmail.toLowerCase() !== ctx.recipientEmail.toLowerCase()) {
       return NextResponse.json(
         {
           error: 'identity_mismatch',
