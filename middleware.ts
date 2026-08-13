@@ -40,13 +40,14 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 2. Handle API v1 routes (except docs and openapi.json)
+  // 2. Handle API v1 routes (except docs, openapi.json, and webhooks)
   const isApiRoute = pathname.startsWith('/api/v1');
   const isDocsOrOpenApi =
     pathname === '/api/v1/openapi.json' ||
     pathname.startsWith('/api/v1/docs');
+  const isWebhookRoute = pathname === '/api/v1/webhooks/geniuspay';
 
-  if (isApiRoute && !isDocsOrOpenApi) {
+  if (isApiRoute && !isDocsOrOpenApi && !isWebhookRoute) {
     try {
       // Resolve client IP
       const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';

@@ -98,3 +98,42 @@ function handleInMemoryLimit(key: string, windowSizeMs: number): number {
     return 1;
   }
 }
+
+export async function rateLimitIp(
+  ip: string,
+  limit: number = 500,
+  windowSizeMs: number = 60000
+): Promise<RateLimitResult> {
+  const now = Date.now();
+  const windowStart = Math.floor(now / windowSizeMs) * windowSizeMs;
+  const resetTimeSeconds = Math.floor((windowStart + windowSizeMs) / 1000);
+  const key = `ratelimit:ip:${ip}:${windowStart}`;
+
+  let currentCount = 0;
+
+  if (redis) {
+    try {
+      const pipeline = redis.pipeline();
+      pipeline.incr(key);
+      pipeline.expire(key, Math.ceil(windowSizeMs / 1000));
+      const results = await pipeline.exec<[number, number]>();
+      currentCount = results[0];
+    } catch (error) {
+      console.warn('Redis IP rate limiting error, falling back to in-memory:', error);
+      currentCount = handleInMemoryLimit(key, windowSizeMs);
+    }
+  } else {
+    currentCount = handleInMemoryLimit(key, windowSizeMs);
+  }
+
+  const remaining = Math.max(0, limit - currentCount);
+  const allowed = currentCount <= limit;
+
+  return {
+    allowed,
+    limit,
+    remaining,
+    reset: resetTimeSeconds,
+  };
+}
+

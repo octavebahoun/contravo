@@ -1,0 +1,1810 @@
+/ Docs
+
+v1.0
+
+Markdown
+
+Mes clés API
+
+API Marchand GeniusPay
+Intégrez les paiements mobiles et par carte dans vos applications en quelques
+minutes.
+Base URL
+
+Copier
+
+https://geniuspay.ci/api/v1/merchant
+
+Sandbox
+
+Production
+
+Testez votre intégration sans frais. Les
+transactions sont simulées.
+
+Transactions réelles. Activez le mode live dans
+vos paramètres.
+
+Authentification
+Toutes les requêtes API doivent inclure vos clés dans les headers HTTP. Vous trouverez vos
+clés dans Paramètres → API.
+Header
+
+Description
+
+X-API-Key
+
+Votre clé publique (pk_sandbox_... ou pk_live_...)
+
+X-API-Secret
+
+Votre clé secrète (sk_sandbox_... ou sk_live_...)
+
+Content-Type
+
+application/json
+
+Exemple avec cURL
+curl -X POST https://geniuspay.ci/api/v1/merchant/payments \
+-H "X-API-Key: pk_sandbox_xxxxxxxx" \
+-H "X-API-Secret: sk_sandbox_xxxxxxxx" \
+-H "Content-Type: application/json" \
+-d '{"amount": 5000, "customer": {"phone": "+221771234567"}}'
+
+Ne partagez jamais votre clé secrète
+
+La clé X-API-Secret ne doit jamais être exposée côté client (frontend, app mobile). Gardez-la
+v1.0
+Markdown
+Mes clés API
+uniquement côté serveur./ Docs
+
+Démarrage rapide
+Créez un paiement et redirigez votre client vers notre page de checkout sécurisée. Deux
+lignes de code suffisent.
+// 1. Créer le paiement (sans spécifier payment_method)
+$response = Http::withHeaders([
+'X-API-Key' => 'pk_live_xxx',
+'X-API-Secret' => 'sk_live_xxx',
+])->post('https://geniuspay.ci/api/v1/merchant/payments', [
+'amount' => 15000,
+'description' => 'Commande #123',
+]);
+// 2. Rediriger vers la page de checkout GeniusPay
+return redirect($response['data']['checkout_url']);
+
+Rapide
+
+Intégration en 2 lignes, aucune
+logique de paiement à gérer
+
+Sécurisé
+
+Page de checkout hébergée et
+sécurisée par GeniusPay
+
+Tous les moyens
+
+Wave, Orange, MTN, Moov,
+cartes bancaires
+
+Comment ça marche ?
+En omettant le paramètre payment_method , GeniusPay génère une URL vers la page de
+checkout. Le client y choisit son moyen de paiement préféré, effectue le paiement, puis est
+redirigé. Vous recevez un webhook de confirmation.
+
+POST
+
+Initier un paiement
+
+Crée une nouvelle transaction et retourne une URL de paiement ou de checkout.
+POST /api/v1/merchant/payments
+
+Paramètres du body
+
+/ Docs
+
+v1.0
+
+Markdown
+
+Mes clés API
+
+Paramètre
+
+Type
+
+Requis
+
+Description
+
+amount
+
+number
+
+Oui
+
+Montant en XOF (min: 200)
+
+currency
+
+string
+
+—
+
+Devise : XOF , EUR , USD . Défaut : XOF
+
+payment_method
+
+string
+
+—
+
+wave pawapay paystack orange_money mtn_money
+card
+
+gateway
+
+string
+
+—
+
+Gateway explicite : wave, pawapay, orange_money,
+mtn_momo, moov_money
+
+mmo_provider
+
+string
+
+—
+
+Code fournisseur MMO PawaPay (ex: ORANGE_CIV ). Voir
+Fournisseurs
+
+description
+
+string
+
+—
+
+Description du paiement (max 500 car.)
+
+customer.name
+
+string
+
+—
+
+Nom du client
+
+customer.email
+
+string
+
+—
+
+Email du client
+
+customer.phone
+
+string
+
+—
+
+Téléphone (format international recommandé)
+
+customer.country
+
+string
+
+—
+
+Code pays ISO2 (ex: CI, SN, CD). Utilisé pour le routage
+PawaPay
+
+success_url
+
+string
+
+—
+
+URL de redirection après succès
+
+error_url
+
+string
+
+—
+
+URL de redirection après échec
+
+metadata
+
+object
+
+—
+
+Données personnalisées (clé/valeur). Retournées dans les
+réponses et webhooks. Voir Récupérer un paiement
+
+Si omis → page checkout GeniusPay
+
+REQUÊTE
+
+{
+"amount": 15000,
+"payment_method": "wave",
+"description": "Commande #12345",
+"customer": {
+"name": "Amadou Diallo",
+"email": "amadou@example.com",
+"phone": "+221771234567"
+},
+"metadata": {
+"order_id": "12345"
+
+}
+
+/ Docs
+
+}
+
+v1.0
+
+Markdown
+
+Mes clés API
+
+RÉPONSE 201
+
+{
+"success": true,
+"data": {
+"id": 456,
+"reference": "MTX-A1B2C3D4E5",
+"amount": 15000,
+"fees": 450,
+"net_amount": 14550,
+"status": "pending",
+"payment_url": "https://wave.com/...",
+"gateway": "wave",
+"environment": "sandbox",
+"metadata": {
+"order_id": "12345"
+}
+}
+}
+
+Astuce : utilisez les metadata
+Stockez votre order_id , user_id ou toute donnée utile dans le champ metadata . Ces
+données seront retournées telles quelles dans les réponses API et les webhooks.
+
+Page de Checkout GeniusPay
+Quand vous initiez un paiement sans spécifier de payment_method , l'API retourne une
+checkout_url vers notre page de paiement hébergée.
+Aperçu de la page de checkout
+
+Paiement sécurisé
+
+Votre Boutique
+
+/ Docs 15 000 FCFA
+
+v1.0
+
+Markdown
+
+Mes clés API
+
+Wave
+Orange Money
+MTN MoMo
+Carte bancaire
+
+Réponse API (mode checkout)
+{
+"success": true,
+"data": {
+"id": 123,
+"reference": "MTX-A1B2C3D4E5",
+"amount": 15000,
+"currency": "XOF",
+"status": "pending",
+"checkout_url": "https://geniuspay.ci/checkout/MTX-A1B2C3D4E5",
+"payment_url": "https://geniuspay.ci/checkout/MTX-A1B2C3D4E5",
+"metadata": {},
+"environment": "sandbox",
+"expires_at": "2025-01-16T14:00:00.000000Z"
+}
+}
+
+Avantages
+
+Bon à savoir
+
+Aucune gestion des moyens de paiement
+côté client
+Interface optimisée pour la conversion
+Mise à jour automatique des providers
+Design responsive (mobile/desktop)
+
+Le lien expire après 24 heures
+Webhooks envoyés après paiement
+Redirection vers success_url / error_url
+Compatible sandbox et production
+
+Lister les paiements
+/ Docs
+
+GET
+
+v1.0
+
+Markdown
+
+Mes clés API
+
+Récupérez la liste paginée de toutes vos transactions avec filtres optionnels.
+GET /api/v1/merchant/payments
+
+Paramètres de query
+Paramètre
+
+Type
+
+Description
+
+status
+
+string
+
+Filtrer par statut : pending , completed , failed
+
+payment_method
+
+string
+
+Filtrer par moyen de paiement (ex: wave , pawapay )
+
+from
+
+string
+
+Date de début au format YYYY-MM-DD
+
+to
+
+string
+
+Date de fin au format YYYY-MM-DD
+
+search
+
+string
+
+Recherche par référence, nom ou téléphone du client
+
+per_page
+
+integer
+
+Résultats par page (défaut : 20, max : 100)
+
+Exemple
+curl -X GET "https://geniuspay.ci/api/v1/merchant/payments?status=completed&
+-H "X-API-Key: pk_live_xxx" \
+-H "X-API-Secret: sk_live_xxx"
+
+Réponse 200
+{
+"success": true,
+"data": [
+{
+"id": 456,
+"reference": "MTX-A1B2C3D4E5",
+"amount": 15000,
+"currency": "XOF",
+"status": "completed",
+"payment_method": "wave",
+"customer_name": "Amadou Diallo",
+"created_at": "2025-01-15T10:30:00.000000Z"
+}
+],
+
+"meta": {
+Docs
+"current_page": 1,/
+"per_page": 10,
+"total": 42,
+"last_page": 5
+}
+
+v1.0
+
+Markdown
+
+Mes clés API
+
+}
+
+GET
+
+Récupérer un paiement
+
+Récupérez les détails complets d'une transaction via sa référence (ex: MTX-A1B2C3D4E5 ). La
+référence est retournée lors de la création du paiement.
+GET /api/v1/merchant/payments/{reference}
+
+Paramètre d'URL
+Paramètre
+
+Type
+
+Requis
+
+Description
+
+reference
+
+string
+
+Oui
+
+La référence unique de la transaction (format : MTX-XXXXXXXXXX )
+
+Exemple de requête
+curl -X GET https://geniuspay.ci/api/v1/merchant/payments/MTX-A1B2C3D4E5 \
+-H "X-API-Key: pk_live_votre_cle_publique" \
+-H "X-API-Secret: sk_live_votre_cle_secrete"
+
+Réponse 200
+{
+"success": true,
+"data": {
+"id": 456,
+"reference": "MTX-A1B2C3D4E5",
+"amount": 15000,
+"currency": "XOF",
+"fees": 450,
+"net_amount": 14550,
+"status": "completed",
+
+"payment_method": "wave",
+v1.0
+Markdown
+/ Docs
+"payment_provider":
+"wave",
+"environment": "live",
+"customer": {
+"name": "Amadou Diallo",
+"email": "amadou@example.com",
+"phone": "+221771234567"
+},
+"success_url": "https://votre-site.com/paiement/succes",
+"error_url": "https://votre-site.com/paiement/echec",
+"metadata": {
+"order_id": "12345",
+"product_name": "Abonnement Premium",
+"custom_field": "valeur_personnalisee"
+},
+"created_at": "2025-01-15T10:30:00.000000Z",
+"completed_at": "2025-01-15T10:31:22.000000Z"
+
+Mes clés API
+
+}
+}
+
+Champs de la réponse
+Champ
+
+Type
+
+Description
+
+id
+
+integer
+
+Identifiant interne de la transaction
+
+reference
+
+string
+
+Référence unique ( MTX-XXXXXXXXXX )
+
+amount
+
+number
+
+Montant en XOF
+
+currency
+
+string
+
+Devise (toujours XOF )
+
+fees
+
+number
+
+Total des frais (gateway + plateforme)
+
+net_amount
+
+number
+
+Montant net crédité ( amount - fees )
+
+status
+
+string
+
+pending processing completed failed expired
+
+payment_method
+
+string |
+null
+
+Moyen de paiement (wave, pawapay, paystack...)
+
+customer
+
+object
+
+Infos client : name, email, phone
+
+metadata
+
+object
+
+Vos données personnalisées envoyées lors de la création. Retournées
+telles quelles.
+
+Champ
+
+Type
+
+Description
+/ Docs
+
+created_at
+
+string
+
+Date de création (ISO 8601)
+
+completed_at
+
+string |
+null
+
+Date de complétion ( null si en cours)
+
+v1.0
+
+Markdown
+
+Mes clés API
+
+Erreur 404
+{
+"success": false,
+"error": {
+"code": "TRANSACTION_NOT_FOUND",
+"message": "Transaction not found"
+}
+}
+
+Comment utiliser les metadata
+Le champ metadata vous permet de stocker vos propres données dans la transaction.
+Envoyez-les lors de la création (POST), puis récupérez-les avec ce endpoint (GET).
+1. ENVOYER LES METADATA (POST)
+
+{
+"amount": 15000,
+"customer": {
+"name": "Amadou Diallo",
+"phone": "+221771234567"
+},
+"metadata": {
+"order_id": "CMD-2025-0042",
+"product_name": "Abonnement Premium",
+"user_id": "usr_abc123",
+"plan": "monthly"
+}
+}
+
+2. RÉCUPÉRER LES METADATA (GET)
+
+{
+"success": true,
+
+"data": {
+/ Docs
+"reference": "MTX-A1B2C3D4E5",
+"status": "completed",
+"metadata": {
+"order_id": "CMD-2025-0042",
+"product_name": "Abonnement Premium",
+"user_id": "usr_abc123",
+"plan": "monthly"
+}
+}
+
+v1.0
+
+Markdown
+
+Mes clés API
+
+}
+
+Exemple d'intégration — PHP / Laravel
+// 1. Créer le paiement avec vos metadata
+$response = Http::withHeaders([
+'X-API-Key'
+=> 'pk_live_...',
+'X-API-Secret' => 'sk_live_...',
+])->post('https://geniuspay.ci/api/v1/merchant/payments', [
+'amount'
+=> 15000,
+'customer' => ['name' => 'Amadou', 'phone' => '+221771234567'],
+'metadata' => [
+'order_id' => $order->id,
+'user_id' => $user->id,
+'plan'
+=> 'premium',
+],
+]);
+$reference = $response->json('data.reference');
+// 2. Récupérer la transaction et vos metadata
+$payment = Http::withHeaders([
+'X-API-Key'
+=> 'pk_live_...',
+'X-API-Secret' => 'sk_live_...',
+])->get("https://geniuspay.ci/api/v1/merchant/payments/{$reference}");
+if ($payment->json('data.status') === 'completed') {
+Order::find($payment->json('data.metadata.order_id'))->markAsPaid();
+}
+
+Exemple d'intégration — JavaScript / Node.js
+
+/ Docs
+
+v1.0
+
+Markdown
+
+Mes clés API
+
+// 1. Créer le paiement
+const createRes = await fetch('https://geniuspay.ci/api/v1/merchant/payment
+method: 'POST',
+headers: {
+'X-API-Key': 'pk_live_...', 'X-API-Secret': 'sk_live_...',
+'Content-Type': 'application/json',
+},
+body: JSON.stringify({
+amount: 15000,
+customer: { name: 'Amadou', phone: '+221771234567' },
+metadata: { order_id: 'CMD-2025-0042', user_id: 'usr_abc123' },
+}),
+});
+const { data } = await createRes.json();
+// 2. Récupérer par référence
+const getRes = await fetch(
+`https://geniuspay.ci/api/v1/merchant/payments/${data.reference}`,
+{ headers: { 'X-API-Key': 'pk_live_...', 'X-API-Secret': 'sk_live_...' }
+);
+const payment = await getRes.json();
+console.log(payment.data.metadata.order_id); // "CMD-2025-0042"
+
+Bonnes pratiques metadata
+
+Erreurs courantes
+
+Stockez votre order_id pour lier le
+paiement
+Ajoutez un user_id pour identifier le client
+Utilisez des clés descriptives (snake_case)
+Les valeurs doivent rester simples (string,
+number)
+
+Ne pas envoyer les metadata au POST = rien à
+récupérer
+Ne pas stocker la reference côté serveur
+Confondre id (interne) et reference
+(MTX-...)
+Oublier les headers d'authentification dans le
+GET
+
+PawaPay — Mobile Money Afrique
+PawaPay est un agrégateur de mobile money. GeniusPay intègre actuellement 12 pays
+africains avec 24 opérateurs MMO disponibles. Le système détecte automatiquement le
+pays depuis le numéro de téléphone.
+
+/ Docs
+
+v1.0
+
+Auto-routing
+
+Multi-devises
+
+Choix explicite
+
+12 Pays
+
+Envoyez le numéro, GeniusPay détecte pays et
+opérateur
+
+Markdown
+
+Mes clés API
+
+9 devises avec conversion automatique vers XOF
+
+Spécifiez mmo_provider pour cibler un opérateur
+
+Bénin, Cameroun, CI, Congo, RDC, Gabon, Kenya,
+Rwanda, Sénégal, etc.
+
+Guide d'intégration — 3 modes
+1. Auto-routing
+
+2. MMO explicite
+
+3. Par pays / devise
+
+Le numéro de téléphone suffit. GeniusPay détecte automatiquement le pays, l'opérateur et la devise.
+C'est le mode recommandé.
+
+curl -X POST https://geniuspay.ci/api/v1/merchant/payments \
+-H "X-API-Key: pk_live_xxx" \
+-H "X-API-Secret: sk_live_xxx" \
+-H "Content-Type: application/json" \
+-d '{
+"amount": 5000,
+"payment_method": "pawapay",
+"customer": {
+"phone": "+221771234567"
+}
+}'
+
+Auto-détection : Sénégal → Free/Orange Money → XOF. Aucune configuration supplémentaire
+requise.
+
+Bonnes pratiques
+Utilisez toujours le préfixe international (+221, +254, etc.)
+Laissez GeniusPay détecter l'opérateur (meilleur taux de succès)
+Pour les devises étrangères, spécifiez currency
+Consultez GET /pawapay/providers pour lister dynamiquement les opérateurs
+Les conversions sont transparentes : envoyez en devise locale, recevez en XOF
+
+GET
+
+Fournisseurs MMO
+/ Docs disponibles
+
+v1.0
+
+Markdown
+
+Mes clés API
+
+Endpoint de découverte pour lister les fournisseurs MMO par pays ou tous les pays
+supportés.
+GET /api/v1/merchant/pawapay/providers?country=CI
+
+Paramètre
+Paramètre
+
+Type
+
+Description
+
+country
+
+string
+
+Code pays ISO2 (ex: CI, SN, GH). Si omis, retourne tous les pays
+
+RÉPONSE (UN PAYS)
+
+{
+"success": true,
+"data": {
+"country": "CI",
+"country_iso3": "CIV",
+"country_name": "Côte d'Ivoire",
+"currency": "XOF",
+"providers": [
+{ "code": "ORANGE_CIV", "name": "Orange Money", "type": "MMO" },
+{ "code": "MTN_MOMO_CIV", "name": "MTN Mobile Money", "type": "MMO" },
+{ "code": "MOOV_CIV", "name": "Moov Money", "type": "MMO" },
+{ "code": "WAVE_CIV", "name": "Wave", "type": "MMO" }
+]
+}
+}
+
+RÉPONSE (TOUS LES PAYS)
+
+{
+"success": true,
+"data": {
+"countries": [
+{
+"country": "CI",
+"country_iso3": "CIV",
+"country_name": "Côte d'Ivoire",
+"currency": "XOF",
+"providers": [ ... ]
+
+}
+
+/ Docs
+],
+"total_countries": 12
+
+v1.0
+
+Markdown
+
+Mes clés API
+
+}
+}
+
+Pays et opérateurs disponibles
+Seuls les pays listés ci-dessous sont actuellement disponibles. Le système détecte
+automatiquement le pays depuis le numéro de téléphone.
+Pays
+
+ISO2
+
+Devise
+
+Opérateurs
+
+Codes Provider
+
+Bénin
+
+BJ
+
+XOF
+
+MTN, Moov
+
+MTN_MOMO_BEN, MOOV_BEN
+
+Cameroun
+
+CM
+
+XAF
+
+MTN, Orange
+
+MTN_MOMO_CMR, ORANGE_CMR
+
+Côte d'Ivoire
+
+CI
+
+XOF
+
+Wave, MTN,
+Orange
+
+Via Wave & Paystack
+
+RD Congo
+
+CD
+
+CDF /
+USD
+
+Airtel, Orange,
+Vodacom
+
+AIRTEL_COD, ORANGE_COD,
+VODACOM_MPESA_COD
+
+Gabon
+
+GA
+
+XAF
+
+Airtel
+
+AIRTEL_GAB
+
+Kenya
+
+KE
+
+KES
+
+M-Pesa
+(Safaricom)
+
+MPESA_KEN
+
+République du
+Congo
+
+CG
+
+XAF
+
+Airtel, MTN
+
+AIRTEL_COG, MTN_MOMO_COG
+
+Rwanda
+
+RW
+
+RWF
+
+Airtel, MTN
+
+AIRTEL_RWA, MTN_MOMO_RWA
+
+Sénégal
+
+SN
+
+XOF
+
+Free, Orange
+
+FREE_SEN, ORANGE_SEN
+
+Sierra Leone
+
+SL
+
+SLE
+
+Orange
+
+ORANGE_SLE
+
+Ouganda
+
+UG
+
+UGX
+
+Airtel, MTN
+
+AIRTEL_UGA, MTN_MOMO_UGA
+
+Zambie
+
+ZM
+
+ZMW
+
+MTN, Zamtel
+
+MTN_MOMO_ZMB, ZAMTEL_ZMB
+
+Devises supportées
+
+Astuce d'intégration
+
+9 devises avec conversion automatique vers
+XOF :
+
+Utilisez GET /pawapay/providers?
+country=CI pour obtenir dynamiquement les
+codes opérateurs. Les conversions de
+
+XOF
+
+XAF
+
+CDF
+
+USD
+
+KES
+
+RWF
+
+SLE
+
+GET
+
+UGX
+
+ZMW
+
+/ Docs
+
+devises sont transparentes : envoyez dans la
+v1.0GeniusPay
+Markdown
+Mes clés API
+devise locale,
+stocke en XOF.
+
+Informations du compte
+
+Récupérez les informations de votre compte marchand : nom, email, statut et
+environnement actif.
+GET /api/v1/merchant/account
+
+Exemple de requête
+curl -X GET https://geniuspay.ci/api/v1/merchant/account \
+-H "X-API-Key: pk_live_xxx" \
+-H "X-API-Secret: sk_live_xxx"
+
+Réponse 200
+{
+"success": true,
+"data": {
+"id": 25,
+"business_name": "Ma Boutique",
+"email": "contact@maboutique.com",
+"status": "active",
+"environment": "live",
+"created_at": "2024-06-01T08:00:00.000000Z"
+}
+}
+
+GET
+
+Solde du compte
+
+Consultez votre solde disponible, en attente et total en temps réel.
+GET /api/v1/merchant/account/balance
+
+Exemple de requête
+
+v1.0
+Markdown \ Mes clés API
+curl -X GET
+https://geniuspay.ci/api/v1/merchant/account/balance
+/ Docs
+-H "X-API-Key: pk_live_xxx" \
+-H "X-API-Secret: sk_live_xxx"
+
+Réponse 200
+{
+"success": true,
+"data": {
+"available": 1250000,
+"pending": 75000,
+"total": 1325000,
+"currency": "XOF"
+}
+}
+
+Champs de la réponse
+Champ
+
+Type
+
+Description
+
+available
+
+number
+
+Montant disponible pour retrait
+
+pending
+
+number
+
+Montant en attente de confirmation (transactions en cours)
+
+total
+
+number
+
+Solde total ( available + pending )
+
+currency
+
+string
+
+Devise du solde (toujours XOF )
+
+Webhooks
+Recevez des notifications en temps réel sur les événements de vos paiements. L'intégration
+webhook est identique pour Sandbox et Live — seules les clés changent.
+Sandbox vs Live
+Aspect
+
+Sandbox
+
+Live
+
+Secret Webhook
+
+whsec_sandbox_xxx
+
+whsec_live_xxx
+
+Header Environment
+
+X-Webhook-Environment: sandbox
+
+X-Webhook-Environment: live
+
+Aspect
+
+Sandbox
+
+Payload Field
+
+"environment": "sandbox"
+
+"environment": "live"
+
+Code d'intégration
+
+Identique
+
+Identique
+
+/ Docs
+
+Live
+
+v1.0
+
+Markdown
+
+Mes clés API
+
+Endpoints
+GET
+
+/webhooks
+
+Lister les webhooks
+
+POST
+
+/webhooks
+
+Créer un webhook
+
+PUT
+
+/webhooks/{id}
+
+DELETE
+POST
+
+/webhooks/{id}
+/webhooks/{id}/test
+
+Modifier un webhook
+Supprimer un webhook
+Tester un webhook
+
+Créer un webhook
+curl -X POST https://geniuspay.ci/api/v1/merchant/webhooks \
+-H "X-API-Key: pk_live_xxx" \
+-H "X-API-Secret: sk_live_xxx" \
+-H "Content-Type: application/json" \
+-d '{
+"name": "Mon webhook",
+"url": "https://example.com/webhooks/geniuspay",
+"events": ["payment.success", "payment.failed", "cashout.completed"]
+}'
+
+Conservez le secret
+Le secret webhook ( whsec_... ) est retourné uniquement à la création. Stockez-le en
+sécurité côté serveur.
+
+Événements webhook
+Liste de tous les événements disponibles et le format du payload reçu.
+
+Événements disponibles
+
+/ Docs
+
+v1.0
+
+Événement
+
+Description
+
+payment.initiated
+
+Paiement initié
+
+payment.success
+
+Paiement réussi
+
+payment.failed
+
+Paiement échoué
+
+payment.cancelled
+
+Paiement annulé
+
+payment.refunded
+
+Paiement remboursé
+
+payment.expired
+
+Paiement expiré
+
+cashout.requested
+
+Demande de retrait
+
+cashout.approved
+
+Retrait approuvé
+
+cashout.completed
+
+Retrait complété
+
+cashout.failed
+
+Retrait échoué
+
+webhook.test
+
+Test de webhook
+
+Markdown
+
+Format du payload
+Le payload est identique pour Sandbox et Live. Seul le champ "environment" change.
+
+{
+"id": "550e8400-e29b-41d4-a716-446655440000",
+"event": "payment.success",
+"timestamp": 1735587600,
+"created_at": "2025-12-30T12:00:00.000000Z",
+"data": {
+"object": "transaction",
+"id": 12345,
+"reference": "TXN-2025-001",
+"amount": 10000.00,
+"currency": "XOF",
+"fees": 250.00,
+"net_amount": 9750.00,
+"status": "completed",
+"payment_method": "mobile_money",
+"provider": "wave",
+"customer_name": "Jean Kouassi",
+
+Mes clés API
+
+"customer_phone": "+2250748123456",
+Docs
+"merchant_id": 25,/
+"metadata": {
+"order_id": "ORD-2025-123",
+"customer_email": "jean@example.com"
+}
+
+v1.0
+
+Markdown
+
+Mes clés API
+
+},
+"environment": "live",
+"api_version": "2024-01-01"
+}
+
+Metadata dans les webhooks
+Vos metadata envoyées lors de la création du paiement sont incluses dans le payload
+webhook. Utilisez-les pour identifier la commande dans votre système.
+
+Sécurité des webhooks
+Vérifiez toujours la signature des webhooks pour vous assurer qu'ils proviennent bien de
+GeniusPay.
+Important
+Ne traitez jamais un webhook sans vérifier sa signature. Cela vous protège contre les requêtes
+malveillantes.
+
+Headers webhook
+Header
+
+Description
+
+Content-Type
+
+application/json
+
+X-Webhook-Signature
+
+Signature HMAC-SHA256
+
+X-Webhook-Timestamp
+
+Timestamp Unix de l'envoi
+
+X-Webhook-Event
+
+Type d'événement (ex: payment.success)
+
+X-Webhook-Delivery
+
+ID unique de livraison (optionnel)
+
+X-Webhook-Environment
+
+sandbox ou live
+
+User-Agent
+
+GeniusPay-Webhook/1.0
+
+Vérification de la signature
+
+/ Docs
+
+v1.0
+
+Markdown
+
+Format : signature = HMAC-SHA256(timestamp + "." + json_payload, secret)
+
+// Récupérer les headers
+$signature = $request->header('X-Webhook-Signature');
+$timestamp = $request->header('X-Webhook-Timestamp');
+$event = $request->header('X-Webhook-Event');
+// Récupérer le payload JSON
+$payload = $request->all();
+// Construire la donnée à vérifier
+$data = $timestamp . '.' . json_encode($payload);
+// Calculer la signature attendue
+$secret = 'whsec_xxxxxxxx'; // Votre clé secrète webhook
+$expectedSignature = hash_hmac('sha256', $data, $secret);
+// Vérifier la signature
+if (!hash_equals($expectedSignature, $signature)) {
+return response()->json([
+'status' => 401,
+'detail' => 'Invalid signature'
+], 401);
+}
+// Vérifier le timestamp (protection replay attack — 5 min)
+if (abs(time() - (int)$timestamp) > 300) {
+return response()->json([
+'status' => 400,
+'detail' => 'Timestamp too old'
+], 400);
+}
+// Traiter l'événement
+switch ($event) {
+case 'payment.success':
+// Marquer la commande comme payée
+break;
+case 'payment.failed':
+// Notifier le client
+
+Mes clés API
+
+break;
+}
+
+/ Docs
+
+v1.0
+
+Markdown
+
+Mes clés API
+
+Documentation complète
+Consultez le Guide d'Intégration Webhook pour des exemples en PHP, Node.js, Python et
+Java.
+
+Statuts des paiements
+Chaque transaction passe par un cycle de vie défini. Voici les statuts possibles.
+pending
+
+processing
+
+En attente de paiement. Le client n'a pas
+encore payé.
+
+En cours de traitement par le gateway de
+paiement.
+
+completed
+
+failed
+
+Paiement réussi. Le montant a été crédité.
+
+Paiement échoué (solde insuffisant, erreur
+réseau, etc.).
+
+cancelled
+
+refunded
+
+Paiement annulé par le client ou le marchand.
+
+Paiement remboursé au client.
+
+Méthodes de paiement
+GeniusPay supporte 60+ opérateurs dans 23 pays africains. Les valeurs acceptées pour le
+paramètre payment_method sont listées ci-dessous.
+Conseil
+Omettez le paramètre payment_method pour laisser le client choisir sur la page de checkout
+GeniusPay. C'est l'approche recommandée pour maximiser les conversions.
+
+Codes de paiement (paramètre payment_method)
+
+Code
+
+Nom
+
+wave
+
+Wave
+
+Mobile Money Wave (CI)
+
+orange_money
+
+Orange Money
+
+Mobile Money Orange (SN, CI, ML, BF, CD, CG, SL, GA)
+
+mtn_money
+
+MTN Mobile Money
+
+Mobile Money MTN (CI, BF, CM, CG, CD, RW, UG, ZM)
+
+pawapay
+
+PawaPay
+
+Agrégateur Mobile Money Afrique (12 pays)
+
+paystack
+
+Paystack
+
+Cartes bancaires et Mobile Money (CI, GH, NG, KE, ZA)
+
+moov_money
+
+Moov Money
+
+Mobile Money Moov (CI, TG, BF)
+
+airtel_money
+
+Airtel Money
+
+Mobile Money Airtel (CD, CG, KE, RW, UG, ZM)
+
+card
+
+Carte bancaire
+
+Visa, Mastercard (International)
+
+/ Docs
+
+Description
+
+v1.0
+
+Markdown
+
+Mes clés API
+
+Couverture détaillée par région
+XOF
+
+UEMOA
+
+XOF
+
+Côte d'Ivoire, Sénégal, Mali, Burkina Faso, Bénin,
+Togo, Niger, Guinée-Bissau
+Wave
+
+Orange Money
+
+Moov Money
+
+XAF
+
+MTN MoMo
+
+Paystack
+
+Afrique Centrale
+
+KES
+
+MTN MoMo
+
+Airtel Money
+
+Orange Money
+
+MTN MoMo
+
+Airtel Money
+
+RD Congo
+
+Orange Money
+
+ZMW
+
+Kenya, Rwanda, Ouganda
+Airtel Money
+
+Paystack
+
+Conversion automatique vers XOF
+
+Afrique de l'Est
+
+M-Pesa
+
+Ghana, Nigeria, Sierra Leone
+
+CDF / USD
+
+Cameroun, Gabon, Congo, RCA
+Orange Money
+
+Afrique de l'Ouest
+
+Airtel Money
+
+Vodacom M-Pesa
+
+Afrique Australe
+
+Zambie, Afrique du Sud
+MTN MoMo
+
+MTN MoMo
+
+Zamtel
+
+Opérateurs par code PawaPay
+Pour le code pawapay , vous pouvez spécifier un opérateur via mmo_provider . Voir Fournisseurs
+MMO pour la liste complète.
+
+Code Provider
+
+/ Docs Nom
+
+v1.0
+
+Pays
+Markdown
+
+FREE_SEN
+
+Free Money
+
+Sénégal
+
+ORANGE_SEN
+
+Orange Money
+
+Sénégal
+
+ORANGE_CIV
+
+Orange Money
+
+Côte d'Ivoire
+
+MTN_MOMO_CIV
+
+MTN Mobile Money
+
+Côte d'Ivoire
+
+ORANGE_CMR
+
+Orange Money
+
+Cameroun
+
+MTN_MOMO_CMR
+
+MTN Mobile Money
+
+Cameroun
+
+AIRTEL_COD
+
+Airtel Money
+
+RD Congo
+
+ORANGE_COD
+
+Orange Money
+
+RD Congo
+
+VODACOM_MPESA_COD
+
+Vodacom M-Pesa
+
+RD Congo
+
+MPESA_KEN
+
+M-Pesa
+
+Kenya
+
+MTN_MOMO_UGA
+
+MTN Mobile Money
+
+Ouganda
+
+MTN_MOMO_ZMB
+
+MTN Mobile Money
+
+Zambie
+
+Mes clés API
+
+Codes d'erreur
+Toutes les erreurs API suivent un format cohérent avec un code machine et un message
+lisible.
+Format d'erreur
+{
+"success": false,
+"error": {
+"code": "ERROR_CODE",
+"message": "Description lisible de l'erreur"
+}
+}
+
+Codes
+
+Code
+
+HTTP
+
+/ Docs Description
+
+MISSING_API_KEY
+
+401
+
+Clé API manquante dans les headers
+
+INVALID_API_KEY
+
+401
+
+Clé API invalide ou expirée
+
+MERCHANT_INACTIVE
+
+403
+
+Compte marchand désactivé
+
+PAYMENT_INIT_FAILED
+
+400
+
+Échec d'initialisation du paiement
+
+TRANSACTION_NOT_FOUND
+
+404
+
+Transaction introuvable pour la référence donnée
+
+VALIDATION_ERROR
+
+422
+
+Données de requête invalides (champ manquant ou format
+incorrect)
+
+COUNTRY_NOT_SUPPORTED
+
+404
+
+Pays non supporté par PawaPay
+
+v1.0
+
+Markdown
+
+Mes clés API
+
+Exemples d'intégration
+Deux approches pour intégrer GeniusPay : le mode checkout (recommandé) et le mode
+direct.
+Recommandé
+
+Mode Checkout (2 lignes)
+
+Sans payment_method , le client choisit son moyen de paiement sur la page GeniusPay.
+PHP / Laravel
+
+JavaScript
+
+Python
+
+Flutter
+
+// Intégration en 2 lignes
+$response = Http::withHeaders([
+'X-API-Key' => 'pk_live_xxx',
+'X-API-Secret' => 'sk_live_xxx',
+])->post('https://geniuspay.ci/api/v1/merchant/payments', [
+'amount' => 15000,
+'description' => 'Commande #123',
+]);
+return redirect($response['data']['checkout_url']);
+
+Alternatif
+
+Mode Direct (méthode spécifiée)
+
+Avec payment_method spécifié, le client est redirigé directement vers le gateway.
+
+PHP
+
+JavaScript
+
+/ Docs
+
+v1.0
+
+Markdown
+
+Mes clés API
+
+$response = Http::withHeaders([
+'X-API-Key' => 'pk_live_xxx',
+'X-API-Secret' => 'sk_live_xxx',
+])->post('https://geniuspay.ci/api/v1/merchant/payments', [
+'amount' => 15000,
+'payment_method' => 'wave',
+'customer' => [
+'phone' => '+221771234567',
+],
+]);
+return redirect($response['data']['payment_url']);
+
+© 2026 GeniusPay. Tous droits réservés.
+
+Support Dashboard
+
+
