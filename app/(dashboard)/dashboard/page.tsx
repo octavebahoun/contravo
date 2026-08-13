@@ -11,7 +11,8 @@ import {
 } from '@/components/ui/card';
 import { customerPortalAction } from '@/lib/payments/actions';
 import { useActionState } from 'react';
-import { TeamDataWithMembers, User } from '@/lib/db/schema';
+import { User } from '@/lib/db/schema';
+import { TeamDataWithMembers } from '@/lib/auth/middleware';
 import { removeTeamMember, inviteTeamMember } from '@/app/(login)/actions';
 import useSWR from 'swr';
 import { Suspense } from 'react';
@@ -100,8 +101,8 @@ function TeamMembers() {
     FormData
   >(removeTeamMember, {});
 
-  const getUserDisplayName = (user: Pick<User, 'id' | 'name' | 'email'>) => {
-    return user.name || user.email || 'Unknown User';
+  const getUserDisplayName = (user: { id: string; name?: string; fullName?: string; email: string }) => {
+    return user.fullName || user.name || user.email || 'Unknown User';
   };
 
   if (!teamData?.teamMembers?.length) {
@@ -189,7 +190,11 @@ function InviteTeamMemberSkeleton() {
 
 function InviteTeamMember() {
   const { data: user } = useSWR<User>('/api/user', fetcher);
-  const isOwner = user?.role === 'owner';
+  const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
+  const currentUserMember = teamData?.teamMembers?.find(
+    (member) => member.user.id === user?.id
+  );
+  const isOwner = currentUserMember?.role === 'owner';
   const [inviteState, inviteAction, isInvitePending] = useActionState<
     ActionState,
     FormData

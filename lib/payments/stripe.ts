@@ -1,13 +1,13 @@
 import Stripe from 'stripe';
 import { redirect } from 'next/navigation';
-import { Team } from '@/lib/db/schema';
+import { Organization } from '@/lib/db/schema';
 import {
   getTeamByStripeCustomerId,
   getUser,
   updateTeamSubscription
 } from '@/lib/db/queries';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
   apiVersion: '2025-04-30.basil'
 });
 
@@ -15,7 +15,7 @@ export async function createCheckoutSession({
   team,
   priceId
 }: {
-  team: Team | null;
+  team: Organization | null;
   priceId: string;
 }) {
   const user = await getUser();
@@ -46,7 +46,7 @@ export async function createCheckoutSession({
   redirect(session.url!);
 }
 
-export async function createCustomerPortalSession(team: Team) {
+export async function createCustomerPortalSession(team: Organization) {
   if (!team.stripeCustomerId || !team.stripeProductId) {
     redirect('/pricing');
   }
@@ -147,36 +147,46 @@ export async function handleSubscriptionChange(
 }
 
 export async function getStripePrices() {
-  const prices = await stripe.prices.list({
-    expand: ['data.product'],
-    active: true,
-    type: 'recurring'
-  });
+  try {
+    const prices = await stripe.prices.list({
+      expand: ['data.product'],
+      active: true,
+      type: 'recurring'
+    });
 
-  return prices.data.map((price) => ({
-    id: price.id,
-    productId:
-      typeof price.product === 'string' ? price.product : price.product.id,
-    unitAmount: price.unit_amount,
-    currency: price.currency,
-    interval: price.recurring?.interval,
-    trialPeriodDays: price.recurring?.trial_period_days
-  }));
+    return prices.data.map((price) => ({
+      id: price.id,
+      productId:
+        typeof price.product === 'string' ? price.product : price.product.id,
+      unitAmount: price.unit_amount,
+      currency: price.currency,
+      interval: price.recurring?.interval,
+      trialPeriodDays: price.recurring?.trial_period_days
+    }));
+  } catch (error) {
+    console.error('Error fetching Stripe prices:', error);
+    return [];
+  }
 }
 
 export async function getStripeProducts() {
-  const products = await stripe.products.list({
-    active: true,
-    expand: ['data.default_price']
-  });
+  try {
+    const products = await stripe.products.list({
+      active: true,
+      expand: ['data.default_price']
+    });
 
-  return products.data.map((product) => ({
-    id: product.id,
-    name: product.name,
-    description: product.description,
-    defaultPriceId:
-      typeof product.default_price === 'string'
-        ? product.default_price
-        : product.default_price?.id
-  }));
+    return products.data.map((product) => ({
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      defaultPriceId:
+        typeof product.default_price === 'string'
+          ? product.default_price
+          : product.default_price?.id
+    }));
+  } catch (error) {
+    console.error('Error fetching Stripe products:', error);
+    return [];
+  }
 }
