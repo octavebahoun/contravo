@@ -18,50 +18,57 @@ export function LandingHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-        <Link href="/" className="flex items-center" aria-label="Contravo — accueil">
-          <Image
-            src="/logo.webp"
-            alt="Contravo"
-            width={132}
-            height={36}
-            className="h-9 w-auto object-contain"
-            priority
-          />
-        </Link>
+      <div className="relative mx-auto max-w-7xl">
+        {/* Left vertical border */}
+        <div className="absolute inset-y-0 left-0 w-px bg-border/40" />
+        {/* Right vertical border */}
+        <div className="absolute inset-y-0 right-0 w-px bg-border/40" />
 
-        <ul className="hidden items-center gap-8 md:flex">
-          {menuItems.map((item) => (
-            <li key={item.href}>
-              <a
-                href={item.href}
-                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {item.label}
-              </a>
-            </li>
-          ))}
-        </ul>
+        <nav className="flex items-center justify-between px-6 py-3">
+          <Link href="/" className="flex items-center" aria-label="Contravo — accueil">
+            <Image
+              src="/logo.webp"
+              alt="Contravo"
+              width={132}
+              height={36}
+              className="h-9 w-auto object-contain"
+              priority
+            />
+          </Link>
 
-        <div className="hidden items-center gap-3 md:flex">
-          <Button variant="ghost" asChild>
-            <Link href="/sign-in">Se connecter</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/sign-up">Créer un compte</Link>
-          </Button>
-        </div>
+          <ul className="hidden items-center gap-8 md:flex">
+            {menuItems.map((item) => (
+              <li key={item.href}>
+                <a
+                  href={item.href}
+                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))}
+          </ul>
 
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="rounded-lg p-2 text-foreground md:hidden"
-          aria-label={open ? 'Fermer le menu' : 'Ouvrir le menu'}
-          aria-expanded={open}
-        >
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
-      </nav>
+          <div className="hidden items-center gap-3 md:flex">
+            <Button variant="ghost" asChild>
+              <Link href="/sign-in">Se connecter</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/sign-up">Créer un compte</Link>
+            </Button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="rounded-lg p-2 text-foreground md:hidden"
+            aria-label={open ? 'Fermer le menu' : 'Ouvrir le menu'}
+            aria-expanded={open}
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </nav>
+      </div>
 
       {open ? (
         <div className="border-t border-border bg-background md:hidden">
