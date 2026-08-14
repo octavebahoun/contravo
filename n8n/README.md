@@ -29,30 +29,41 @@ n8n est le **seul orchestrateur externe**. Il ne prend aucune décision métier 
 | `healthcheck_v1.json` | Cron 5 min → `/api/v1/me`. 3 échecs consécutifs → alerte. |
 | `email_*_v1.json` (13) | Sous-workflows appelés par le router. Rendu du template MJML puis envoi Resend. |
 
-## Variables d'environnement n8n
+## Configuration (aucune variable d'environnement requise)
 
-À définir sur l'instance n8n (*Settings → Variables*, ou variables d'env du
-conteneur). Aucune ne doit apparaître dans les JSON versionnés.
+Les nodes Code de n8n tournent dans un sandbox qui interdit `process.env`,
+`require('crypto')` et le helper d'expression `hmac()`. Les workflows n'utilisent
+donc **ni `$env` ni `$vars`** (ces dernières sont réservées aux plans payants).
 
-| Variable | Utilisée par | Valeur |
-|---|---|---|
-| `N8N_EXCELLENCE_WEBHOOK_SECRET` | router (vérif HMAC) | Le `secret` de la row `webhook_endpoints` créée côté Excellence (format `whsec_...`). Doit correspondre exactement. |
-| `EXCELLENCE_API_BASE` | healthcheck | Base de l'API Excellence, ex. `https://app.contravo.io` |
-| `EXCELLENCE_API_KEY` | healthcheck, `Fetch PDF` | Clé API Excellence (`sk_live_...`) scopée lecture seule. **Valeur brute, sans `Bearer`** : les workflows ajoutent le préfixe. |
-| `RESEND_API_KEY` | les 13 workflows email | Clé Resend (`re_...`). **Valeur brute, sans `Bearer`**. |
-| `RESEND_FROM` | les 13 workflows email | Expéditeur vérifié, ex. `Contravo <no-reply@notifications.contravo.io>` |
-| `EXCELLENCE_ENV` | healthcheck | `staging` ou `prod` |
-| `N8N_ALERT_WEBHOOK` | healthcheck | URL webhook Slack pour les alertes. |
+**Secrets → credentials n8n** (chiffrés en base, conformes à la DoD §6). À créer
+une fois via *Credentials → New → Header Auth* :
 
-Le secret HMAC n'est pas une variable d'env côté Excellence : il est stocké en
-base dans `webhook_endpoints.secret` et généré à la création de l'endpoint.
+| Credential (nom exact) | Type | Header | Valeur |
+|---|---|---|---|
+| `RESEND_API_KEY` | Header Auth | `Authorization` | `Bearer re_...` |
+| `EXCELLENCE_API_KEY` | Header Auth | `Authorization` | `Bearer sk_live_...` |
+
+Le nom doit correspondre exactement : `deploy.ts` résout ces noms en IDs, qui
+diffèrent d'une instance à l'autre.
+
+**Valeurs non secrètes → node `Config`.** Le router et le healthcheck commencent
+chacun par un node *Config* qui porte `apiBase` (et `environment` /
+`alertWebhook` pour le healthcheck). C'est le seul endroit à éditer quand l'URL
+change — utile en développement où l'URL de tunnel bouge à chaque redémarrage.
+
+**Vérification HMAC.** Le sandbox empêchant tout calcul de HMAC côté n8n, le
+router délègue à Excellence : il POST `{ signature, rawBody }` vers
+`/api/v1/webhooks/verify`, qui répond `{ valid, event, payload }`. Le secret ne
+quitte jamais Excellence (il vit dans `webhook_endpoints.secret`) et la
+comparaison reste timing-safe.
 
 ## Importer en local
 
 1. Lancer une instance n8n locale (`npx n8n` ou Docker).
 2. Importer chaque fichier de `workflows/` via *Workflows → Import from File*.
-3. Définir les variables ci-dessus.
-4. Après import manuel, les nodes *Execute Sub-workflow* du router doivent être
+3. Créer les 2 credentials ci-dessus et les rattacher aux nodes HTTP.
+4. Renseigner `apiBase` dans le node *Config* du router et du healthcheck.
+5. Après import manuel, les nodes *Execute Sub-workflow* du router doivent être
    re-pointés à la main sur les sous-workflows (les IDs sont propres à chaque
    instance). Le script `deploy.ts` fait cette résolution automatiquement —
    le préférer à l'import manuel.

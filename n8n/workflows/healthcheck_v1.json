@@ -23,28 +23,62 @@
       }
     },
     {
+      "id": "dbd725b0-ea4c-4048-8f74-3d18430d5fdc",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        280,
+        300
+      ],
+      "notes": "Point unique de configuration. Modifier apiBase quand l'URL du tunnel change.",
+      "notesInFlow": true,
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "833dccaa-9d9d-413c-a3e1-3845b940960b",
+              "name": "apiBase",
+              "type": "string",
+              "value": "https://CHANGEME.trycloudflare.com"
+            },
+            {
+              "id": "a998c35d-5da2-47ad-9028-980b527594e6",
+              "name": "environment",
+              "type": "string",
+              "value": "staging"
+            },
+            {
+              "id": "3a5bf02c-890e-41b3-96c5-52b2b998874a",
+              "name": "alertWebhook",
+              "type": "string",
+              "value": ""
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
       "id": "f4593e79-e945-4350-a58e-f0341a17e71a",
       "name": "Call /api/v1/me",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        300,
+        500,
         300
       ],
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.EXCELLENCE_API_BASE }}/api/v1/me",
+        "url": "={{ $json.apiBase }}/api/v1/me",
         "sendHeaders": true,
         "specifyHeaders": "keypair",
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.EXCELLENCE_API_KEY }}"
-            },
-            {
               "name": "X-Excellence-Environment",
-              "value": "={{ $env.EXCELLENCE_ENV }}"
+              "value": "={{ $json.environment }}"
             }
           ]
         },
@@ -55,12 +89,14 @@
               "neverError": false
             }
           }
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "credentials": {
         "httpHeaderAuth": {
-          "id": "n8n_api_key",
-          "name": "n8n API Key"
+          "id": "",
+          "name": "EXCELLENCE_API_KEY"
         }
       }
     },
@@ -70,7 +106,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        500,
+        700,
         300
       ],
       "parameters": {
@@ -84,7 +120,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        700,
+        900,
         300
       ],
       "parameters": {
@@ -102,6 +138,16 @@
                 "operation": "equals"
               },
               "rightValue": true
+            },
+            {
+              "id": "552bb279-f041-48c4-b6e7-d30b12c40e85",
+              "leftValue": "={{ $('Config').first().json.alertWebhook }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
             }
           ],
           "combinator": "and"
@@ -114,12 +160,12 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        900,
+        1100,
         300
       ],
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.N8N_ALERT_WEBHOOK }}",
+        "url": "={{ $('Config').first().json.alertWebhook }}",
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
@@ -135,7 +181,7 @@
       "main": [
         [
           {
-            "node": "Call /api/v1/me",
+            "node": "Config",
             "type": "main",
             "index": 0
           }
@@ -169,6 +215,17 @@
         [
           {
             "node": "Alert Slack/Ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Call /api/v1/me",
             "type": "main",
             "index": 0
           }

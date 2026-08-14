@@ -34,6 +34,49 @@ interface N8nWorkflow {
   active?: boolean;
 }
 
+interface N8nCredential {
+  id: string;
+  name: string;
+}
+
+async function listCredentials(): Promise<N8nCredential[]> {
+  // The public API exposes credentials only through the (paginated) list endpoint.
+  const res = await fetch(`${API_BASE}/api/v1/credentials?limit=250`, {
+    headers: { 'X-N8N-API-KEY': API_KEY! },
+  });
+  if (!res.ok) {
+    // Older n8n versions do not expose GET /credentials; deploy can still proceed.
+    console.warn(
+      `[warn] could not list credentials (${res.status}); credential IDs will be left empty`
+    );
+    return [];
+  }
+  const data = (await res.json()) as { data: N8nCredential[] };
+  return data.data ?? [];
+}
+
+/**
+ * Resolves credential *names* (as committed in the repo) to instance credential IDs.
+ * Names are environment-agnostic; IDs are not.
+ */
+function resolveCredentialIds(wf: N8nWorkflow, idsByName: Map<string, string>): void {
+  for (const node of wf.nodes as Array<Record<string, any>>) {
+    if (!node.credentials) continue;
+    for (const [credType, ref] of Object.entries(node.credentials as Record<string, any>)) {
+      if (!ref?.name || ref.id) continue;
+      const id = idsByName.get(ref.name);
+      if (!id) {
+        console.warn(
+          `[warn] ${wf.name}: node "${node.name}" references credential "${ref.name}" ` +
+            `which does not exist on this instance — create it and re-run.`
+        );
+        continue;
+      }
+      node.credentials[credType] = { id, name: ref.name };
+    }
+  }
+}
+
 async function listWorkflows(): Promise<N8nWorkflow[]> {
   const res = await fetch(`${API_BASE}/api/v1/workflows`, {
     headers: { 'X-N8N-API-KEY': API_KEY! },
@@ -115,9 +158,14 @@ async function main(): Promise<void> {
   const subWorkflows = workflows.filter((wf) => !callsSubWorkflows(wf));
   const callers = workflows.filter(callsSubWorkflows);
 
+  const credentialIds = new Map(
+    (await listCredentials()).map((c) => [c.name, c.id] as const)
+  );
+
   const idsByName = new Map<string, string>();
 
   const deploy = async (wf: N8nWorkflow): Promise<void> => {
+    resolveCredentialIds(wf, credentialIds);
     const match = existing.find((e) => e.name === wf.name);
     const id = match ? await updateWorkflow(wf, match.id!) : await createWorkflow(wf);
     idsByName.set(wf.name, id);

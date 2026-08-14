@@ -46,10 +46,6 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.RESEND_API_KEY }}"
-            },
-            {
               "name": "Idempotency-Key",
               "value": "={{ $json.eventId }}"
             }
@@ -58,8 +54,16 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ from: $env.RESEND_FROM, to: $json.to, subject: $json.subject, html: $json.html }) }}",
-        "options": {}
+        "jsonBody": "={{ JSON.stringify({ from: \"Contravo <onboarding@resend.dev>\", to: $json.to, subject: $json.subject, html: $json.html }) }}",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "RESEND_API_KEY"
+        }
       }
     }
   ],

@@ -20,17 +20,61 @@
       "webhookId": "a05c1013-84ea-46e8-8083-eace719b0154"
     },
     {
+      "id": "96ddf023-21da-440b-bb07-f52d1ae82899",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        340,
+        300
+      ],
+      "notes": "Point unique de configuration : modifier apiBase quand l'URL du tunnel change.",
+      "notesInFlow": true,
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1021fdce-2b28-4594-b4e7-578d932088b4",
+              "name": "apiBase",
+              "type": "string",
+              "value": "https://CHANGEME.trycloudflare.com"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
       "id": "7953e26d-b3ad-44ff-83cf-d3b9de5e6d2e",
       "name": "Verify Signature",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
       "position": [
-        300,
+        480,
         300
       ],
       "parameters": {
-        "language": "javaScript",
-        "jsCode": "\nconst crypto = require('crypto');\nconst secret = process.env.N8N_EXCELLENCE_WEBHOOK_SECRET;\nconst item = $('Excellence Events Webhook').first().json;\nconst header = item.headers['x-webhook-signature'];\nconst rawBody = JSON.stringify(item.body);\nconst parts = (header || '').split(',');\nlet ts, v1;\nfor (const p of parts) { const [k, v] = p.split('='); if (k === 't') ts = v; if (k === 'v1') v1 = v; }\nconst now = Math.floor(Date.now() / 1000);\nlet valid = false;\nif (ts && v1 && Math.abs(now - Number(ts)) <= 300) {\n  const expected = crypto.createHmac('sha256', secret).update(ts + '.' + rawBody).digest('hex');\n  valid = crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(v1, 'hex'));\n}\nconst eventType = item.body?.type || item.headers['x-webhook-event'];\nreturn [{ json: { valid, event: eventType, payload: item.body } }];\n"
+        "method": "POST",
+        "url": "={{ $('Config').first().json.apiBase }}/api/v1/webhooks/verify",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ signature: $json.headers['x-webhook-signature'], rawBody: JSON.stringify($json.body) }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "notes": "Le sandbox n8n interdit crypto/process.env dans les nodes Code : la verification HMAC est deleguee a Excellence.",
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "EXCELLENCE_API_KEY"
+        }
       }
     },
     {
@@ -39,7 +83,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        500,
+        680,
         300
       ],
       "parameters": {
@@ -69,7 +113,7 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.4,
       "position": [
-        700,
+        880,
         300
       ],
       "parameters": {
@@ -363,7 +407,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        900,
+        1080,
         300
       ],
       "parameters": {
@@ -389,7 +433,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        1100,
+        1280,
         300
       ],
       "parameters": {
@@ -408,7 +452,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        900,
+        1080,
         450
       ],
       "parameters": {
@@ -434,7 +478,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        900,
+        1080,
         600
       ],
       "parameters": {
@@ -460,7 +504,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        900,
+        1080,
         750
       ],
       "parameters": {
@@ -486,7 +530,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        900,
+        1080,
         900
       ],
       "parameters": {
@@ -512,7 +556,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        900,
+        1080,
         1050
       ],
       "parameters": {
@@ -538,7 +582,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        900,
+        1080,
         1200
       ],
       "parameters": {
@@ -564,7 +608,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        900,
+        1080,
         1350
       ],
       "parameters": {
@@ -590,7 +634,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        900,
+        1080,
         1500
       ],
       "parameters": {
@@ -616,7 +660,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        900,
+        1080,
         1650
       ],
       "parameters": {
@@ -642,7 +686,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        900,
+        1080,
         1800
       ],
       "parameters": {
@@ -668,7 +712,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        900,
+        1080,
         1950
       ],
       "parameters": {
@@ -694,7 +738,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        900,
+        1080,
         2100
       ],
       "parameters": {
@@ -720,7 +764,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        700,
+        880,
         450
       ],
       "parameters": {
@@ -739,7 +783,7 @@
       "main": [
         [
           {
-            "node": "Verify Signature",
+            "node": "Config",
             "type": "main",
             "index": 0
           }
@@ -1007,6 +1051,17 @@
         [
           {
             "node": "Acknowledge 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Verify Signature",
             "type": "main",
             "index": 0
           }

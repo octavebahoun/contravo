@@ -74,16 +74,7 @@
       "parameters": {
         "method": "GET",
         "url": "={{ $json.pdfDownloadUrl }}",
-        "sendHeaders": true,
-        "specifyHeaders": "keypair",
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.EXCELLENCE_API_KEY }}"
-            }
-          ]
-        },
+        "sendHeaders": false,
         "options": {
           "redirect": {
             "redirect": {
@@ -97,6 +88,14 @@
               "outputPropertyName": "data"
             }
           }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "EXCELLENCE_API_KEY"
         }
       }
     },
@@ -156,10 +155,6 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.RESEND_API_KEY }}"
-            },
-            {
               "name": "Idempotency-Key",
               "value": "={{ $json.eventId }}"
             }
@@ -168,8 +163,16 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ from: $env.RESEND_FROM, to: $json.to, subject: $json.subject, html: $json.html, attachments: $json.attachments }) }}",
-        "options": {}
+        "jsonBody": "={{ JSON.stringify({ from: \"Contravo <onboarding@resend.dev>\", to: $json.to, subject: $json.subject, html: $json.html, attachments: $json.attachments }) }}",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "RESEND_API_KEY"
+        }
       }
     }
   ],
