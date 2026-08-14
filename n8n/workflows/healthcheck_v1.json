@@ -34,12 +34,14 @@
       "parameters": {
         "method": "GET",
         "url": "={{ $env.EXCELLENCE_API_BASE }}/api/v1/me",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "specifyHeaders": "keypair",
         "headerParameters": {
           "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.EXCELLENCE_API_KEY }}"
+            },
             {
               "name": "X-Excellence-Environment",
               "value": "={{ $env.EXCELLENCE_ENV }}"
