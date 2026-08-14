@@ -27,6 +27,7 @@ import {
   SignatureMockup,
 } from './mockups';
 import { HeroReveal, Reveal, RevealChild, fadeUpVariants } from './motion';
+import { SquigglyText } from '@/components/ui/squiggly-text';
 
 /**
  * Landing sections (structure and animation adapted from the Finwise template, MIT).
@@ -49,7 +50,21 @@ const FEATURE_MOCKUPS = [QuoteMockup, SignatureMockup, InvoiceMockup, PortalMock
 
 export function Hero() {
   return (
-    <section id="hero" className="relative overflow-hidden px-4 pb-16 pt-20 sm:px-6 sm:pt-28">
+    <section id="hero" className="relative mx-auto max-w-7xl px-6 pb-16 pt-20 sm:pt-28">
+      {/* Left border */}
+      <div className="absolute inset-y-0 left-0 h-full w-px bg-border/40">
+        <div className="absolute top-0 h-40 w-px bg-gradient-to-b from-transparent via-primary to-transparent" />
+      </div>
+      {/* Right border */}
+      <div className="absolute inset-y-0 right-0 h-full w-px bg-border/40">
+        <div className="absolute h-40 w-px bg-gradient-to-b from-transparent via-primary to-transparent" />
+      </div>
+      {/* Bottom border */}
+      <div className="absolute inset-x-0 bottom-0 h-px w-full bg-border/40">
+        <div className="absolute mx-auto h-px w-40 bg-gradient-to-r from-transparent via-primary to-transparent" />
+      </div>
+
+      {/* Grid backdrop */}
       <div
         aria-hidden
         className="absolute inset-0 -z-10 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-[size:44px_44px] opacity-40 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_40%,#000_55%,transparent_100%)]"
@@ -68,7 +83,7 @@ export function Hero() {
 
         <HeroReveal delay={0.08}>
           <h1 className="mt-6 text-4xl font-bold leading-tight tracking-tight text-foreground sm:text-6xl">
-            {heroDetails.heading}
+            <SquigglyText>{heroDetails.heading}</SquigglyText>
           </h1>
         </HeroReveal>
 
@@ -93,9 +108,18 @@ export function Hero() {
           </p>
         </HeroReveal>
 
-        <HeroReveal delay={0.32}>
-          <div className="mt-14 flex justify-center">
-            <HeroMockup />
+        <HeroReveal
+          delay={0.4}
+          className="relative z-10 mt-20 rounded-3xl border border-border bg-card p-4 shadow-md"
+        >
+          <div className="w-full overflow-hidden rounded-xl border border-border">
+            <img
+              src="/dashboard-preview.png"
+              alt="Dashboard Preview"
+              className="aspect-[16/9] h-auto w-full object-cover"
+              height={1000}
+              width={1000}
+            />
           </div>
         </HeroReveal>
       </div>
@@ -395,7 +419,7 @@ export function CTA() {
       <Reveal variants={fadeUpVariants} className="mx-auto max-w-4xl">
         <div className="overflow-hidden rounded-2xl bg-foreground px-6 py-12 text-center sm:px-12">
           <h2 className="text-2xl font-bold text-background sm:text-3xl">
-            {ctaDetails.heading}
+            <SquigglyText>{ctaDetails.heading}</SquigglyText>
           </h2>
           <p className="mx-auto mt-3 max-w-md text-background/70">{ctaDetails.subheading}</p>
 

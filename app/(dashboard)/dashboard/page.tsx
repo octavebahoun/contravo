@@ -9,7 +9,8 @@ import {
   CardTitle,
   CardFooter
 } from '@/components/ui/card';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
+import { GooeyInput } from '@/components/ui/gooey-input';
 import { User } from '@/lib/db/schema';
 import { TeamDataWithMembers } from '@/lib/auth/middleware';
 import { removeTeamMember, inviteTeamMember } from '@/app/(login)/actions';
@@ -95,6 +96,7 @@ function TeamMembers() {
     ActionState,
     FormData
   >(removeTeamMember, {});
+  const [searchQuery, setSearchQuery] = useState('');
 
   const getUserDisplayName = (user: { id: string; name?: string; fullName?: string; email: string }) => {
     return user.fullName || user.name || user.email || 'Unknown User';
@@ -113,58 +115,77 @@ function TeamMembers() {
     );
   }
 
+  const filteredMembers = teamData.teamMembers.filter((member) => {
+    const displayName = getUserDisplayName(member.user).toLowerCase();
+    const email = member.user.email.toLowerCase();
+    const role = member.role.toLowerCase();
+    const query = searchQuery.toLowerCase();
+    return displayName.includes(query) || email.includes(query) || role.includes(query);
+  });
+
   return (
     <Card className="mb-8">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle>Team Members</CardTitle>
+        <GooeyInput
+          placeholder="Rechercher un membre..."
+          value={searchQuery}
+          onValueChange={setSearchQuery}
+        />
       </CardHeader>
       <CardContent>
-        <ul className="space-y-4">
-          {teamData.teamMembers.map((member, index) => (
-            <li key={member.id} className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Avatar>
-                  {/* 
-                    This app doesn't save profile images, but here
-                    is how you'd show them:
+        {filteredMembers.length > 0 ? (
+          <ul className="space-y-4">
+            {filteredMembers.map((member, index) => (
+              <li key={member.id} className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <Avatar>
+                    {/* 
+                      This app doesn't save profile images, but here
+                      is how you'd show them:
 
-                    <AvatarImage
-                      src={member.user.image || ''}
-                      alt={getUserDisplayName(member.user)}
-                    />
-                  */}
-                  <AvatarFallback>
-                    {getUserDisplayName(member.user)
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium">
-                    {getUserDisplayName(member.user)}
-                  </p>
-                  <p className="text-sm text-muted-foreground capitalize">
-                    {member.role}
-                  </p>
+                      <AvatarImage
+                        src={member.user.image || ''}
+                        alt={getUserDisplayName(member.user)}
+                      />
+                    */}
+                    <AvatarFallback>
+                      {getUserDisplayName(member.user)
+                        .split(' ')
+                        .map((n) => n[0])
+                        .join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">
+                      {getUserDisplayName(member.user)}
+                    </p>
+                    <p className="text-sm text-muted-foreground capitalize">
+                      {member.role}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              {index > 1 ? (
-                <form action={removeAction}>
-                  <input type="hidden" name="memberId" value={member.id} />
-                  <Button
-                    type="submit"
-                    variant="outline"
-                    size="sm"
-                    disabled={isRemovePending}
-                  >
-                    {isRemovePending ? 'Removing...' : 'Remove'}
-                  </Button>
-                </form>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+                {index > 1 ? (
+                  <form action={removeAction}>
+                    <input type="hidden" name="memberId" value={member.id} />
+                    <Button
+                      type="submit"
+                      variant="outline"
+                      size="sm"
+                      disabled={isRemovePending}
+                    >
+                      {isRemovePending ? 'Removing...' : 'Remove'}
+                    </Button>
+                  </form>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground py-4 text-center">
+            Aucun membre ne correspond à votre recherche.
+          </p>
+        )}
         {removeState?.error && (
           <p className="text-red-500 mt-4">{removeState.error}</p>
         )}

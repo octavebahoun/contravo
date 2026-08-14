@@ -1,109 +1,30 @@
-'use client';
-
-import Link from 'next/link';
-import { use, useState, Suspense } from 'react';
-import { Button } from '@/components/ui/button';
-import { Home, LogOut } from 'lucide-react';
-import Image from 'next/image';
+import type { ReactNode } from 'react';
+import { AppSidebar } from '@/components/app-sidebar';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { signOut } from '@/app/(login)/actions';
-import { useRouter } from 'next/navigation';
-import { User } from '@/lib/db/schema';
-import useSWR, { mutate } from 'swr';
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
+import { Separator } from '@/components/ui/separator';
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
-function UserMenu() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { data: user } = useSWR<User>('/api/user', fetcher);
-  const router = useRouter();
-
-  async function handleSignOut() {
-    await signOut();
-    mutate('/api/user');
-    router.push('/');
-  }
-
-  if (!user) {
-    return (
-      <>
-        <Button variant="ghost" asChild>
-          <Link href="/sign-in">Se connecter</Link>
-        </Button>
-        <Button asChild>
-          <Link href="/sign-up">Créer un compte</Link>
-        </Button>
-      </>
-    );
-  }
-
+/**
+ * Authenticated application shell (layout from the shadcn `sidebar-08` block).
+ *
+ * Replaces the template's top bar, which still advertised "ACME" and linked to
+ * the removed `/pricing` page.
+ */
+export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-      <DropdownMenuTrigger>
-        <Avatar className="cursor-pointer size-9">
-          <AvatarImage alt={user.fullName || ''} />
-          <AvatarFallback>
-            {user.email
-              .split(' ')
-              .map((n) => n[0])
-              .join('')}
-          </AvatarFallback>
-        </Avatar>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="flex flex-col gap-1">
-        <DropdownMenuItem className="cursor-pointer">
-          <Link href="/dashboard" className="flex w-full items-center">
-            <Home className="mr-2 h-4 w-4" />
-            <span>Tableau de bord</span>
-          </Link>
-        </DropdownMenuItem>
-        <form action={handleSignOut} className="w-full">
-          <button type="submit" className="flex w-full">
-            <DropdownMenuItem className="w-full flex-1 cursor-pointer">
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Se déconnecter</span>
-            </DropdownMenuItem>
-          </button>
-        </form>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border px-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
+        </header>
 
-function Header() {
-  return (
-    <header className="border-b border-border bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-        <Link href="/" className="flex items-center" aria-label="Contravo — accueil">
-          <Image
-            src="/logo.webp"
-            alt="Contravo"
-            width={120}
-            height={32}
-            className="h-8 w-auto object-contain"
-          />
-        </Link>
-        <div className="flex items-center space-x-4">
-          <Suspense fallback={<div className="h-9" />}>
-            <UserMenu />
-          </Suspense>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return (
-    <section className="flex flex-col min-h-screen">
-      <Header />
-      {children}
-    </section>
+        <div className="flex flex-1 flex-col gap-4 p-4 sm:p-6">{children}</div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

@@ -1,141 +1,157 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useActionState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { CircleIcon, Loader2 } from 'lucide-react';
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field';
 import { signIn, signUp } from './actions';
-import { ActionState } from '@/lib/auth/middleware';
+import type { ActionState } from '@/lib/auth/middleware';
 
+/**
+ * Sign-in and sign-up form (layout from the shadcn `login-02` / `signup-02` blocks).
+ *
+ * The block markup is kept, but the submission stays on the existing server
+ * actions: `useActionState` surfaces validation errors returned by the action
+ * and disables the button while it runs.
+ *
+ * Third-party sign-in is deliberately absent — the blocks ship a GitHub button,
+ * and no OAuth provider is wired on this project.
+ */
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
-  const priceId = searchParams.get('priceId');
   const inviteId = searchParams.get('inviteId');
+
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     mode === 'signin' ? signIn : signUp,
     { error: '' }
   );
 
-  return (
-    <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <CircleIcon className="h-12 w-12 text-orange-500" />
-        </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          {mode === 'signin'
-            ? 'Sign in to your account'
-            : 'Create your account'}
-        </h2>
-      </div>
+  const isSignIn = mode === 'signin';
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <form className="space-y-6" action={formAction}>
+  return (
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-background px-4 py-12">
+      <div className="w-full max-w-sm">
+        <div className="mb-8 flex justify-center">
+          <Link href="/" aria-label="Contravo — accueil">
+            <Image
+              src="/logo.webp"
+              alt="Contravo"
+              width={148}
+              height={40}
+              className="h-10 w-auto object-contain"
+              priority
+            />
+          </Link>
+        </div>
+
+        <form action={formAction} className="flex flex-col gap-6">
           <input type="hidden" name="redirect" value={redirect || ''} />
-          <input type="hidden" name="priceId" value={priceId || ''} />
           <input type="hidden" name="inviteId" value={inviteId || ''} />
-          <div>
-            <Label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Email
-            </Label>
-            <div className="mt-1">
+
+          <FieldGroup>
+            <div className="flex flex-col items-center gap-1 text-center">
+              <h1 className="text-2xl font-bold">
+                {isSignIn ? 'Connexion à votre compte' : 'Créer votre compte'}
+              </h1>
+              <p className="text-sm text-balance text-muted-foreground">
+                {isSignIn
+                  ? 'Entrez votre email pour accéder à votre espace.'
+                  : 'Quelques secondes suffisent pour démarrer.'}
+              </p>
+            </div>
+
+            <Field>
+              <FieldLabel htmlFor="email">Email</FieldLabel>
               <Input
                 id="email"
                 name="email"
                 type="email"
                 autoComplete="email"
-                defaultValue={state.email}
+                placeholder="vous@exemple.com"
                 required
-                maxLength={50}
-                className="appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm"
-                placeholder="Enter your email"
+                maxLength={255}
+                defaultValue={state.email}
               />
-            </div>
-          </div>
+            </Field>
 
-          <div>
-            <Label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Password
-            </Label>
-            <div className="mt-1">
+            <Field>
+              {/* The blocks ship a "forgot password" link; there is no reset
+                  page yet (only the API route), so linking it would 404. */}
+              <FieldLabel htmlFor="password">Mot de passe</FieldLabel>
               <Input
                 id="password"
                 name="password"
                 type="password"
-                autoComplete={
-                  mode === 'signin' ? 'current-password' : 'new-password'
-                }
-                defaultValue={state.password}
+                autoComplete={isSignIn ? 'current-password' : 'new-password'}
                 required
                 minLength={8}
                 maxLength={100}
-                className="appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm"
-                placeholder="Enter your password"
+                defaultValue={state.password}
               />
-            </div>
-          </div>
+              {!isSignIn ? (
+                <FieldDescription>8 caractères minimum.</FieldDescription>
+              ) : null}
+            </Field>
 
-          {state?.error && (
-            <div className="text-red-500 text-sm">{state.error}</div>
-          )}
+            {state?.error ? (
+              <p
+                role="alert"
+                className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              >
+                {state.error}
+              </p>
+            ) : null}
 
-          <div>
-            <Button
-              type="submit"
-              className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-              disabled={pending}
-            >
-              {pending ? (
-                <>
-                  <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                  Loading...
-                </>
-              ) : mode === 'signin' ? (
-                'Sign in'
-              ) : (
-                'Sign up'
-              )}
-            </Button>
-          </div>
+            <Field>
+              <Button type="submit" disabled={pending}>
+                {pending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                    Un instant…
+                  </>
+                ) : isSignIn ? (
+                  'Se connecter'
+                ) : (
+                  'Créer mon compte'
+                )}
+              </Button>
+
+              <FieldDescription className="text-center">
+                {isSignIn ? (
+                  <>
+                    Pas encore de compte ?{' '}
+                    <Link
+                      href={`/sign-up${redirect ? `?redirect=${redirect}` : ''}`}
+                      className="underline underline-offset-4"
+                    >
+                      Créer un compte
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    Vous avez déjà un compte ?{' '}
+                    <Link
+                      href={`/sign-in${redirect ? `?redirect=${redirect}` : ''}`}
+                      className="underline underline-offset-4"
+                    >
+                      Se connecter
+                    </Link>
+                  </>
+                )}
+              </FieldDescription>
+            </Field>
+          </FieldGroup>
         </form>
-
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-50 text-gray-500">
-                {mode === 'signin'
-                  ? 'New to our platform?'
-                  : 'Already have an account?'}
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <Link
-              href={`${mode === 'signin' ? '/sign-up' : '/sign-in'}${
-                redirect ? `?redirect=${redirect}` : ''
-              }${priceId ? `&priceId=${priceId}` : ''}`}
-              className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-full shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-            >
-              {mode === 'signin'
-                ? 'Create an account'
-                : 'Sign in to existing account'}
-            </Link>
-          </div>
-        </div>
       </div>
     </div>
   );
