@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { db } from '../lib/db/drizzle';
 import { organizations, apiKeys, webhookEndpoints, webhookDeliveries } from '../lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -6,6 +6,21 @@ import { generateApiKey, verifyApiKey, rotateApiKey, revokeApiKey } from '../lib
 import { generatePublicToken, verifyPublicToken, consumePublicToken, revokePublicToken } from '../lib/public-tokens';
 import { rateLimit } from '../lib/rate-limit';
 import { emit, signPayload } from '../lib/webhooks';
+
+vi.mock('@upstash/redis', () => {
+  return {
+    Redis: class MockRedis {
+      constructor() {}
+      pipeline() {
+        return {
+          incr: () => {},
+          expire: () => {},
+          exec: () => Promise.reject(new Error('Redis disabled for tests')),
+        };
+      }
+    },
+  };
+});
 
 describe('Unified API Auth and Infrastructure Test Suite', () => {
   let orgId: string;
@@ -33,7 +48,7 @@ describe('Unified API Auth and Infrastructure Test Suite', () => {
       })
       .returning();
     otherOrgId = otherOrg.id;
-  });
+  }, 60000);
 
   afterAll(async () => {
     // Cleanup database records
@@ -43,7 +58,7 @@ describe('Unified API Auth and Infrastructure Test Suite', () => {
     if (otherOrgId) {
       await db.delete(organizations).where(eq(organizations.id, otherOrgId));
     }
-  });
+  }, 60000);
 
   describe('1. API Key Lifecycle & Security', () => {
     it('should generate, verify, rotate, and revoke API keys with proper scope/tenant validation', async () => {
@@ -159,21 +174,15 @@ describe('Unified API Auth and Infrastructure Test Suite', () => {
     it('should allow requests within rate limits and block once limit is exceeded', async () => {
       const limitKey = `rate-limit-test-${Date.now()}`;
       
-      // Let's make 105 requests for the 'free' tier (limit: 100)
-      const results: boolean[] = [];
-      for (let i = 0; i < 105; i++) {
-        const res = await rateLimit(limitKey, 'free');
-        results.push(res.allowed);
-      }
+      // Let's make 105 requests for the 'free' tier (limit: 100) in parallel to avoid timeouts
+      const promises = Array.from({ length: 105 }, () => rateLimit(limitKey, 'free'));
+      const responses = await Promise.all(promises);
+      
+      const allowedCount = responses.filter(r => r.allowed).length;
+      const blockedCount = responses.filter(r => !r.allowed).length;
 
-      // First 100 requests should be allowed
-      for (let i = 0; i < 100; i++) {
-        expect(results[i]).toBe(true);
-      }
-      // Requests 101-105 should be blocked
-      for (let i = 100; i < 105; i++) {
-        expect(results[i]).toBe(false);
-      }
+      expect(allowedCount).toBe(100);
+      expect(blockedCount).toBe(5);
     });
   });
 

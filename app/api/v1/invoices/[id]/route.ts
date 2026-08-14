@@ -11,7 +11,7 @@ const updateInvoiceItemSchema = z.object({
   unit: z.string().default('unit'),
   unitPriceCents: z.string().transform((val) => BigInt(val)).or(z.number().transform((val) => BigInt(val))),
   discountBps: z.number().default(0),
-  position: z.number().optional(),
+  position: z.number().default(0),
 });
 
 const updateInvoiceSchema = z.object({
@@ -21,7 +21,7 @@ const updateInvoiceSchema = z.object({
   currency: z.string().optional(),
   discountCents: z.string().transform((val) => BigInt(val)).or(z.number().transform((val) => BigInt(val))).optional(),
   taxRateBps: z.number().optional(),
-  dueDate: z.string().transform((val) => new Date(val)).optional(),
+  dueDate: z.string().optional(),
   notes: z.string().optional().nullable(),
   items: z.array(updateInvoiceItemSchema).optional(),
 });
@@ -47,7 +47,7 @@ export async function GET(
       taxCents: invoice.taxCents.toString(),
       totalCents: invoice.totalCents.toString(),
       amountPaidCents: invoice.amountPaidCents.toString(),
-      amountDueCents: invoice.amountDueCents.toString(),
+      amountDueCents: invoice.amountDueCents?.toString() ?? '0',
       items: invoice.items.map((item) => ({
         ...item,
         unitPriceCents: item.unitPriceCents.toString(),
@@ -56,7 +56,7 @@ export async function GET(
       payments: invoice.payments.map((p) => ({
         ...p,
         amountCents: p.amountCents.toString(),
-        netAmountCents: p.netAmountCents.toString(),
+        netAmountCents: p.netAmountCents?.toString() ?? '0',
         gatewayFeesCents: p.gatewayFeesCents?.toString() || null,
       })),
     };
@@ -97,7 +97,7 @@ export async function PATCH(
       taxCents: invoice.taxCents.toString(),
       totalCents: invoice.totalCents.toString(),
       amountPaidCents: invoice.amountPaidCents.toString(),
-      amountDueCents: invoice.amountDueCents.toString(),
+      amountDueCents: invoice.amountDueCents?.toString() ?? '0',
       items: invoice.items.map((item) => ({
         ...item,
         unitPriceCents: item.unitPriceCents.toString(),
@@ -106,7 +106,7 @@ export async function PATCH(
       payments: invoice.payments.map((p) => ({
         ...p,
         amountCents: p.amountCents.toString(),
-        netAmountCents: p.netAmountCents.toString(),
+        netAmountCents: p.netAmountCents?.toString() ?? '0',
         gatewayFeesCents: p.gatewayFeesCents?.toString() || null,
       })),
     };
@@ -140,7 +140,7 @@ export async function DELETE(
       taxCents: invoice.taxCents.toString(),
       totalCents: invoice.totalCents.toString(),
       amountPaidCents: invoice.amountPaidCents.toString(),
-      amountDueCents: invoice.amountDueCents.toString(),
+      amountDueCents: invoice.amountDueCents?.toString() ?? '0',
     };
 
     return NextResponse.json(serializedInvoice);

@@ -11,13 +11,13 @@ const updateQuoteItemSchema = z.object({
   unit: z.string().default('unit'),
   unitPriceCents: z.string().transform((val) => BigInt(val)).or(z.number().transform((val) => BigInt(val))),
   discountBps: z.number().default(0),
-  position: z.number().optional(),
+  position: z.number().default(0),
 });
 
 const updateQuoteSchema = z.object({
   projectId: z.string().uuid().optional(),
   clientId: z.string().uuid().optional(),
-  validUntil: z.string().transform((val) => new Date(val)).optional(),
+  validUntil: z.string().optional(),
   currency: z.string().optional(),
   discountCents: z.string().transform((val) => BigInt(val)).or(z.number().transform((val) => BigInt(val))).optional(),
   taxRateBps: z.number().optional(),

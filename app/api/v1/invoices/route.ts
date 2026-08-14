@@ -10,7 +10,7 @@ const createInvoiceItemSchema = z.object({
   unit: z.string().default('unit'),
   unitPriceCents: z.string().transform((val) => BigInt(val)).or(z.number().transform((val) => BigInt(val))),
   discountBps: z.number().default(0),
-  position: z.number().optional(),
+  position: z.number().default(0),
 });
 
 const createInvoiceSchema = z.object({
@@ -20,7 +20,8 @@ const createInvoiceSchema = z.object({
   currency: z.string().default('XOF'),
   discountCents: z.string().transform((val) => BigInt(val)).or(z.number().transform((val) => BigInt(val))).default(0),
   taxRateBps: z.number().default(0),
-  dueDate: z.string().transform((val) => new Date(val)),
+  issueDate: z.string().default(() => new Date().toISOString().split('T')[0]),
+  dueDate: z.string(),
   notes: z.string().optional().nullable(),
   status: z.enum(['draft', 'sent', 'partial', 'paid', 'overdue', 'cancelled', 'refunded']).default('draft'),
   items: z.array(createInvoiceItemSchema),
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest) {
         currency: validated.currency,
         discountCents: validated.discountCents,
         taxRateBps: validated.taxRateBps,
+        issueDate: validated.issueDate,
         dueDate: validated.dueDate,
         notes: validated.notes,
         status: validated.status,
@@ -95,7 +97,7 @@ export async function POST(request: NextRequest) {
       taxCents: invoice.taxCents.toString(),
       totalCents: invoice.totalCents.toString(),
       amountPaidCents: invoice.amountPaidCents.toString(),
-      amountDueCents: invoice.amountDueCents.toString(),
+      amountDueCents: (invoice.amountDueCents ?? 0n).toString(),
       items: invoice.items.map((item) => ({
         ...item,
         unitPriceCents: item.unitPriceCents.toString(),

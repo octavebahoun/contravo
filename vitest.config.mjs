@@ -11,6 +11,6 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './'),
     },
-    testTimeout: 20000, // 20s timeout since we hit a real DB
+    testTimeout: 60000, // 60s timeout since we hit a real remote DB
   },
 });

@@ -76,9 +76,10 @@ export async function createContract(
 }
 
 export async function getContractById(organizationId: string, id: string) {
-  const tdb = tenantDb(organizationId);
-  const [contract] = await tdb
-    .select(contracts, and(eq(contracts.id, id), sql`deleted_at IS NULL`));
+  const [contract] = await db
+    .select()
+    .from(contracts)
+    .where(and(eq(contracts.id, id), eq(contracts.organizationId, organizationId), sql`deleted_at IS NULL`));
   return contract || null;
 }
 
@@ -92,12 +93,11 @@ export async function listContracts(
     limit?: number;
   }
 ) {
-  const tdb = tenantDb(organizationId);
   const page = options?.page || 1;
   const limit = options?.limit || 20;
   const offset = (page - 1) * limit;
 
-  const conditions = [sql`deleted_at IS NULL`];
+  const conditions = [eq(contracts.organizationId, organizationId), sql`deleted_at IS NULL`];
 
   if (options?.projectId) {
     conditions.push(eq(contracts.projectId, options.projectId));
@@ -109,8 +109,10 @@ export async function listContracts(
     conditions.push(eq(contracts.status, options.status));
   }
 
-  const results = await tdb
-    .select(contracts, and(...conditions))
+  const results = await db
+    .select()
+    .from(contracts)
+    .where(and(...conditions))
     .orderBy(desc(contracts.createdAt))
     .limit(limit)
     .offset(offset);
@@ -125,22 +127,22 @@ export async function updateContract(
   actorUserId?: string | null,
   ipAddress?: string | null
 ) {
-  const tdb = tenantDb(organizationId);
-
-  const [existing] = await tdb
-    .select(contracts, and(eq(contracts.id, id), sql`deleted_at IS NULL`));
+  const [existing] = await db
+    .select()
+    .from(contracts)
+    .where(and(eq(contracts.id, id), eq(contracts.organizationId, organizationId), sql`deleted_at IS NULL`));
 
   if (!existing) {
     throw new ApiError('NOT_FOUND', 'Contract not found', 404);
   }
 
-  const [contract] = await tdb
+  const [contract] = await db
     .update(contracts)
     .set({
       ...input,
       updatedAt: new Date(),
     })
-    .where(eq(contracts.id, id))
+    .where(and(eq(contracts.id, id), eq(contracts.organizationId, organizationId)))
     .returning();
 
   const changed: string[] = [];
@@ -171,22 +173,22 @@ export async function deleteContract(
   actorUserId?: string | null,
   ipAddress?: string | null
 ) {
-  const tdb = tenantDb(organizationId);
-
-  const [existing] = await tdb
-    .select(contracts, and(eq(contracts.id, id), sql`deleted_at IS NULL`));
+  const [existing] = await db
+    .select()
+    .from(contracts)
+    .where(and(eq(contracts.id, id), eq(contracts.organizationId, organizationId), sql`deleted_at IS NULL`));
 
   if (!existing) {
     throw new ApiError('NOT_FOUND', 'Contract not found', 404);
   }
 
-  const [deletedContract] = await tdb
+  const [deletedContract] = await db
     .update(contracts)
     .set({
       deletedAt: new Date(),
       updatedAt: new Date(),
     })
-    .where(eq(contracts.id, id))
+    .where(and(eq(contracts.id, id), eq(contracts.organizationId, organizationId)))
     .returning();
 
   await createAuditLog({

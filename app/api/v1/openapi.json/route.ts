@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server';
-import { OpenAPIRegistry, OpenApiGeneratorV3 } from '@asteasolutions/zod-to-openapi';
+import {
+  OpenAPIRegistry,
+  OpenApiGeneratorV3,
+  extendZodWithOpenApi,
+} from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
+
+// Adds `.openapi()` to zod schemas. Without this call the method does not
+// exist and every schema definition below throws at module evaluation, which
+// fails the production build while `next dev` never evaluates the route.
+extendZodWithOpenApi(z);
 
 export const dynamic = 'force-static';
 
