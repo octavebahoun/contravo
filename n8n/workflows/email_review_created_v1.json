@@ -3,7 +3,7 @@
   "name": "email_review_created_v1",
   "nodes": [
     {
-      "id": "f62045b5-3fbd-4ed7-853c-fc93a5f0b69d",
+      "id": "198f2eec-12ad-4e85-a177-60b0cfd76d87",
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
@@ -12,13 +12,11 @@
         300
       ],
       "parameters": {
-        "workflowInputs": {
-          "values": []
-        }
+        "inputSource": "passthrough"
       }
     },
     {
-      "id": "01e1a404-426d-4c2f-aa07-ffb3fc01ceae",
+      "id": "60fbcbd1-3a78-42db-be7a-e1ea493f1619",
       "name": "Render Email",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -28,11 +26,11 @@
       ],
       "parameters": {
         "language": "javaScript",
-        "jsCode": "const d=$('Execute Workflow Trigger').first().json.data||{};return[{json:{to:d.ownerEmail||'',subject:'Nouvel avis reçu',html:'<p>Un nouvel avis de '+(d.clientName||'client')+' a été publié ('+d.rating+'/5).</p>'}}];"
+        "jsCode": "// Template: review_created/fr — rendu inline (versionné dans /n8n/email-templates)\nconst input = $('Execute Workflow Trigger').first().json;\nconst payload = input.payload || input;\nconst d = payload.data || {};\nconst c = d.client || {};\nconst org = d.org || d.organization || {};\n\nconst SUBJECT_TPL = \"Nouvel avis re\\u00e7u\";\nconst BODY_MJML = \"<mjml><mj-body><mj-section><mj-column><mj-text>Un nouvel avis de {{clientName}} a \\u00e9t\\u00e9 publi\\u00e9 ({{rating}}/5).</mj-text></mj-column></mj-section></mj-body></mjml>\";\n\n// Contexte de résolution des placeholders {{...}}\nconst ctx = {\n  ...d,\n  client: { name: c.name || '', email: c.email || '' },\n  org: {\n    name: org.name || '', logoUrl: org.logoUrl || '',\n    brandColor: org.brandColor || '#111827',\n    email: org.email || '', phone: org.phone || '',\n  },\n  portalUrl: d.portalUrl || '',\n  unsubscribeUrl: d.unsubscribeUrl || '',\n};\n\nfunction lookup(path) {\n  return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), ctx);\n}\nfunction resolve(tpl) {\n  return tpl.replace(/\\{\\{\\s*([\\w.]+)\\s*\\}\\}/g, (_, p) => {\n    const v = lookup(p);\n    return v == null ? '' : String(v);\n  });\n}\n\n// MJML -> HTML. mjml est optionnel dans l'image n8n : fallback si absent.\nfunction compile(mjmlSource) {\n  try {\n    const mjml2html = require('mjml');\n    const out = mjml2html(mjmlSource, { validationLevel: 'soft' });\n    if (out && out.html) return out.html;\n  } catch (e) {\n    // mjml non installé -> dégradation contrôlée vers un HTML simple\n  }\n  const body = mjmlSource\n    .replace(/<mj-button[^>]*href=\"([^\"]*)\"[^>]*>([\\s\\S]*?)<\\/mj-button>/g,\n             '<p><a href=\"$1\">$2</a></p>')\n    .replace(/<mj-text[^>]*>([\\s\\S]*?)<\\/mj-text>/g, '<p>$1</p>')\n    .replace(/<\\/?mj-(?:mjml|body|section|column|raw)[^>]*>/g, '')\n    .replace(/<\\/?mjml[^>]*>/g, '');\n  return '<!doctype html><html><body>' + body + '</body></html>';\n}\n\nconst to = (d.teamEmails && d.teamEmails.length ? d.teamEmails : [d.ownerEmail]).filter(Boolean);\nif (!to.length) {\n  throw new Error('Aucun destinataire résolu pour review_created (event ' + (payload.id || '?') + ')');\n}\n\nreturn [{ json: {\n  eventId: payload.id || '',\n  organizationId: payload.organizationId || '',\n  to,\n  subject: resolve(SUBJECT_TPL).trim(),\n  html: compile(resolve(BODY_MJML)),\n  pdfDownloadUrl: d.pdfUrl || d.pdfDownloadUrl || '',\n  pdfFilename: (d.number ? String(d.number) : 'document') + '.pdf',\n} }];\n"
       }
     },
     {
-      "id": "c7023824-1843-4a41-bf00-9f823a1006bd",
+      "id": "39e00301-d360-4a0d-b4df-9961c5b38f5c",
       "name": "Send via Resend",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
@@ -49,25 +47,19 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{ $env.RESEND_API_KEY }}"
+              "value": "=Bearer {{ $env.RESEND_API_KEY }}"
             },
             {
-              "name": "Content-Type",
-              "value": "application/json"
+              "name": "Idempotency-Key",
+              "value": "={{ $json.eventId }}"
             }
           ]
         },
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": {
-          "from": "={{ $env.RESEND_FROM }}",
-          "to": [
-            "={{ $env.EXCELLENCE_TEAM_EMAIL }}"
-          ],
-          "subject": "={{ $json.subject }}",
-          "html": "={{ $json.html }}"
-        }
+        "jsonBody": "={{ JSON.stringify({ from: $env.RESEND_FROM, to: $json.to, subject: $json.subject, html: $json.html }) }}",
+        "options": {}
       }
     }
   ],
@@ -95,5 +87,7 @@
       ]
     }
   },
-  "settings": {}
+  "settings": {
+    "executionOrder": "v1"
+  }
 }

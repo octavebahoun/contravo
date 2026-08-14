@@ -3,7 +3,7 @@
   "name": "email_quote_accepted_v1",
   "nodes": [
     {
-      "id": "e4a058a7-a774-472f-a3bb-172b011511d2",
+      "id": "5f3f54de-e451-4192-8c04-1a1340f3588e",
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
@@ -12,13 +12,11 @@
         300
       ],
       "parameters": {
-        "workflowInputs": {
-          "values": []
-        }
+        "inputSource": "passthrough"
       }
     },
     {
-      "id": "f07db0fe-a3f6-4cc5-9330-4c582e19e4a5",
+      "id": "10e0ba8e-18e0-4cfe-a172-c31b5946a3d7",
       "name": "Render Email",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -28,11 +26,11 @@
       ],
       "parameters": {
         "language": "javaScript",
-        "jsCode": "const d=$('Execute Workflow Trigger').first().json.data||{};return[{json:{to:d.ownerEmail||'',subject:'Devis '+d.number+' accepté',html:'<p>Le devis <strong>'+d.number+'</strong> a été accepté.</p>'}}];"
+        "jsCode": "// Template: quote_accepted/fr — rendu inline (versionné dans /n8n/email-templates)\nconst input = $('Execute Workflow Trigger').first().json;\nconst payload = input.payload || input;\nconst d = payload.data || {};\nconst c = d.client || {};\nconst org = d.org || d.organization || {};\n\nconst SUBJECT_TPL = \"Devis {{number}} accept\\u00e9\";\nconst BODY_MJML = \"<mjml><mj-body><mj-section><mj-column><mj-text>Le devis <strong>{{number}}</strong> a \\u00e9t\\u00e9 accept\\u00e9.</mj-text></mj-column></mj-section></mj-body></mjml>\";\n\n// Contexte de résolution des placeholders {{...}}\nconst ctx = {\n  ...d,\n  client: { name: c.name || '', email: c.email || '' },\n  org: {\n    name: org.name || '', logoUrl: org.logoUrl || '',\n    brandColor: org.brandColor || '#111827',\n    email: org.email || '', phone: org.phone || '',\n  },\n  portalUrl: d.portalUrl || '',\n  unsubscribeUrl: d.unsubscribeUrl || '',\n};\n\nfunction lookup(path) {\n  return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), ctx);\n}\nfunction resolve(tpl) {\n  return tpl.replace(/\\{\\{\\s*([\\w.]+)\\s*\\}\\}/g, (_, p) => {\n    const v = lookup(p);\n    return v == null ? '' : String(v);\n  });\n}\n\n// MJML -> HTML. mjml est optionnel dans l'image n8n : fallback si absent.\nfunction compile(mjmlSource) {\n  try {\n    const mjml2html = require('mjml');\n    const out = mjml2html(mjmlSource, { validationLevel: 'soft' });\n    if (out && out.html) return out.html;\n  } catch (e) {\n    // mjml non installé -> dégradation contrôlée vers un HTML simple\n  }\n  const body = mjmlSource\n    .replace(/<mj-button[^>]*href=\"([^\"]*)\"[^>]*>([\\s\\S]*?)<\\/mj-button>/g,\n             '<p><a href=\"$1\">$2</a></p>')\n    .replace(/<mj-text[^>]*>([\\s\\S]*?)<\\/mj-text>/g, '<p>$1</p>')\n    .replace(/<\\/?mj-(?:mjml|body|section|column|raw)[^>]*>/g, '')\n    .replace(/<\\/?mjml[^>]*>/g, '');\n  return '<!doctype html><html><body>' + body + '</body></html>';\n}\n\nconst to = (d.teamEmails && d.teamEmails.length ? d.teamEmails : [d.ownerEmail]).filter(Boolean);\nif (!to.length) {\n  throw new Error('Aucun destinataire résolu pour quote_accepted (event ' + (payload.id || '?') + ')');\n}\n\nreturn [{ json: {\n  eventId: payload.id || '',\n  organizationId: payload.organizationId || '',\n  to,\n  subject: resolve(SUBJECT_TPL).trim(),\n  html: compile(resolve(BODY_MJML)),\n  pdfDownloadUrl: d.pdfUrl || d.pdfDownloadUrl || '',\n  pdfFilename: (d.number ? String(d.number) : 'document') + '.pdf',\n} }];\n"
       }
     },
     {
-      "id": "6b7a5589-7e58-4fb5-841c-7eb64fa45393",
+      "id": "0a2eea4d-bd3b-45d2-a233-1abcc946f99e",
       "name": "Send via Resend",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
@@ -49,25 +47,19 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{ $env.RESEND_API_KEY }}"
+              "value": "=Bearer {{ $env.RESEND_API_KEY }}"
             },
             {
-              "name": "Content-Type",
-              "value": "application/json"
+              "name": "Idempotency-Key",
+              "value": "={{ $json.eventId }}"
             }
           ]
         },
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": {
-          "from": "={{ $env.RESEND_FROM }}",
-          "to": [
-            "={{ $env.EXCELLENCE_TEAM_EMAIL }}"
-          ],
-          "subject": "={{ $json.subject }}",
-          "html": "={{ $json.html }}"
-        }
+        "jsonBody": "={{ JSON.stringify({ from: $env.RESEND_FROM, to: $json.to, subject: $json.subject, html: $json.html }) }}",
+        "options": {}
       }
     }
   ],
@@ -95,5 +87,7 @@
       ]
     }
   },
-  "settings": {}
+  "settings": {
+    "executionOrder": "v1"
+  }
 }

@@ -10,6 +10,9 @@
  * Behavior:
  *  - For each *.json file, if a workflow with the same `name` already exists it is
  *    updated (PUT), otherwise it is created (POST).
+ *  - Sub-workflows are deployed before the router, then every `executeWorkflow` node
+ *    referencing a sub-workflow by name is rewritten to the real instance ID
+ *    (n8n resolves `workflowId` by ID, not by name, and IDs differ per environment).
  *  - The function is idempotent and safe to run on every deploy.
  *
  * @example
@@ -40,17 +43,19 @@ async function listWorkflows(): Promise<N8nWorkflow[]> {
   return data.data;
 }
 
-async function createWorkflow(wf: N8nWorkflow): Promise<void> {
+async function createWorkflow(wf: N8nWorkflow): Promise<string> {
   const res = await fetch(`${API_BASE}/api/v1/workflows`, {
     method: 'POST',
     headers: { 'X-N8N-API-KEY': API_KEY!, 'Content-Type': 'application/json' },
     body: JSON.stringify(wf),
   });
   if (!res.ok) throw new Error(`Failed to create ${wf.name}: ${res.status} ${await res.text()}`);
+  const created = (await res.json()) as N8nWorkflow;
   console.log(`[create] ${wf.name}`);
+  return created.id!;
 }
 
-async function updateWorkflow(wf: N8nWorkflow, id: string): Promise<void> {
+async function updateWorkflow(wf: N8nWorkflow, id: string): Promise<string> {
   const res = await fetch(`${API_BASE}/api/v1/workflows/${id}`, {
     method: 'PUT',
     headers: { 'X-N8N-API-KEY': API_KEY!, 'Content-Type': 'application/json' },
@@ -58,6 +63,32 @@ async function updateWorkflow(wf: N8nWorkflow, id: string): Promise<void> {
   });
   if (!res.ok) throw new Error(`Failed to update ${wf.name}: ${res.status} ${await res.text()}`);
   console.log(`[update] ${wf.name}`);
+  return id;
+}
+
+/**
+ * Rewrites every `executeWorkflow` node's `workflowId` from a workflow *name*
+ * (as committed in the repo, which is environment-agnostic) to the actual
+ * instance ID, using the name -> id map built while deploying sub-workflows.
+ */
+function resolveSubWorkflowIds(wf: N8nWorkflow, idsByName: Map<string, string>): void {
+  for (const node of wf.nodes as Array<Record<string, any>>) {
+    if (node.type !== 'n8n-nodes-base.executeWorkflow') continue;
+    const ref = node.parameters?.workflowId;
+    if (!ref || typeof ref !== 'object') continue;
+
+    // Repo JSON references sub-workflows by name; n8n resolves by ID.
+    const name = ref.mode === 'name' ? String(ref.value) : ref.cachedResultName;
+    if (!name) continue;
+
+    const id = idsByName.get(name);
+    if (!id) {
+      throw new Error(
+        `${wf.name}: node "${node.name}" references unknown sub-workflow "${name}"`
+      );
+    }
+    node.parameters.workflowId = { __rl: true, mode: 'id', value: id, cachedResultName: name };
+  }
 }
 
 async function main(): Promise<void> {
@@ -71,17 +102,34 @@ async function main(): Promise<void> {
   const files = fs.readdirSync(DIR).filter((f) => f.endsWith('.json'));
   const existing = await listWorkflows();
 
-  for (const file of files) {
+  const workflows = files.map((file) => {
     const raw = fs.readFileSync(path.join(DIR, file), 'utf-8');
-    const wf = JSON.parse(raw) as N8nWorkflow;
+    return JSON.parse(raw) as N8nWorkflow;
+  });
+
+  // Sub-workflows first: the router needs their IDs to wire its executeWorkflow nodes.
+  const callsSubWorkflows = (wf: N8nWorkflow): boolean =>
+    (wf.nodes as Array<Record<string, unknown>>).some(
+      (n) => n.type === 'n8n-nodes-base.executeWorkflow'
+    );
+  const subWorkflows = workflows.filter((wf) => !callsSubWorkflows(wf));
+  const callers = workflows.filter(callsSubWorkflows);
+
+  const idsByName = new Map<string, string>();
+
+  const deploy = async (wf: N8nWorkflow): Promise<void> => {
     const match = existing.find((e) => e.name === wf.name);
-    if (match) {
-      await updateWorkflow(wf, match.id!);
-    } else {
-      await createWorkflow(wf);
-    }
+    const id = match ? await updateWorkflow(wf, match.id!) : await createWorkflow(wf);
+    idsByName.set(wf.name, id);
+  };
+
+  for (const wf of subWorkflows) await deploy(wf);
+  for (const wf of callers) {
+    resolveSubWorkflowIds(wf, idsByName);
+    await deploy(wf);
   }
-  console.log(`Deployed ${files.length} workflow(s).`);
+
+  console.log(`Deployed ${workflows.length} workflow(s).`);
 }
 
 main().catch((err) => {
