@@ -4,6 +4,8 @@ import { eq, and, sql } from 'drizzle-orm';
 import { decryptSecret, decryptSecretWithKek } from '../credentials.service';
 import { recordPayment as recordInvoicePayment } from '../../repositories/invoices.repo';
 import { GeniusPayClient } from './geniuspay-client';
+import { emit } from '../../webhooks';
+import { buildEventPayload } from '../../webhooks/payload-builder';
 
 
 
@@ -324,94 +326,122 @@ export async function processGeniusPayWebhook(
     return { status: 200, body: { success: true, message: 'Amount mismatch detected' } };
   }
 
-  // Step 8: Apply Business Logic inside transaction
+  // Step 8: Apply Business Logic
   try {
-    await db.transaction(async (tx) => {
-      // Find matching local intent
-      const [intent] = await tx
-        .select()
-        .from(paymentIntents)
-        .where(and(eq(paymentIntents.gatewayReference, reference), eq(paymentIntents.organizationId, orgId)));
+    // Find matching local intent
+    const [intent] = await db
+      .select()
+      .from(paymentIntents)
+      .where(and(eq(paymentIntents.gatewayReference, reference), eq(paymentIntents.organizationId, orgId)));
 
-      if (eventType === 'payment.success') {
-        const feesCents = refetchedPayment.data?.fees ? BigInt(Math.round(refetchedPayment.data.fees * 100)) : 0n;
-        const netCents = refetchedPayment.data?.net_amount ? BigInt(Math.round(refetchedPayment.data.net_amount * 100)) : 0n;
+    if (eventType === 'payment.success') {
+      const feesCents = refetchedPayment.data?.fees ? BigInt(Math.round(refetchedPayment.data.fees * 100)) : 0n;
+      const netCents = refetchedPayment.data?.net_amount ? BigInt(Math.round(refetchedPayment.data.net_amount * 100)) : 0n;
 
-        if (intent) {
-          await tx
-            .update(paymentIntents)
-            .set({
-              status: 'succeeded',
-              gatewayStatus: refetchedPayment.data?.status || 'completed',
-              gatewayPaymentMethod: refetchedPayment.data?.payment_method || null,
-              gatewayFeesCents: feesCents,
-              gatewayNetCents: netCents,
-              succeededAt: new Date(),
-              updatedAt: new Date(),
-            })
-            .where(eq(paymentIntents.id, intent.id));
-        }
+      if (intent) {
+        await db
+          .update(paymentIntents)
+          .set({
+            status: 'succeeded',
+            gatewayStatus: refetchedPayment.data?.status || 'completed',
+            gatewayPaymentMethod: refetchedPayment.data?.payment_method || null,
+            gatewayFeesCents: feesCents,
+            gatewayNetCents: netCents,
+            succeededAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(paymentIntents.id, intent.id));
+      }
 
-        // Record the payment on the invoice
-        const invoiceId = intent?.invoiceId || payload.data?.metadata?.invoice_id;
-        if (invoiceId) {
-          await recordInvoicePayment(
-            orgId,
-            invoiceId,
-            {
-              amountCents: intent?.amountCents || BigInt(Math.round(refetchedAmount * 100)),
-              method: 'geniuspay',
-              source: 'geniuspay',
-              paymentIntentId: intent?.id || null,
-              gatewayReference: reference,
-              gatewayFeesCents: feesCents,
-              paidAt: refetchedPayment.data?.completed_at ? new Date(refetchedPayment.data.completed_at) : new Date(),
-            },
-            null,
-            null
-          );
-        }
-      } else if (['payment.failed', 'payment.cancelled', 'payment.expired'].includes(eventType)) {
-        let localStatus: string = 'failed';
-        if (eventType === 'payment.cancelled') localStatus = 'cancelled';
-        if (eventType === 'payment.expired') localStatus = 'expired';
+      // Record the payment on the invoice
+      const invoiceId = intent?.invoiceId || payload.data?.metadata?.invoice_id;
+      if (invoiceId) {
+        await recordInvoicePayment(
+          orgId,
+          invoiceId,
+          {
+            amountCents: intent?.amountCents || BigInt(Math.round(refetchedAmount * 100)),
+            method: 'geniuspay',
+            source: 'geniuspay',
+            paymentIntentId: intent?.id || null,
+            gatewayReference: reference,
+            gatewayFeesCents: feesCents,
+            paidAt: refetchedPayment.data?.completed_at ? new Date(refetchedPayment.data.completed_at) : new Date(),
+          },
+          null,
+          null
+        );
+      }
+    } else if (['payment.failed', 'payment.cancelled', 'payment.expired'].includes(eventType)) {
+      let localStatus: string = 'failed';
+      if (eventType === 'payment.cancelled') localStatus = 'cancelled';
+      if (eventType === 'payment.expired') localStatus = 'expired';
 
-        if (intent) {
-          await tx
-            .update(paymentIntents)
-            .set({
-              status: localStatus,
-              gatewayStatus: refetchedPayment.data?.status || 'failed',
-              failedAt: new Date(),
-              failureReason: refetchedPayment.data?.failure_reason || `GeniusPay event: ${eventType}`,
-              updatedAt: new Date(),
-            })
-            .where(eq(paymentIntents.id, intent.id));
-        }
-      } else if (eventType === 'payment.refunded') {
-        // Refunded event: Record a negative payment on the invoice
-        const invoiceId = intent?.invoiceId || payload.data?.metadata?.invoice_id;
-        if (invoiceId) {
-          const refundAmount = BigInt(Math.round(refetchedAmount * 100));
-          await recordInvoicePayment(
-            orgId,
-            invoiceId,
-            {
-              amountCents: -refundAmount, // Negative amount representing refund
-              method: 'geniuspay',
-              source: 'geniuspay',
-              paymentIntentId: intent?.id || null,
-              gatewayReference: `${reference}-refund`,
-              gatewayFeesCents: 0n,
-              paidAt: new Date(),
-              notes: 'Refunded via GeniusPay webhook',
-            },
-            null,
-            null
-          );
+      if (intent) {
+        const failureReason =
+          refetchedPayment.data?.failure_reason || `GeniusPay event: ${eventType}`;
+
+        await db
+          .update(paymentIntents)
+          .set({
+            status: localStatus,
+            gatewayStatus: refetchedPayment.data?.status || 'failed',
+            failedAt: new Date(),
+            failureReason,
+            updatedAt: new Date(),
+          })
+          .where(eq(paymentIntents.id, intent.id));
+
+        // MVP3 §6: notifies the client so they can retry (MVP5 §3.2).
+        if (eventType === 'payment.failed' && intent.invoiceId) {
+          try {
+            const [invoice] = await db
+              .select()
+              .from(invoices)
+              .where(eq(invoices.id, intent.invoiceId))
+              .limit(1);
+
+            if (invoice) {
+              const payload = await buildEventPayload({
+                organizationId: orgId,
+                entityKind: 'invoice',
+                entityId: invoice.id,
+                entity: invoice,
+                withPortalUrl: true,
+                extra: { failureReason },
+              });
+              await emit('invoice.payment_failed', orgId, payload);
+            }
+          } catch (emitErr) {
+            // The payment state is already recorded; a failed notification
+            // must not make the webhook retry and reprocess it.
+            console.error('Failed to emit invoice.payment_failed:', emitErr);
+          }
         }
       }
-    });
+    } else if (eventType === 'payment.refunded') {
+      // Refunded event: Record a negative payment on the invoice
+      const invoiceId = intent?.invoiceId || payload.data?.metadata?.invoice_id;
+      if (invoiceId) {
+        const refundAmount = BigInt(Math.round(refetchedAmount * 100));
+        await recordInvoicePayment(
+          orgId,
+          invoiceId,
+          {
+            amountCents: -refundAmount, // Negative amount representing refund
+            method: 'geniuspay',
+            source: 'geniuspay',
+            paymentIntentId: intent?.id || null,
+            gatewayReference: `${reference}-refund`,
+            gatewayFeesCents: 0n,
+            paidAt: new Date(),
+            notes: 'Refunded via GeniusPay webhook',
+          },
+          null,
+          null
+        );
+      }
+    }
 
     // Step 9: Acknowledge processed
     await db
@@ -427,7 +457,7 @@ export async function processGeniusPayWebhook(
     await db
       .update(paymentWebhookEvents)
       .set({
-        processingError: `transaction_error: ${err.message}`,
+        processingError: `processing_error: ${err.message}`,
       })
       .where(eq(paymentWebhookEvents.id, webhookEventRecord.id));
 

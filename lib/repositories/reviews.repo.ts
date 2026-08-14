@@ -5,6 +5,7 @@ import { reviews, reviewRequests, projects, clients } from '@/lib/db/schema';
 import { ApiError } from '@/lib/rbac';
 import { createAuditLog } from '@/lib/audit';
 import { emit } from '@/lib/webhooks';
+import { buildEventPayload } from '@/lib/webhooks/payload-builder';
 
 export type CreateReviewRequestInput = Omit<
   typeof reviewRequests.$inferInsert,
@@ -59,7 +60,20 @@ export async function createReviewRequest(
     ipAddress,
   });
 
-  await emit('review_request.created', organizationId, { reviewRequest: request });
+  // MVP3 §6 names this event `review.requested`; it is what n8n listens on to
+  // email the client their review link (MVP5 §3.2).
+  try {
+    const payload = await buildEventPayload({
+      organizationId,
+      entityKind: 'review_request',
+      entityId: request.id,
+      entity: { ...request, clientId: input.clientId },
+      withPortalUrl: true,
+    });
+    await emit('review.requested', organizationId, payload);
+  } catch (emitErr) {
+    console.error('Failed to emit review.requested:', emitErr);
+  }
 
   return request;
 }
@@ -183,12 +197,10 @@ export async function moderateReview(
     throw new ApiError('NOT_FOUND', 'Review not found', 404);
   }
 
+  // tenantDb.update takes (table, values, condition) and applies the
+  // organization filter itself — it is not the chainable Drizzle builder.
   const [review] = await tdb
-    .update(reviews)
-    .set({
-      moderationStatus,
-    })
-    .where(eq(reviews.id, id))
+    .update(reviews, { moderationStatus }, eq(reviews.id, id))
     .returning();
 
   await createAuditLog({

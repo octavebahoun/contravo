@@ -1,6 +1,8 @@
 import { getQuoteById, updateQuote } from '@/lib/repositories/quotes.repo';
 import { createContract } from '@/lib/repositories/contracts.repo';
 import { ApiError } from '@/lib/rbac';
+import { emit } from '@/lib/webhooks';
+import { buildEventPayload } from '@/lib/webhooks/payload-builder';
 
 export type QuoteStatus = 'draft' | 'sent' | 'viewed' | 'accepted' | 'rejected' | 'cancelled' | 'expired';
 export type QuoteAction = 'send' | 'view' | 'accept' | 'reject' | 'cancel' | 'expire';
@@ -90,6 +92,35 @@ export async function transitionQuote(
     } catch (contractErr) {
       // Log error but don't fail the quote acceptance transaction if it's separate
       console.error('Failed to auto-create contract for accepted quote:', contractErr);
+    }
+  }
+
+  // Emit the transition event (MVP3 §6). n8n turns these into client emails
+  // (MVP5 §3.2), so `send` carries a portal link and the PDF, while internal
+  // outcomes only need the team recipients.
+  const EVENT_BY_ACTION: Partial<Record<QuoteAction, string>> = {
+    send: 'quote.sent',
+    view: 'quote.viewed',
+    accept: 'quote.accepted',
+    reject: 'quote.rejected',
+  };
+
+  const eventName = EVENT_BY_ACTION[action];
+  if (eventName) {
+    try {
+      const payload = await buildEventPayload({
+        organizationId,
+        entityKind: 'quote',
+        entityId: quoteId,
+        entity: { ...quote, ...updateFields },
+        withPortalUrl: action === 'send',
+        withPdfUrl: action === 'send',
+        extra: action === 'reject' ? { reason: input?.rejectionReason ?? null } : undefined,
+      });
+      await emit(eventName, organizationId, payload);
+    } catch (emitErr) {
+      // Never fail a committed transition because a webhook could not be queued.
+      console.error(`Failed to emit ${eventName} for quote ${quoteId}:`, emitErr);
     }
   }
 
