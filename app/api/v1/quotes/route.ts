@@ -10,13 +10,13 @@ const createQuoteItemSchema = z.object({
   unit: z.string().default('unit'),
   unitPriceCents: z.string().transform((val) => BigInt(val)).or(z.number().transform((val) => BigInt(val))),
   discountBps: z.number().default(0),
-  position: z.number().optional(),
+  position: z.number().default(0),
 });
 
 const createQuoteSchema = z.object({
   projectId: z.string().uuid(),
   clientId: z.string().uuid(),
-  validUntil: z.string().transform((val) => new Date(val)),
+  validUntil: z.string(),
   currency: z.string().default('XOF'),
   discountCents: z.string().transform((val) => BigInt(val)).or(z.number().transform((val) => BigInt(val))).default(0),
   taxRateBps: z.number().default(0),

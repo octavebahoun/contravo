@@ -7,16 +7,6 @@ export async function getUser() {
   return getSession();
 }
 
-export async function getOrganizationByStripeCustomerId(customerId: string) {
-  const result = await db
-    .select()
-    .from(organizations)
-    .where(and(eq(organizations.stripeCustomerId, customerId), isNull(organizations.deletedAt)))
-    .limit(1);
-
-  return result.length > 0 ? result[0] : null;
-}
-
 export async function updateOrganizationSubscription(
   orgId: string,
   subscriptionData: {
@@ -52,10 +42,6 @@ export async function getUserWithOrganization(userId: string) {
 export async function getUserWithTeam(userId: string) {
   const result = await getUserWithOrganization(userId);
   return result ? { user: result.user, teamId: result.organizationId } : null;
-}
-
-export async function getTeamByStripeCustomerId(customerId: string) {
-  return getOrganizationByStripeCustomerId(customerId);
 }
 
 export async function updateTeamSubscription(

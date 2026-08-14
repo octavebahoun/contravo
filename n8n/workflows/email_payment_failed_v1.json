@@ -1,0 +1,97 @@
+{
+  "id": "email_payment_failed_v1",
+  "name": "email_payment_failed_v1",
+  "nodes": [
+    {
+      "id": "2b3aa5fd-2f96-4dd0-841e-a45327f00907",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "8729c0d3-e88e-4d21-a509-942ff909c0ef",
+      "name": "Render Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        300
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// Template: payment_failed/fr — rendu inline (versionné dans /n8n/email-templates)\nconst input = $('Execute Workflow Trigger').first().json;\nconst payload = input.payload || input;\nconst d = payload.data || {};\nconst c = d.client || {};\nconst org = d.org || d.organization || {};\n\nconst SUBJECT_TPL = \"\\u00c9chec de paiement \\u2014 Facture {{number}}\";\nconst BODY_MJML = \"<mjml><mj-body><mj-section><mj-column><mj-text>Bonjour {{client.name}},</mj-text><mj-text>Le paiement de la facture <strong>{{number}}</strong> a \\u00e9chou\\u00e9.</mj-text><mj-button href=\\\"{{portalUrl}}\\\">R\\u00e9essayer</mj-button></mj-column></mj-section></mj-body></mjml>\";\n\n// Contexte de résolution des placeholders {{...}}\nconst ctx = {\n  ...d,\n  client: { name: c.name || '', email: c.email || '' },\n  org: {\n    name: org.name || '', logoUrl: org.logoUrl || '',\n    brandColor: org.brandColor || '#111827',\n    email: org.email || '', phone: org.phone || '',\n  },\n  portalUrl: d.portalUrl || '',\n  unsubscribeUrl: d.unsubscribeUrl || '',\n};\n\nfunction lookup(path) {\n  return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), ctx);\n}\nfunction resolve(tpl) {\n  return tpl.replace(/\\{\\{\\s*([\\w.]+)\\s*\\}\\}/g, (_, p) => {\n    const v = lookup(p);\n    return v == null ? '' : String(v);\n  });\n}\n\n// MJML -> HTML. mjml est optionnel dans l'image n8n : fallback si absent.\nfunction compile(mjmlSource) {\n  try {\n    const mjml2html = require('mjml');\n    const out = mjml2html(mjmlSource, { validationLevel: 'soft' });\n    if (out && out.html) return out.html;\n  } catch (e) {\n    // mjml non installé -> dégradation contrôlée vers un HTML simple\n  }\n  const body = mjmlSource\n    .replace(/<mj-button[^>]*href=\"([^\"]*)\"[^>]*>([\\s\\S]*?)<\\/mj-button>/g,\n             '<p><a href=\"$1\">$2</a></p>')\n    .replace(/<mj-text[^>]*>([\\s\\S]*?)<\\/mj-text>/g, '<p>$1</p>')\n    .replace(/<\\/?mj-(?:mjml|body|section|column|raw)[^>]*>/g, '')\n    .replace(/<\\/?mjml[^>]*>/g, '');\n  return '<!doctype html><html><body>' + body + '</body></html>';\n}\n\nconst to = [c.email].filter(Boolean);\nif (!to.length) {\n  throw new Error('Aucun destinataire résolu pour payment_failed (event ' + (payload.id || '?') + ')');\n}\n\nreturn [{ json: {\n  eventId: payload.id || '',\n  organizationId: payload.organizationId || '',\n  to,\n  subject: resolve(SUBJECT_TPL).trim(),\n  html: compile(resolve(BODY_MJML)),\n  pdfDownloadUrl: d.pdfUrl || d.pdfDownloadUrl || '',\n  pdfFilename: (d.number ? String(d.number) : 'document') + '.pdf',\n} }];\n"
+      }
+    },
+    {
+      "id": "9cbcd674-7340-4be5-9781-2484fb03d9d1",
+      "name": "Send via Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.eventId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: \"Contravo <onboarding@resend.dev>\", to: $json.to, subject: $json.subject, html: $json.html }) }}",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "RESEND_API_KEY"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Render Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Email": {
+      "main": [
+        [
+          {
+            "node": "Send via Resend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

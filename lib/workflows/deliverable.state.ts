@@ -1,5 +1,8 @@
 import { getDeliverableById, updateDeliverable } from '@/lib/repositories/deliverables.repo';
 import { ApiError } from '@/lib/rbac';
+import { emit } from '@/lib/webhooks';
+import { buildEventPayload } from '@/lib/webhooks/payload-builder';
+
 
 export type DeliverableStatus = 'draft' | 'submitted' | 'approved' | 'rejected' | 'revision_requested';
 export type DeliverableAction = 'submit' | 'approve' | 'reject' | 'request_revision';
@@ -73,6 +76,34 @@ export async function transitionDeliverable(
     actorUserId,
     ipAddress
   );
+
+  // Emit the transition event (MVP3 §6); consumed by n8n for transactional
+  // emails (MVP5 §3.2). Recipient-facing transitions carry a portal link.
+  const EVENT_BY_ACTION: Partial<Record<DeliverableAction, string>> = {
+    submit: 'deliverable.submitted',
+    approve: 'deliverable.approved',
+    reject: 'deliverable.rejected',
+    request_revision: 'deliverable.revision_requested',
+  };
+
+  const eventName = EVENT_BY_ACTION[action];
+  if (eventName) {
+    try {
+      const payload = await buildEventPayload({
+        organizationId,
+        entityKind: 'deliverable',
+        entityId: deliverableId,
+        entity: { ...deliverable, ...updateFields },
+        withPortalUrl: action === 'submit',
+        withPdfUrl: false,
+        extra: input?.rejectionReason ? { reason: input.rejectionReason } : undefined,
+      });
+      await emit(eventName, organizationId, payload);
+    } catch (emitErr) {
+      // Never fail a committed transition because a webhook could not be queued.
+      console.error(`Failed to emit ${eventName} for deliverable ${deliverableId}:`, emitErr);
+    }
+  }
 
   return updatedDeliverable;
 }

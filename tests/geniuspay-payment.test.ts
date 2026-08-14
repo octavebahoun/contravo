@@ -83,7 +83,7 @@ describe('GeniusPay Payment Integration and Webhook Pipeline Suite', () => {
       })
       .returning();
     credentialsId = creds.id;
-  });
+  }, 60000);
 
   afterAll(async () => {
     // Cleanup in reverse order
@@ -94,7 +94,7 @@ describe('GeniusPay Payment Integration and Webhook Pipeline Suite', () => {
     await db.delete(invoices).where(eq(invoices.id, invoiceId));
     await db.delete(clients).where(eq(clients.id, clientId));
     await db.delete(organizations).where(eq(organizations.id, orgId));
-  });
+  }, 60000);
 
   describe('1. Payment Intent Creation', () => {
     it('should successfully create local and remote payment intent', async () => {

@@ -1,0 +1,257 @@
+{
+  "id": "email_contract_signed_v1",
+  "name": "email_contract_signed_v1",
+  "nodes": [
+    {
+      "id": "c0859b8b-de6e-4932-a10b-db8d5c6d998f",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "03658c71-cc5f-4aab-8c3b-095d41175bc9",
+      "name": "Render Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        300
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// Template: contract_signed/fr — rendu inline (versionné dans /n8n/email-templates)\nconst input = $('Execute Workflow Trigger').first().json;\nconst payload = input.payload || input;\nconst d = payload.data || {};\nconst c = d.client || {};\nconst org = d.org || d.organization || {};\n\nconst SUBJECT_TPL = \"Contrat {{number}} sign\\u00e9 \\u2014 confirmation\";\nconst BODY_MJML = \"<mjml><mj-body><mj-section><mj-column><mj-text>Merci, le contrat <strong>{{number}}</strong> est sign\\u00e9.</mj-text></mj-column></mj-section></mj-body></mjml>\";\n\n// Contexte de résolution des placeholders {{...}}\nconst ctx = {\n  ...d,\n  client: { name: c.name || '', email: c.email || '' },\n  org: {\n    name: org.name || '', logoUrl: org.logoUrl || '',\n    brandColor: org.brandColor || '#111827',\n    email: org.email || '', phone: org.phone || '',\n  },\n  portalUrl: d.portalUrl || '',\n  unsubscribeUrl: d.unsubscribeUrl || '',\n};\n\nfunction lookup(path) {\n  return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), ctx);\n}\nfunction resolve(tpl) {\n  return tpl.replace(/\\{\\{\\s*([\\w.]+)\\s*\\}\\}/g, (_, p) => {\n    const v = lookup(p);\n    return v == null ? '' : String(v);\n  });\n}\n\n// MJML -> HTML. mjml est optionnel dans l'image n8n : fallback si absent.\nfunction compile(mjmlSource) {\n  try {\n    const mjml2html = require('mjml');\n    const out = mjml2html(mjmlSource, { validationLevel: 'soft' });\n    if (out && out.html) return out.html;\n  } catch (e) {\n    // mjml non installé -> dégradation contrôlée vers un HTML simple\n  }\n  const body = mjmlSource\n    .replace(/<mj-button[^>]*href=\"([^\"]*)\"[^>]*>([\\s\\S]*?)<\\/mj-button>/g,\n             '<p><a href=\"$1\">$2</a></p>')\n    .replace(/<mj-text[^>]*>([\\s\\S]*?)<\\/mj-text>/g, '<p>$1</p>')\n    .replace(/<\\/?mj-(?:mjml|body|section|column|raw)[^>]*>/g, '')\n    .replace(/<\\/?mjml[^>]*>/g, '');\n  return '<!doctype html><html><body>' + body + '</body></html>';\n}\n\nconst to = [c.email, ...(d.teamEmails || [d.ownerEmail])].filter(Boolean);\nif (!to.length) {\n  throw new Error('Aucun destinataire résolu pour contract_signed (event ' + (payload.id || '?') + ')');\n}\n\nreturn [{ json: {\n  eventId: payload.id || '',\n  organizationId: payload.organizationId || '',\n  to,\n  subject: resolve(SUBJECT_TPL).trim(),\n  html: compile(resolve(BODY_MJML)),\n  pdfDownloadUrl: d.pdfUrl || d.pdfDownloadUrl || '',\n  pdfFilename: (d.number ? String(d.number) : 'document') + '.pdf',\n} }];\n"
+      }
+    },
+    {
+      "id": "7c9fafd0-af52-40b0-a32d-dbeb3bc2c8eb",
+      "name": "Has PDF?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "329b8b14-ff3d-4806-a382-ad407037889a",
+              "leftValue": "={{ $json.pdfDownloadUrl }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ee9658bb-a9ba-494d-a895-730252ef8840",
+      "name": "Fetch PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        700,
+        200
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.pdfDownloadUrl }}",
+        "sendHeaders": false,
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": true,
+              "maxRedirects": 5
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "EXCELLENCE_API_KEY"
+        }
+      }
+    },
+    {
+      "id": "dec8cdc6-2014-4313-a43c-d766b16fe914",
+      "name": "Build Attachment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        200
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// Limite MVP5 §5.4 : au-delà de 10 Mo, on envoie le lien au lieu de la pièce jointe.\nconst MAX_BYTES = 10 * 1024 * 1024;\nconst rendered = $('Render Email').first().json;\nconst binary = $input.first().binary?.data;\nif (!binary) {\n  return [{ json: { ...rendered, attachments: [] } }];\n}\nconst buf = await this.helpers.getBinaryDataBuffer(0, 'data');\nif (buf.length > MAX_BYTES) {\n  return [{ json: {\n    ...rendered,\n    html: rendered.html.replace('</body>',\n      '<p><a href=\"' + rendered.pdfDownloadUrl + '\">Télécharger le document (PDF)</a></p></body>'),\n    attachments: [],\n  } }];\n}\nreturn [{ json: {\n  ...rendered,\n  attachments: [{\n    filename: rendered.pdfFilename,\n    content: buf.toString('base64'),\n    content_type: 'application/pdf',\n  }],\n} }];\n"
+      }
+    },
+    {
+      "id": "33c89cb6-d552-483b-bb7f-22300b62810f",
+      "name": "No Attachment",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        700,
+        400
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "eb22d2b9-fda3-4e9b-856d-7b9004f14d7c",
+              "name": "attachments",
+              "value": "={{ [] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "725f205d-51c1-45ea-ac5e-ab0ed9f30b7a",
+      "name": "Send via Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1120,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.eventId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: \"Contravo <onboarding@resend.dev>\", to: $json.to, subject: $json.subject, html: $json.html, attachments: $json.attachments }) }}",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "RESEND_API_KEY"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Render Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Email": {
+      "main": [
+        [
+          {
+            "node": "Has PDF?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has PDF?": {
+      "main": [
+        [
+          {
+            "node": "Fetch PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Attachment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch PDF": {
+      "main": [
+        [
+          {
+            "node": "Build Attachment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Attachment": {
+      "main": [
+        [
+          {
+            "node": "Send via Resend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Attachment": {
+      "main": [
+        [
+          {
+            "node": "Send via Resend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

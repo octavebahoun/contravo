@@ -53,9 +53,10 @@ export async function createExpense(
 }
 
 export async function getExpenseById(organizationId: string, id: string) {
-  const tdb = tenantDb(organizationId);
-  const [expense] = await tdb
-    .select(expenses, and(eq(expenses.id, id), sql`deleted_at IS NULL`));
+  const [expense] = await db
+    .select()
+    .from(expenses)
+    .where(and(eq(expenses.id, id), eq(expenses.organizationId, organizationId), sql`deleted_at IS NULL`));
   return expense || null;
 }
 
@@ -68,12 +69,11 @@ export async function listExpenses(
     limit?: number;
   }
 ) {
-  const tdb = tenantDb(organizationId);
   const page = options?.page || 1;
   const limit = options?.limit || 20;
   const offset = (page - 1) * limit;
 
-  const conditions = [sql`deleted_at IS NULL`];
+  const conditions = [eq(expenses.organizationId, organizationId), sql`deleted_at IS NULL`];
 
   if (options?.projectId) {
     conditions.push(eq(expenses.projectId, options.projectId));
@@ -82,8 +82,10 @@ export async function listExpenses(
     conditions.push(eq(expenses.category, options.category));
   }
 
-  const results = await tdb
-    .select(expenses, and(...conditions))
+  const results = await db
+    .select()
+    .from(expenses)
+    .where(and(...conditions))
     .orderBy(desc(expenses.incurredOn))
     .limit(limit)
     .offset(offset);
@@ -98,22 +100,22 @@ export async function updateExpense(
   actorUserId?: string | null,
   ipAddress?: string | null
 ) {
-  const tdb = tenantDb(organizationId);
-
-  const [existing] = await tdb
-    .select(expenses, and(eq(expenses.id, id), sql`deleted_at IS NULL`));
+  const [existing] = await db
+    .select()
+    .from(expenses)
+    .where(and(eq(expenses.id, id), eq(expenses.organizationId, organizationId), sql`deleted_at IS NULL`));
 
   if (!existing) {
     throw new ApiError('NOT_FOUND', 'Expense not found', 404);
   }
 
-  const [expense] = await tdb
+  const [expense] = await db
     .update(expenses)
     .set({
       ...input,
       updatedAt: new Date(),
     })
-    .where(eq(expenses.id, id))
+    .where(and(eq(expenses.id, id), eq(expenses.organizationId, organizationId)))
     .returning();
 
   const changed: string[] = [];
@@ -144,22 +146,22 @@ export async function deleteExpense(
   actorUserId?: string | null,
   ipAddress?: string | null
 ) {
-  const tdb = tenantDb(organizationId);
-
-  const [existing] = await tdb
-    .select(expenses, and(eq(expenses.id, id), sql`deleted_at IS NULL`));
+  const [existing] = await db
+    .select()
+    .from(expenses)
+    .where(and(eq(expenses.id, id), eq(expenses.organizationId, organizationId), sql`deleted_at IS NULL`));
 
   if (!existing) {
     throw new ApiError('NOT_FOUND', 'Expense not found', 404);
   }
 
-  const [deletedExpense] = await tdb
+  const [deletedExpense] = await db
     .update(expenses)
     .set({
       deletedAt: new Date(),
       updatedAt: new Date(),
     })
-    .where(eq(expenses.id, id))
+    .where(and(eq(expenses.id, id), eq(expenses.organizationId, organizationId)))
     .returning();
 
   await createAuditLog({

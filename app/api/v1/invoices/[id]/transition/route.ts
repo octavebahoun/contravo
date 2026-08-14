@@ -35,7 +35,7 @@ export async function POST(
       taxCents: invoice.taxCents.toString(),
       totalCents: invoice.totalCents.toString(),
       amountPaidCents: invoice.amountPaidCents.toString(),
-      amountDueCents: invoice.amountDueCents.toString(),
+      amountDueCents: (invoice.amountDueCents ?? 0n).toString(),
       items: invoice.items?.map((item) => ({
         ...item,
         unitPriceCents: item.unitPriceCents.toString(),

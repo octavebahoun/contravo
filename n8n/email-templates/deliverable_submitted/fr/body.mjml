@@ -1,0 +1,1 @@
+<mjml><mj-body><mj-section><mj-column><mj-text>Bonjour {{client.name}},</mj-text><mj-text>Un livrable <strong>{{title}}</strong> vous attend validation.</mj-text><mj-button href="{{portalUrl}}">Voir le livrable</mj-button></mj-column></mj-section></mj-body></mjml>

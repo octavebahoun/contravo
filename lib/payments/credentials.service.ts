@@ -5,7 +5,12 @@ import { eq } from 'drizzle-orm';
 
 function getKek(): Buffer {
   const kekStr = process.env.PAYMENT_CREDENTIALS_KEK || 'mock_kek_must_be_32_bytes_long_!';
-  const kek = Buffer.from(kekStr, 'utf-8');
+  let kek: Buffer;
+  if (kekStr.length === 64 && /^[0-9a-fA-F]+$/.test(kekStr)) {
+    kek = Buffer.from(kekStr, 'hex');
+  } else {
+    kek = Buffer.from(kekStr, 'utf-8');
+  }
   if (kek.length !== 32) {
     throw new Error('PAYMENT_CREDENTIALS_KEK must be exactly 32 bytes long');
   }

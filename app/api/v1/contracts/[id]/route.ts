@@ -12,7 +12,7 @@ const updateContractSchema = z.object({
   title: z.string().min(1).optional(),
   status: z.enum(['draft', 'sent', 'signed', 'cancelled', 'expired']).optional(),
   bodyMarkdown: z.string().optional(),
-  expiresAt: z.string().transform((val) => new Date(val)).optional().nullable(),
+  expiresAt: z.string().optional().nullable(),
 });
 
 export async function GET(

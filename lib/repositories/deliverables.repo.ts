@@ -71,9 +71,10 @@ export async function createDeliverable(
 }
 
 export async function getDeliverableById(organizationId: string, id: string) {
-  const tdb = tenantDb(organizationId);
-  const [deliverable] = await tdb
-    .select(deliverables, and(eq(deliverables.id, id), sql`deleted_at IS NULL`));
+  const [deliverable] = await db
+    .select()
+    .from(deliverables)
+    .where(and(eq(deliverables.id, id), eq(deliverables.organizationId, organizationId), sql`deleted_at IS NULL`));
   return deliverable || null;
 }
 
@@ -86,12 +87,11 @@ export async function listDeliverables(
     limit?: number;
   }
 ) {
-  const tdb = tenantDb(organizationId);
   const page = options?.page || 1;
   const limit = options?.limit || 20;
   const offset = (page - 1) * limit;
 
-  const conditions = [sql`deleted_at IS NULL`];
+  const conditions = [eq(deliverables.organizationId, organizationId), sql`deleted_at IS NULL`];
 
   if (options?.projectId) {
     conditions.push(eq(deliverables.projectId, options.projectId));
@@ -100,8 +100,10 @@ export async function listDeliverables(
     conditions.push(eq(deliverables.status, options.status));
   }
 
-  const results = await tdb
-    .select(deliverables, and(...conditions))
+  const results = await db
+    .select()
+    .from(deliverables)
+    .where(and(...conditions))
     .orderBy(desc(deliverables.createdAt))
     .limit(limit)
     .offset(offset);
@@ -116,22 +118,22 @@ export async function updateDeliverable(
   actorUserId?: string | null,
   ipAddress?: string | null
 ) {
-  const tdb = tenantDb(organizationId);
-
-  const [existing] = await tdb
-    .select(deliverables, and(eq(deliverables.id, id), sql`deleted_at IS NULL`));
+  const [existing] = await db
+    .select()
+    .from(deliverables)
+    .where(and(eq(deliverables.id, id), eq(deliverables.organizationId, organizationId), sql`deleted_at IS NULL`));
 
   if (!existing) {
     throw new ApiError('NOT_FOUND', 'Deliverable not found', 404);
   }
 
-  const [deliverable] = await tdb
+  const [deliverable] = await db
     .update(deliverables)
     .set({
       ...input,
       updatedAt: new Date(),
     })
-    .where(eq(deliverables.id, id))
+    .where(and(eq(deliverables.id, id), eq(deliverables.organizationId, organizationId)))
     .returning();
 
   const changed: string[] = [];
@@ -162,22 +164,22 @@ export async function deleteDeliverable(
   actorUserId?: string | null,
   ipAddress?: string | null
 ) {
-  const tdb = tenantDb(organizationId);
-
-  const [existing] = await tdb
-    .select(deliverables, and(eq(deliverables.id, id), sql`deleted_at IS NULL`));
+  const [existing] = await db
+    .select()
+    .from(deliverables)
+    .where(and(eq(deliverables.id, id), eq(deliverables.organizationId, organizationId), sql`deleted_at IS NULL`));
 
   if (!existing) {
     throw new ApiError('NOT_FOUND', 'Deliverable not found', 404);
   }
 
-  const [deletedDeliverable] = await tdb
+  const [deletedDeliverable] = await db
     .update(deliverables)
     .set({
       deletedAt: new Date(),
       updatedAt: new Date(),
     })
-    .where(eq(deliverables.id, id))
+    .where(and(eq(deliverables.id, id), eq(deliverables.organizationId, organizationId)))
     .returning();
 
   await createAuditLog({
@@ -200,7 +202,7 @@ export async function resubmitDeliverable(
   input: {
     title: string;
     description?: string | null;
-    fileR2Key?: string | null;
+    fileId?: string | null;
     fileName?: string | null;
     fileSizeBytes?: bigint | null;
     fileMime?: string | null;
@@ -232,7 +234,7 @@ export async function resubmitDeliverable(
         title: input.title,
         description: input.description || parent.description,
         status: 'submitted',
-        fileR2Key: input.fileR2Key || null,
+        fileId: input.fileId || null,
         fileName: input.fileName || null,
         fileSizeBytes: input.fileSizeBytes || null,
         fileMime: input.fileMime || null,

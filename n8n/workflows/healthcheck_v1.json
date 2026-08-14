@@ -1,0 +1,238 @@
+{
+  "id": "healthcheck_v1",
+  "name": "Healthcheck v1",
+  "nodes": [
+    {
+      "id": "a7f532c8-8a70-4773-b212-5898f7ac8af3",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "dbd725b0-ea4c-4048-8f74-3d18430d5fdc",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        280,
+        300
+      ],
+      "notes": "Point unique de configuration. Modifier apiBase quand l'URL du tunnel change.",
+      "notesInFlow": true,
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "833dccaa-9d9d-413c-a3e1-3845b940960b",
+              "name": "apiBase",
+              "type": "string",
+              "value": "https://CHANGEME.trycloudflare.com"
+            },
+            {
+              "id": "a998c35d-5da2-47ad-9028-980b527594e6",
+              "name": "environment",
+              "type": "string",
+              "value": "staging"
+            },
+            {
+              "id": "3a5bf02c-890e-41b3-96c5-52b2b998874a",
+              "name": "alertWebhook",
+              "type": "string",
+              "value": ""
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "f4593e79-e945-4350-a58e-f0341a17e71a",
+      "name": "Call Excellence API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.apiBase }}/api/v1/clients?limit=1",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Excellence-Environment",
+              "value": "={{ $json.environment }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "fullResponse": true
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "EXCELLENCE_API_KEY"
+        }
+      }
+    },
+    {
+      "id": "0ecd2713-5250-4859-83f8-8fe98b615a4b",
+      "name": "Track Failures",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        300
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const res = $('Call Excellence API').first().json || {};\n// fullResponse + neverError : on juge sur le code HTTP, pas sur la forme du corps\n// (une reponse d'erreur JSON est aussi un objet non vide).\nconst ok = res.statusCode >= 200 && res.statusCode < 300;\nlet failures = Number($workflow.staticData.failures || 0);\nfailures = ok ? 0 : failures + 1;\n$workflow.staticData.failures = failures;\nreturn [{ json: { failures, alert: failures >= 3, statusCode: res.statusCode || null } }];\n"
+      }
+    },
+    {
+      "id": "ceac9495-d23c-4058-b9b7-f4b775b5f984",
+      "name": "Alert?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        900,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.alert }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              },
+              "rightValue": true
+            },
+            {
+              "id": "552bb279-f041-48c4-b6e7-d30b12c40e85",
+              "leftValue": "={{ $('Config').first().json.alertWebhook }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "4f18933d-bf39-4ca7-ab23-09efad2f96f4",
+      "name": "Alert Slack/Ops",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1100,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.alertWebhook }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": {
+          "text": "⚠️ n8n healthcheck: Excellence API unreachable 3× consecutively",
+          "failures": "={{ $json.failures }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Excellence API": {
+      "main": [
+        [
+          {
+            "node": "Track Failures",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Track Failures": {
+      "main": [
+        [
+          {
+            "node": "Alert?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert?": {
+      "main": [
+        [
+          {
+            "node": "Alert Slack/Ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Call Excellence API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

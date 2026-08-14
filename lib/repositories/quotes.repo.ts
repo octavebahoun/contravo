@@ -87,7 +87,7 @@ export async function createQuote(
 
     // 2. Calculate totals
     const totalsInput = items.map(item => ({
-      quantity: item.quantity,
+      quantity: item.quantity || '0',
       unitPriceCents: BigInt(item.unitPriceCents),
       discountBps: item.discountBps || 0,
     }));
@@ -115,7 +115,8 @@ export async function createQuote(
 
     // 5. Insert quote items
     const itemsToInsert = items.map((item, index) => {
-      const qty = parseFloat(item.quantity) || 0;
+      // `quantity` is optional at insert time (schema default '1.000').
+      const qty = parseFloat(item.quantity ?? '1') || 0;
       const unitPrice = BigInt(item.unitPriceCents);
       const disc = BigInt(item.discountBps || 0);
       const amountCents = BigInt(Math.round(qty * Number(unitPrice) * (10000 - Number(disc)) / 10000));
@@ -156,14 +157,17 @@ export async function createQuote(
 }
 
 export async function getQuoteById(organizationId: string, id: string) {
-  const tdb = tenantDb(organizationId);
-  const [quote] = await tdb
-    .select(quotes, and(eq(quotes.id, id), sql`deleted_at IS NULL`));
+  const [quote] = await db
+    .select()
+    .from(quotes)
+    .where(and(eq(quotes.id, id), eq(quotes.organizationId, organizationId), sql`deleted_at IS NULL`));
 
   if (!quote) return null;
 
-  const itemsList = await tdb
-    .select(quoteItems, eq(quoteItems.quoteId, id))
+  const itemsList = await db
+    .select()
+    .from(quoteItems)
+    .where(and(eq(quoteItems.quoteId, id), eq(quoteItems.organizationId, organizationId)))
     .orderBy(quoteItems.position);
 
   return {
@@ -230,7 +234,7 @@ export async function updateQuote(
     let currentItems: { quantity: string; unitPriceCents: bigint; discountBps: number }[] = [];
     if (items) {
       currentItems = items.map(item => ({
-        quantity: item.quantity,
+        quantity: item.quantity || '0',
         unitPriceCents: BigInt(item.unitPriceCents),
         discountBps: item.discountBps || 0,
       }));
@@ -274,7 +278,8 @@ export async function updateQuote(
 
       // Insert new items
       const itemsToInsert = items.map((item, index) => {
-        const qty = parseFloat(item.quantity) || 0;
+        // `quantity` is optional at insert time (schema default '1.000').
+      const qty = parseFloat(item.quantity ?? '1') || 0;
         const unitPrice = BigInt(item.unitPriceCents);
         const disc = BigInt(item.discountBps || 0);
         const amountCents = BigInt(Math.round(qty * Number(unitPrice) * (10000 - Number(disc)) / 10000));
@@ -336,22 +341,22 @@ export async function deleteQuote(
   actorUserId?: string | null,
   ipAddress?: string | null
 ) {
-  const tdb = tenantDb(organizationId);
-
-  const [existing] = await tdb
-    .select(quotes, and(eq(quotes.id, id), sql`deleted_at IS NULL`));
+  const [existing] = await db
+    .select()
+    .from(quotes)
+    .where(and(eq(quotes.id, id), eq(quotes.organizationId, organizationId), sql`deleted_at IS NULL`));
 
   if (!existing) {
     throw new ApiError('NOT_FOUND', 'Quote not found', 404);
   }
 
-  const [deletedQuote] = await tdb
+  const [deletedQuote] = await db
     .update(quotes)
     .set({
       deletedAt: new Date(),
       updatedAt: new Date(),
     })
-    .where(eq(quotes.id, id))
+    .where(and(eq(quotes.id, id), eq(quotes.organizationId, organizationId)))
     .returning();
 
   await createAuditLog({

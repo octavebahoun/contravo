@@ -1,5 +1,8 @@
 import { getInvoiceById, updateInvoice } from '@/lib/repositories/invoices.repo';
 import { ApiError } from '@/lib/rbac';
+import { emit } from '@/lib/webhooks';
+import { buildEventPayload } from '@/lib/webhooks/payload-builder';
+
 
 export type InvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'overdue' | 'cancelled' | 'refunded';
 export type InvoiceAction = 'send' | 'cancel' | 'refund' | 'mark_overdue';
@@ -51,6 +54,33 @@ export async function transitionInvoice(
     actorUserId,
     ipAddress
   );
+
+  // Emit the transition event (MVP3 §6); consumed by n8n for transactional
+  // emails (MVP5 §3.2). Recipient-facing transitions carry a portal link.
+  const EVENT_BY_ACTION: Partial<Record<InvoiceAction, string>> = {
+    send: 'invoice.sent',
+    mark_overdue: 'invoice.overdue',
+    refund: 'invoice.refunded',
+  };
+
+  const eventName = EVENT_BY_ACTION[action];
+  if (eventName) {
+    try {
+      const payload = await buildEventPayload({
+        organizationId,
+        entityKind: 'invoice',
+        entityId: invoiceId,
+        entity: { ...invoice, ...updateFields },
+        withPortalUrl: action === 'send' || action === 'mark_overdue',
+        withPdfUrl: action === 'send',
+        extra: undefined,
+      });
+      await emit(eventName, organizationId, payload);
+    } catch (emitErr) {
+      // Never fail a committed transition because a webhook could not be queued.
+      console.error(`Failed to emit ${eventName} for invoice ${invoiceId}:`, emitErr);
+    }
+  }
 
   return updatedInvoice;
 }

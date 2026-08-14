@@ -90,7 +90,7 @@ export async function createInvoice(
 
     // 2. Calculate totals
     const totalsInput = items.map(item => ({
-      quantity: item.quantity,
+      quantity: item.quantity || '0',
       unitPriceCents: BigInt(item.unitPriceCents),
       discountBps: item.discountBps || 0,
     }));
@@ -119,7 +119,8 @@ export async function createInvoice(
 
     // 5. Insert invoice items
     const itemsToInsert = items.map((item, index) => {
-      const qty = parseFloat(item.quantity) || 0;
+      // `quantity` is optional at insert time (schema default '1.000').
+      const qty = parseFloat(item.quantity ?? '1') || 0;
       const unitPrice = BigInt(item.unitPriceCents);
       const disc = BigInt(item.discountBps || 0);
       const amountCents = BigInt(Math.round(qty * Number(unitPrice) * (10000 - Number(disc)) / 10000));
@@ -160,18 +161,23 @@ export async function createInvoice(
 }
 
 export async function getInvoiceById(organizationId: string, id: string) {
-  const tdb = tenantDb(organizationId);
-  const [invoice] = await tdb
-    .select(invoices, and(eq(invoices.id, id), sql`deleted_at IS NULL`));
+  const [invoice] = await db
+    .select()
+    .from(invoices)
+    .where(and(eq(invoices.id, id), eq(invoices.organizationId, organizationId), sql`deleted_at IS NULL`));
 
   if (!invoice) return null;
 
-  const itemsList = await tdb
-    .select(invoiceItems, eq(invoiceItems.invoiceId, id))
+  const itemsList = await db
+    .select()
+    .from(invoiceItems)
+    .where(eq(invoiceItems.invoiceId, id))
     .orderBy(invoiceItems.position);
 
-  const paymentsList = await tdb
-    .select(invoicePayments, eq(invoicePayments.invoiceId, id))
+  const paymentsList = await db
+    .select()
+    .from(invoicePayments)
+    .where(eq(invoicePayments.invoiceId, id))
     .orderBy(desc(invoicePayments.paidAt));
 
   return {
@@ -239,7 +245,7 @@ export async function updateInvoice(
     let currentItems: { quantity: string; unitPriceCents: bigint; discountBps: number }[] = [];
     if (items) {
       currentItems = items.map(item => ({
-        quantity: item.quantity,
+        quantity: item.quantity || '0',
         unitPriceCents: BigInt(item.unitPriceCents),
         discountBps: item.discountBps || 0,
       }));
@@ -283,7 +289,8 @@ export async function updateInvoice(
 
       // Insert new items
       const itemsToInsert = items.map((item, index) => {
-        const qty = parseFloat(item.quantity) || 0;
+        // `quantity` is optional at insert time (schema default '1.000').
+      const qty = parseFloat(item.quantity ?? '1') || 0;
         const unitPrice = BigInt(item.unitPriceCents);
         const disc = BigInt(item.discountBps || 0);
         const amountCents = BigInt(Math.round(qty * Number(unitPrice) * (10000 - Number(disc)) / 10000));
@@ -365,13 +372,14 @@ export async function deleteInvoice(
     throw new ApiError('VALIDATION_ERROR', 'Only draft invoices can be deleted', 400);
   }
 
+  // tenantDb.update takes (table, values, condition) and applies the
+  // organization filter itself — it is not the chainable Drizzle builder.
   const [deletedInvoice] = await tdb
-    .update(invoices)
-    .set({
-      deletedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(eq(invoices.id, id))
+    .update(
+      invoices,
+      { deletedAt: new Date(), updatedAt: new Date() },
+      eq(invoices.id, id)
+    )
     .returning();
 
   await createAuditLog({

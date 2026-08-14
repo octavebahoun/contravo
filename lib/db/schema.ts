@@ -52,9 +52,75 @@ export const organizations = pgTable('organizations', {
   subscriptionStatus: text('subscription_status'),
   plan: text('plan').default('free'),
   defaultCurrency: text('default_currency').notNull().default('XOF'),
+  logoFileId: uuid('logo_file_id').references((): any => files.id, { onDelete: 'set null' }),
+  brandColor: text('brand_color').default('#2B6CE5'),
+  legalMentions: text('legal_mentions'),
+  bankDetails: jsonb('bank_details'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
+});
+
+export const files = pgTable('files', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
+  r2Key: text('r2_key').unique().notNull(),
+  filename: text('filename').notNull(),
+  mimeType: text('mime_type').notNull(),
+  sizeBytes: bigint('size_bytes', { mode: 'bigint' }).notNull(),
+  sha256: text('sha256').notNull(),
+  kind: text('kind').notNull(), // enum: 'quote_pdf'|'contract_pdf'|'contract_signed_pdf'|'invoice_pdf'|'deliverable'|'expense_receipt'|'signature_canvas'|'attachment'
+  status: text('status').notNull(), // enum: 'uploading'|'scanning'|'clean'|'infected'|'ready'|'failed'
+  scanResult: jsonb('scan_result'), // ClamAV result: {virus_name, scanned_at}
+  linkedEntityType: text('linked_entity_type'), // quote|contract|invoice|deliverable|expense
+  linkedEntityId: uuid('linked_entity_id'),
+  uploadedByUserId: uuid('uploaded_by_user_id')
+    .references(() => users.id, { onDelete: 'set null' }),
+  uploadedVia: text('uploaded_via').notNull(), // enum: 'server_generated'|'session'|'api_key'|'public_token'
+  uploadedFromIp: inet('uploaded_from_ip'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index('idx_files_org_kind').on(table.organizationId, table.kind, table.createdAt),
+  index('idx_files_entity').on(table.linkedEntityType, table.linkedEntityId),
+  unique('files_org_r2_key_unique').on(table.organizationId, table.r2Key),
+]);
+
+export const signatures = pgTable('signatures', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
+  entityType: text('entity_type').notNull(), // enum: 'contract'|'quote'
+  entityId: uuid('entity_id').notNull(),
+  signerName: text('signer_name').notNull(),
+  signerEmail: text('signer_email').notNull(),
+  signerIp: inet('signer_ip').notNull(),
+  signerUserAgent: text('signer_user_agent').notNull(),
+  publicTokenId: uuid('public_token_id')
+    .notNull()
+    .references(() => publicTokens.id, { onDelete: 'restrict' }),
+  canvasFileId: uuid('canvas_file_id')
+    .references(() => files.id, { onDelete: 'set null' }),
+  signedPdfFileId: uuid('signed_pdf_file_id')
+    .notNull()
+    .references(() => files.id, { onDelete: 'restrict' }),
+  documentSha256: text('document_sha256').notNull(),
+  signatureSha256: text('signature_sha256').notNull(),
+  signedAt: timestamp('signed_at', { withTimezone: true }).notNull().defaultNow(),
+  otpVerified: boolean('otp_verified').default(false).notNull(),
+}, (table) => [
+  index('idx_signatures_entity').on(table.entityType, table.entityId),
+]);
+
+export const storageUsage = pgTable('storage_usage', {
+  organizationId: uuid('organization_id')
+    .primaryKey()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
+  totalBytes: bigint('total_bytes', { mode: 'bigint' }).notNull().default(sql`0`),
+  fileCount: integer('file_count').notNull().default(0),
+  lastComputedAt: timestamp('last_computed_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const memberships = pgTable('memberships', {
@@ -165,8 +231,8 @@ export const publicTokens = pgTable('public_tokens', {
 export const webhookEndpoints = pgTable('webhook_endpoints', {
   id: uuid('id').primaryKey().defaultRandom(),
   organizationId: uuid('organization_id')
-    .notNull()
     .references(() => organizations.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull().default('generic'), // enum: 'generic' | 'n8n_primary'
   url: text('url').notNull(),
   secret: text('secret').notNull(),
   events: text('events').array().notNull(),
@@ -294,7 +360,7 @@ export const quotes = pgTable('quotes', {
   validUntil: date('valid_until'),
   notes: text('notes'),
   terms: text('terms'),
-  pdfR2Key: text('pdf_r2_key'),
+  pdfFileId: uuid('pdf_file_id').references((): any => files.id, { onDelete: 'set null' }),
   sentAt: timestamp('sent_at', { withTimezone: true }),
   viewedAt: timestamp('viewed_at', { withTimezone: true }),
   acceptedAt: timestamp('accepted_at', { withTimezone: true }),
@@ -349,8 +415,8 @@ export const contracts = pgTable('contracts', {
   title: text('title').notNull(),
   status: text('status').notNull(), // enum: 'draft'|'sent'|'signed'|'cancelled'|'expired'
   bodyMarkdown: text('body_markdown').notNull(),
-  pdfR2Key: text('pdf_r2_key'),
-  signedPdfR2Key: text('signed_pdf_r2_key'),
+  pdfFileId: uuid('pdf_file_id').references((): any => files.id, { onDelete: 'set null' }),
+  signedPdfFileId: uuid('signed_pdf_file_id').references((): any => files.id, { onDelete: 'set null' }),
   sentAt: timestamp('sent_at', { withTimezone: true }),
   signedAt: timestamp('signed_at', { withTimezone: true }),
   signedByName: text('signed_by_name'),
@@ -394,7 +460,7 @@ export const invoices = pgTable('invoices', {
   issueDate: date('issue_date').notNull(),
   dueDate: date('due_date').notNull(),
   paidAt: timestamp('paid_at', { withTimezone: true }),
-  pdfR2Key: text('pdf_r2_key'),
+  pdfFileId: uuid('pdf_file_id').references((): any => files.id, { onDelete: 'set null' }),
   notes: text('notes'),
   createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -467,7 +533,7 @@ export const expenses = pgTable('expenses', {
   currency: text('currency').notNull().default('XOF'),
   incurredOn: date('incurred_on').notNull(),
   vendor: text('vendor'),
-  receiptR2Key: text('receipt_r2_key'),
+  receiptFileId: uuid('receipt_file_id').references((): any => files.id, { onDelete: 'set null' }),
   billable: boolean('billable').default(false).notNull(),
   reimbursed: boolean('reimbursed').default(false).notNull(),
   createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
@@ -490,7 +556,7 @@ export const deliverables = pgTable('deliverables', {
   title: text('title').notNull(),
   description: text('description'),
   status: text('status').notNull(), // enum: 'draft'|'submitted'|'approved'|'rejected'|'revision_requested'
-  fileR2Key: text('file_r2_key'),
+  fileId: uuid('file_id').references((): any => files.id, { onDelete: 'set null' }),
   fileName: text('file_name'),
   fileSizeBytes: bigint('file_size_bytes', { mode: 'bigint' }),
   fileMime: text('file_mime'),
@@ -655,15 +721,23 @@ export const usersRelations = relations(users, ({ many }) => ({
   auditLogs: many(auditLogs),
   apiKeys: many(apiKeys),
   publicTokens: many(publicTokens),
+  uploadedFiles: many(files),
 }));
 
-export const organizationsRelations = relations(organizations, ({ many }) => ({
+export const organizationsRelations = relations(organizations, ({ one, many }) => ({
   memberships: many(memberships),
   invitations: many(invitations),
   auditLogs: many(auditLogs),
   apiKeys: many(apiKeys),
   publicTokens: many(publicTokens),
   webhookEndpoints: many(webhookEndpoints),
+  logoFile: one(files, {
+    fields: [organizations.logoFileId],
+    references: [files.id],
+  }),
+  files: many(files),
+  signatures: many(signatures),
+  storageUsage: one(storageUsage),
 }));
 
 export const membershipsRelations = relations(memberships, ({ one }) => ({
@@ -807,6 +881,10 @@ export const quotesRelations = relations(quotes, ({ one, many }) => ({
     fields: [quotes.clientId],
     references: [clients.id],
   }),
+  pdfFile: one(files, {
+    fields: [quotes.pdfFileId],
+    references: [files.id],
+  }),
   items: many(quoteItems),
   contracts: many(contracts),
 }));
@@ -835,6 +913,14 @@ export const contractsRelations = relations(contracts, ({ one }) => ({
     fields: [contracts.quoteId],
     references: [quotes.id],
   }),
+  pdfFile: one(files, {
+    fields: [contracts.pdfFileId],
+    references: [files.id],
+  }),
+  signedPdfFile: one(files, {
+    fields: [contracts.signedPdfFileId],
+    references: [files.id],
+  }),
 }));
 
 export const invoicesRelations = relations(invoices, ({ one, many }) => ({
@@ -853,6 +939,10 @@ export const invoicesRelations = relations(invoices, ({ one, many }) => ({
   contract: one(contracts, {
     fields: [invoices.contractId],
     references: [contracts.id],
+  }),
+  pdfFile: one(files, {
+    fields: [invoices.pdfFileId],
+    references: [files.id],
   }),
   items: many(invoiceItems),
   payments: many(invoicePayments),
@@ -889,6 +979,10 @@ export const expensesRelations = relations(expenses, ({ one }) => ({
     fields: [expenses.projectId],
     references: [projects.id],
   }),
+  receiptFile: one(files, {
+    fields: [expenses.receiptFileId],
+    references: [files.id],
+  }),
 }));
 
 export const deliverablesRelations = relations(deliverables, ({ one }) => ({
@@ -904,6 +998,10 @@ export const deliverablesRelations = relations(deliverables, ({ one }) => ({
     fields: [deliverables.parentId],
     references: [deliverables.id],
     relationName: 'revisionHistory',
+  }),
+  file: one(files, {
+    fields: [deliverables.fileId],
+    references: [files.id],
   }),
 }));
 
@@ -973,6 +1071,43 @@ export const paymentWebhookEventsRelations = relations(paymentWebhookEvents, ({ 
   }),
 }));
 
+export const filesRelations = relations(files, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [files.organizationId],
+    references: [organizations.id],
+  }),
+  uploadedBy: one(users, {
+    fields: [files.uploadedByUserId],
+    references: [users.id],
+  }),
+}));
+
+export const signaturesRelations = relations(signatures, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [signatures.organizationId],
+    references: [organizations.id],
+  }),
+  publicToken: one(publicTokens, {
+    fields: [signatures.publicTokenId],
+    references: [publicTokens.id],
+  }),
+  canvasFile: one(files, {
+    fields: [signatures.canvasFileId],
+    references: [files.id],
+  }),
+  signedPdfFile: one(files, {
+    fields: [signatures.signedPdfFileId],
+    references: [files.id],
+  }),
+}));
+
+export const storageUsageRelations = relations(storageUsage, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [storageUsage.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
 // Type Definitions
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -1029,3 +1164,10 @@ export type PaymentIntent = typeof paymentIntents.$inferSelect;
 export type NewPaymentIntent = typeof paymentIntents.$inferInsert;
 export type PaymentWebhookEvent = typeof paymentWebhookEvents.$inferSelect;
 export type NewPaymentWebhookEvent = typeof paymentWebhookEvents.$inferInsert;
+
+export type File = typeof files.$inferSelect;
+export type NewFile = typeof files.$inferInsert;
+export type Signature = typeof signatures.$inferSelect;
+export type NewSignature = typeof signatures.$inferInsert;
+export type StorageUsage = typeof storageUsage.$inferSelect;
+export type NewStorageUsage = typeof storageUsage.$inferInsert;
