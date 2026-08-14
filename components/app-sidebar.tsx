@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import useSWR from "swr"
 import {
   Sidebar,
   SidebarContent,
@@ -32,18 +33,6 @@ import { NavUser } from "@/components/nav-user"
 import { TeamSwitcher } from "@/components/team-switcher"
 
 const data = {
-  user: {
-    name: "Contravo User",
-    email: "user@contravo.com",
-    avatar: "/avatars/user.jpg",
-  },
-  teams: [
-    {
-      name: "Contravo Enterprise",
-      logo: <Layers className="size-4" />,
-      plan: "SaaS Platform",
-    },
-  ],
   mainNav: [
     { title: "Team", url: "/dashboard", icon: Users },
     { title: "Clients (CRM)", url: "/dashboard/clients", icon: Building2 },
@@ -63,10 +52,44 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
 
+  const fetcher = React.useCallback((url: string) => fetch(url).then((res) => res.json()), [])
+
+  const { data: userData } = useSWR("/api/user", fetcher)
+  const { data: activeTeam } = useSWR("/api/team", fetcher)
+  const { data: orgsData } = useSWR("/api/v1/organizations", fetcher)
+
+  const sidebarUser = React.useMemo(() => {
+    return {
+      name: userData?.fullName || userData?.name || "Chargement...",
+      email: userData?.email || "",
+      avatar: "/avatars/user.jpg",
+    }
+  }, [userData])
+
+  const sidebarTeams = React.useMemo(() => {
+    if (!orgsData?.organizations) return []
+    return orgsData.organizations.map((org: any) => ({
+      id: org.id,
+      name: org.name,
+      logo: <Layers className="size-4" />,
+      plan: org.id === activeTeam?.id ? (activeTeam?.planName || "SaaS Platform") : "SaaS Platform",
+    }))
+  }, [orgsData, activeTeam])
+
+  const currentActiveTeam = React.useMemo(() => {
+    if (!activeTeam) return undefined
+    return {
+      id: activeTeam.id,
+      name: activeTeam.name,
+      logo: <Layers className="size-4" />,
+      plan: activeTeam.planName || "SaaS Platform",
+    }
+  }, [activeTeam])
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher teams={sidebarTeams} activeTeam={currentActiveTeam} />
       </SidebarHeader>
 
       <SidebarContent>
@@ -110,7 +133,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
 
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={sidebarUser} />
       </SidebarFooter>
 
       <SidebarRail />

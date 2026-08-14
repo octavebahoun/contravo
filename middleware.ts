@@ -140,7 +140,10 @@ export async function middleware(request: NextRequest) {
         // Session Auth (for frontend/dashboard calling API endpoints)
         const user = await getSessionUser(sessionCookie.value);
         if (user) {
-          let organizationId = request.headers.get('x-organization-id') || request.headers.get('x-org-id');
+          let organizationId =
+            request.headers.get('x-organization-id') ||
+            request.headers.get('x-org-id') ||
+            request.cookies.get('organization_id')?.value;
           let membership = null;
 
           if (organizationId) {
@@ -161,7 +164,9 @@ export async function middleware(request: NextRequest) {
             if (ms.length > 0) {
               membership = ms[0];
             }
-          } else {
+          }
+
+          if (!membership) {
             // Fallback to first membership
             const ms = await db
               .select({
