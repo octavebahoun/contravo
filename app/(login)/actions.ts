@@ -13,7 +13,6 @@ import {
 import { comparePasswords, hashPassword, createSession, setSessionCookie, deleteSession } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { createCheckoutSession } from '@/lib/payments/stripe';
 import { getUser, getUserWithOrganization } from '@/lib/db/queries';
 import {
   validatedAction,
@@ -83,12 +82,6 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   await setSessionCookie(token);
 
   await logActivity(foundOrg?.id, foundUser.id, 'auth.login');
-
-  const redirectTo = formData.get('redirect') as string | null;
-  if (redirectTo === 'checkout') {
-    const priceId = formData.get('priceId') as string;
-    return createCheckoutSession({ team: foundOrg || null, priceId });
-  }
 
   redirect('/dashboard');
 });
@@ -209,12 +202,6 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 
   const token = await createSession(createdUser.id);
   await setSessionCookie(token);
-
-  const redirectTo = formData.get('redirect') as string | null;
-  if (redirectTo === 'checkout') {
-    const priceId = formData.get('priceId') as string;
-    return createCheckoutSession({ team: createdOrg, priceId });
-  }
 
   redirect('/dashboard');
 });

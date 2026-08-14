@@ -5,7 +5,7 @@ import { SWRConfig } from 'swr';
 
 export const metadata: Metadata = {
   title: 'Next.js SaaS Starter',
-  description: 'Get started quickly with Next.js, Postgres, and Stripe.'
+  description: 'Gestion de devis, contrats, factures et paiements pour prestataires.'
 };
 
 export const viewport: Viewport = {

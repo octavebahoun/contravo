@@ -9,7 +9,6 @@ import {
   CardTitle,
   CardFooter
 } from '@/components/ui/card';
-import { customerPortalAction } from '@/lib/payments/actions';
 import { useActionState } from 'react';
 import { User } from '@/lib/db/schema';
 import { TeamDataWithMembers } from '@/lib/auth/middleware';
@@ -61,11 +60,7 @@ function ManageSubscription() {
                   : 'No active subscription'}
               </p>
             </div>
-            <form action={customerPortalAction}>
-              <Button type="submit" variant="outline">
-                Manage Subscription
-              </Button>
-            </form>
+            {/* Self-service billing arrives with the GeniusPay plans (MVP6). */}
           </div>
         </div>
       </CardContent>
