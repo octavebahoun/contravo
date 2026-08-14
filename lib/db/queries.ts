@@ -2,6 +2,7 @@ import { desc, and, eq, isNull } from 'drizzle-orm';
 import { db } from './drizzle';
 import { auditLogs, memberships, organizations, users } from './schema';
 import { getSession } from '@/lib/auth/session';
+import { cookies } from 'next/headers';
 
 export async function getUser() {
   return getSession();
@@ -85,32 +86,61 @@ export async function getTeamForUser() {
     return null;
   }
 
-  const firstMembership = await db.query.memberships.findFirst({
-    where: eq(memberships.userId, user.id),
-    with: {
-      organization: {
-        with: {
-          memberships: {
-            with: {
-              user: {
-                columns: {
-                  id: true,
-                  fullName: true,
-                  email: true
+  const cookieStore = await cookies();
+  const activeOrgId = cookieStore.get('organization_id')?.value;
+
+  let membership = null;
+  if (activeOrgId) {
+    membership = await db.query.memberships.findFirst({
+      where: and(eq(memberships.userId, user.id), eq(memberships.organizationId, activeOrgId)),
+      with: {
+        organization: {
+          with: {
+            memberships: {
+              with: {
+                user: {
+                  columns: {
+                    id: true,
+                    fullName: true,
+                    email: true
+                  }
                 }
               }
             }
           }
         }
       }
-    }
-  });
+    });
+  }
 
-  if (!firstMembership || !firstMembership.organization) {
+  if (!membership) {
+    membership = await db.query.memberships.findFirst({
+      where: eq(memberships.userId, user.id),
+      with: {
+        organization: {
+          with: {
+            memberships: {
+              with: {
+                user: {
+                  columns: {
+                    id: true,
+                    fullName: true,
+                    email: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  if (!membership || !membership.organization) {
     return null;
   }
 
-  const org = firstMembership.organization;
+  const org = membership.organization;
   return {
     ...org,
     teamMembers: org.memberships.map((m) => ({
