@@ -25,9 +25,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={cn("bg-white dark:bg-gray-950 text-black dark:text-white font-sans", "font-sans", inter.variable)}
     >
-      <body className="min-h-[100dvh] bg-gray-50">
+      <body className="min-h-[100dvh] bg-gray-50" suppressHydrationWarning>
         <SWRConfig
           value={{
             fallback: {

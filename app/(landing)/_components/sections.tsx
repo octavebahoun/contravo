@@ -28,6 +28,8 @@ import {
 } from './mockups';
 import { HeroReveal, Reveal, RevealChild, fadeUpVariants } from './motion';
 import { SquigglyText } from '@/components/ui/squiggly-text';
+import { ThreeDMarquee } from '@/components/ui/3d-marquee';
+import { PricingTable } from './pricing-table';
 
 /**
  * Landing sections (structure and animation adapted from the Finwise template, MIT).
@@ -82,7 +84,7 @@ export function Hero() {
         </HeroReveal>
 
         <HeroReveal delay={0.08}>
-          <h1 className="mt-6 text-4xl font-bold leading-tight tracking-tight text-foreground sm:text-6xl">
+          <h1 className="mt-6 text-4xl font-normal leading-tight tracking-tight text-foreground sm:text-6xl">
             <SquigglyText>{heroDetails.heading}</SquigglyText>
           </h1>
         </HeroReveal>
@@ -110,17 +112,32 @@ export function Hero() {
 
         <HeroReveal
           delay={0.4}
-          className="relative z-10 mt-20 rounded-3xl border border-border bg-card p-4 shadow-md"
+          className="relative z-10 mt-16 rounded-3xl border border-border bg-card p-4 shadow-md overflow-hidden max-w-7xl mx-auto"
         >
-          <div className="w-full overflow-hidden rounded-xl border border-border">
-            <img
-              src="/dashboard-preview.png"
-              alt="Dashboard Preview"
-              className="aspect-[16/9] h-auto w-full object-cover"
-              height={1000}
-              width={1000}
-            />
-          </div>
+          <ThreeDMarquee
+            images={[
+              '/brutalist_quote_editor.png',
+              '/brutalist_analytics.png',
+              '/brutalist_documents.png',
+              '/brutalist_signature.png',
+              '/dashboard-preview.png',
+              '/brutalist_quote_editor.png',
+              '/brutalist_analytics.png',
+              '/brutalist_documents.png',
+              '/brutalist_signature.png',
+              '/dashboard-preview.png',
+              '/brutalist_quote_editor.png',
+              '/brutalist_analytics.png',
+              '/brutalist_documents.png',
+              '/brutalist_signature.png',
+              '/dashboard-preview.png',
+              '/brutalist_quote_editor.png',
+              '/brutalist_analytics.png',
+              '/brutalist_documents.png',
+              '/brutalist_signature.png',
+              '/dashboard-preview.png',
+            ]}
+          />
         </HeroReveal>
       </div>
     </section>
@@ -136,7 +153,7 @@ export function SectionTitle({
 }) {
   return (
     <div className="mx-auto max-w-2xl text-center">
-      <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{title}</h2>
+      <h2 className="text-3xl font-normal tracking-tight text-foreground sm:text-4xl">{title}</h2>
       {description ? <p className="mt-3 text-muted-foreground">{description}</p> : null}
     </div>
   );
@@ -167,7 +184,7 @@ function BenefitSection({
             <Icon className="h-6 w-6 text-primary" aria-hidden />
           </div>
 
-          <h3 className="mt-5 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <h3 className="mt-5 text-2xl font-normal tracking-tight text-foreground sm:text-3xl">
             {benefit.title}
           </h3>
           <p className="mt-3 leading-relaxed text-muted-foreground">{benefit.description}</p>
@@ -200,7 +217,7 @@ function BenefitCard({ benefit }: { benefit: Benefit }) {
 
   return (
     <RevealChild className="h-full">
-      <div className="h-full rounded-xl border border-border bg-card p-6 transition-colors hover:border-primary/40">
+      <div className="h-full rounded-3xl border border-border bg-card p-6 transition-colors hover:border-primary/40">
         <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10">
           <Icon className="h-5 w-5 text-primary" aria-hidden />
         </div>
@@ -291,72 +308,10 @@ export function Steps() {
 
 export function Pricing() {
   return (
-    <section id="tarifs" className="px-4 py-16 sm:px-6 sm:py-24">
-      <div className="mx-auto max-w-6xl">
-        <Reveal variants={fadeUpVariants}>
-          <SectionTitle
-            title="Des tarifs simples"
-            description="Commencez gratuitement, changez de plan quand vous grandissez."
-          />
-
-          {pricing.placeholder ? (
-            <p className="mx-auto mt-4 max-w-xl rounded-lg bg-warning/10 px-4 py-2 text-center text-sm text-warning">
-              {pricing.note}
-            </p>
-          ) : null}
-        </Reveal>
-
-        <Reveal className="mt-12 grid gap-6 lg:grid-cols-3">
-          {pricing.plans.map((plan) => (
-            <RevealChild key={plan.name} className="h-full">
-              <div
-                className={`relative h-full rounded-xl border bg-card p-6 ${
-                  plan.highlighted
-                    ? 'border-primary shadow-lg shadow-primary/10'
-                    : 'border-border'
-                }`}
-              >
-                {plan.highlighted ? (
-                  <span className="absolute -top-3 left-6 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
-                    Le plus choisi
-                  </span>
-                ) : null}
-
-                <h3 className="text-lg font-semibold text-foreground">{plan.name}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
-
-                <p className="mt-5 flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-foreground">{plan.price}</span>
-                  <span className="text-sm text-muted-foreground">
-                    {plan.currency}
-                    {plan.period}
-                  </span>
-                </p>
-
-                <ul className="mt-6 space-y-2.5">
-                  {plan.features.map((feature) => (
-                    <li
-                      key={feature}
-                      className="flex items-start gap-2 text-sm text-muted-foreground"
-                    >
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-
-                <Button
-                  className="mt-6 w-full"
-                  variant={plan.highlighted ? 'default' : 'outline'}
-                  asChild
-                >
-                  <Link href="/sign-up">{plan.cta}</Link>
-                </Button>
-              </div>
-            </RevealChild>
-          ))}
-        </Reveal>
-      </div>
+    <section id="tarifs" className="px-4 py-16 sm:px-6 sm:py-24 max-w-7xl mx-auto">
+      <Reveal variants={fadeUpVariants}>
+        <PricingTable />
+      </Reveal>
     </section>
   );
 }
@@ -378,7 +333,7 @@ export function Testimonials() {
         <Reveal className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {testimonials.map((item) => (
             <RevealChild key={item.name} className="h-full">
-              <figure className="h-full rounded-xl border border-border bg-card p-6">
+              <figure className="h-full rounded-3xl border border-border bg-card p-6">
                 <blockquote className="text-sm leading-relaxed text-muted-foreground">
                   « {item.quote} »
                 </blockquote>
@@ -404,7 +359,7 @@ export function Stats() {
       <Reveal className="mx-auto grid max-w-4xl gap-8 text-center sm:grid-cols-3">
         {stats.map((stat) => (
           <RevealChild key={stat.label}>
-            <p className="text-3xl font-bold text-primary">{stat.value}</p>
+            <p className="text-3xl font-medium text-primary font-mono">{stat.value}</p>
             <p className="mt-1 text-sm text-muted-foreground">{stat.label}</p>
           </RevealChild>
         ))}
@@ -417,8 +372,8 @@ export function CTA() {
   return (
     <section className="px-4 py-16 sm:px-6 sm:py-24">
       <Reveal variants={fadeUpVariants} className="mx-auto max-w-4xl">
-        <div className="overflow-hidden rounded-2xl bg-foreground px-6 py-12 text-center sm:px-12">
-          <h2 className="text-2xl font-bold text-background sm:text-3xl">
+        <div className="overflow-hidden rounded-3xl bg-foreground px-6 py-12 text-center sm:px-12">
+          <h2 className="text-2xl font-normal text-background sm:text-3xl">
             <SquigglyText>{ctaDetails.heading}</SquigglyText>
           </h2>
           <p className="mx-auto mt-3 max-w-md text-background/70">{ctaDetails.subheading}</p>

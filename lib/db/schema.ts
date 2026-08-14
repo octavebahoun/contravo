@@ -15,6 +15,7 @@ import {
   smallint,
   customType,
   uniqueIndex,
+  primaryKey,
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 
@@ -712,6 +713,98 @@ export const paymentWebhookEvents = pgTable('payment_webhook_events', {
   index('idx_wh_events_org_type').on(table.organizationId, table.eventType, table.receivedAt),
 ]);
 
+export const subscriptions = pgTable('subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .unique()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
+  planId: text('plan_id').notNull().default('free'),
+  status: text('status').notNull().default('active'),
+  currentPeriodStart: timestamp('current_period_start', { withTimezone: true }).notNull().defaultNow(),
+  currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }).notNull(),
+  cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+  cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+  trialEnd: timestamp('trial_end', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index('idx_subscriptions_org').on(table.organizationId),
+  index('idx_subscriptions_status').on(table.status),
+]);
+
+export const subscriptionCycles = pgTable('subscription_cycles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  subscriptionId: uuid('subscription_id')
+    .notNull()
+    .references(() => subscriptions.id, { onDelete: 'cascade' }),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
+  cycleNumber: integer('cycle_number').notNull(),
+  planId: text('plan_id').notNull(),
+  amountCents: bigint('amount_cents', { mode: 'bigint' }).notNull(),
+  currency: text('currency').notNull().default('XOF'),
+  periodStart: timestamp('period_start', { withTimezone: true }).notNull(),
+  periodEnd: timestamp('period_end', { withTimezone: true }).notNull(),
+  status: text('status').notNull(),
+  invoiceNumber: text('invoice_number').unique().notNull(),
+  invoicePdfFileId: uuid('invoice_pdf_file_id').references((): any => files.id, { onDelete: 'set null' }),
+  paidAt: timestamp('paid_at', { withTimezone: true }),
+  failedReason: text('failed_reason'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique('sub_cycles_sub_cycle_idx').on(table.subscriptionId, table.cycleNumber),
+  index('idx_cycles_org').on(table.organizationId, table.createdAt),
+]);
+
+export const subscriptionPaymentAttempts = pgTable('subscription_payment_attempts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  cycleId: uuid('cycle_id')
+    .notNull()
+    .references(() => subscriptionCycles.id, { onDelete: 'cascade' }),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
+  attemptNumber: integer('attempt_number').notNull(),
+  gatewayReference: text('gateway_reference'),
+  checkoutUrl: text('checkout_url'),
+  status: text('status').notNull(),
+  amountCents: bigint('amount_cents', { mode: 'bigint' }).notNull(),
+  failureReason: text('failure_reason'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex('sub_pay_attempts_gateway_ref_unique_idx')
+    .on(table.gatewayReference)
+    .where(sql`gateway_reference IS NOT NULL`),
+  index('idx_sub_attempts_cycle').on(table.cycleId),
+]);
+
+export const quotaUsage = pgTable('quota_usage', {
+  organizationId: uuid('organization_id')
+    .primaryKey()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
+  membersCount: integer('members_count').notNull().default(0),
+  clientsCount: integer('clients_count').notNull().default(0),
+  projectsCount: integer('projects_count').notNull().default(0),
+  apiKeysCount: integer('api_keys_count').notNull().default(0),
+  webhookEndpointsCount: integer('webhook_endpoints_count').notNull().default(0),
+  storageBytes: bigint('storage_bytes', { mode: 'bigint' }).notNull().default(sql`0`),
+  lastRecomputedAt: timestamp('last_recomputed_at', { withTimezone: true }).defaultNow(),
+});
+
+export const quotaPeriodUsage = pgTable('quota_period_usage', {
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
+  periodStart: date('period_start').notNull(),
+  apiCallsCount: bigint('api_calls_count', { mode: 'bigint' }).notNull().default(sql`0`),
+  publicTokensCreated: integer('public_tokens_created').notNull().default(0),
+}, (table) => [
+  primaryKey({ columns: [table.organizationId, table.periodStart] }),
+]);
+
 // --- Relational Mappings ---
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -1171,3 +1264,15 @@ export type Signature = typeof signatures.$inferSelect;
 export type NewSignature = typeof signatures.$inferInsert;
 export type StorageUsage = typeof storageUsage.$inferSelect;
 export type NewStorageUsage = typeof storageUsage.$inferInsert;
+
+export type Subscription = typeof subscriptions.$inferSelect;
+export type NewSubscription = typeof subscriptions.$inferInsert;
+export type SubscriptionCycle = typeof subscriptionCycles.$inferSelect;
+export type NewSubscriptionCycle = typeof subscriptionCycles.$inferInsert;
+export type SubscriptionPaymentAttempt = typeof subscriptionPaymentAttempts.$inferSelect;
+export type NewSubscriptionPaymentAttempt = typeof subscriptionPaymentAttempts.$inferInsert;
+export type QuotaUsage = typeof quotaUsage.$inferSelect;
+export type NewQuotaUsage = typeof quotaUsage.$inferInsert;
+export type QuotaPeriodUsage = typeof quotaPeriodUsage.$inferSelect;
+export type NewQuotaPeriodUsage = typeof quotaPeriodUsage.$inferInsert;
+
