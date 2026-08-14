@@ -62,7 +62,7 @@
     },
     {
       "id": "f4593e79-e945-4350-a58e-f0341a17e71a",
-      "name": "Call /api/v1/me",
+      "name": "Call Excellence API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
@@ -71,7 +71,7 @@
       ],
       "parameters": {
         "method": "GET",
-        "url": "={{ $json.apiBase }}/api/v1/me",
+        "url": "={{ $json.apiBase }}/api/v1/clients?limit=1",
         "sendHeaders": true,
         "specifyHeaders": "keypair",
         "headerParameters": {
@@ -86,7 +86,8 @@
           "timeout": 10000,
           "response": {
             "response": {
-              "neverError": false
+              "neverError": true,
+              "fullResponse": true
             }
           }
         },
@@ -111,7 +112,7 @@
       ],
       "parameters": {
         "language": "javaScript",
-        "jsCode": "\nlet failures = Number($workflow.staticData.failures || 0);\nconst ok = $('Call /api/v1/me').first().json?.statusCode === 200 || ($('Call /api/v1/me').first().json && Object.keys($('Call /api/v1/me').first().json).length > 0);\nif (ok) { failures = 0; } else { failures = failures + 1; }\n$workflow.staticData.failures = failures;\nreturn [{ json: { failures, alert: failures >= 3 } }];\n"
+        "jsCode": "const res = $('Call Excellence API').first().json || {};\n// fullResponse + neverError : on juge sur le code HTTP, pas sur la forme du corps\n// (une reponse d'erreur JSON est aussi un objet non vide).\nconst ok = res.statusCode >= 200 && res.statusCode < 300;\nlet failures = Number($workflow.staticData.failures || 0);\nfailures = ok ? 0 : failures + 1;\n$workflow.staticData.failures = failures;\nreturn [{ json: { failures, alert: failures >= 3, statusCode: res.statusCode || null } }];\n"
       }
     },
     {
@@ -188,7 +189,7 @@
         ]
       ]
     },
-    "Call /api/v1/me": {
+    "Call Excellence API": {
       "main": [
         [
           {
@@ -225,7 +226,7 @@
       "main": [
         [
           {
-            "node": "Call /api/v1/me",
+            "node": "Call Excellence API",
             "type": "main",
             "index": 0
           }

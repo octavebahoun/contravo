@@ -74,7 +74,8 @@ export async function middleware(request: NextRequest) {
         recipientEmail?: string;
       } | null = null;
 
-      if (token && token.startsWith('ak_')) {
+      // Keys are minted as sk_live_/sk_test_ (lib/api-keys generateApiKey, MVP2 §3).
+      if (token && (token.startsWith('sk_live_') || token.startsWith('sk_test_'))) {
         // API Key Auth
         const verifiedKey = await verifyApiKey(token, ip);
         // Get organization's plan for rate limiting
