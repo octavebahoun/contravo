@@ -1,20 +1,5 @@
 "use client"
 
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { mutate } from "swr"
-import { signOut } from "@/app/(login)/actions"
-
-import {
-  BadgeCheck,
-  ShieldCheck,
-  Bell,
-  ChevronsUpDown,
-  CreditCard,
-  LogOut,
-  Sparkles,
-} from "lucide-react"
-
 import {
   Avatar,
   AvatarFallback,
@@ -35,6 +20,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { ChevronsUpDownIcon, SparklesIcon, BadgeCheckIcon, CreditCardIcon, BellIcon, LogOutIcon } from "lucide-react"
 
 export function NavUser({
   user,
@@ -46,15 +32,6 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
-  const router = useRouter()
-
-  // Reuses the existing server action so the session cookie is cleared
-  // server-side, then drops the cached /api/user response.
-  async function handleSignOut() {
-    await signOut()
-    mutate('/api/user')
-    router.push('/')
-  }
 
   return (
     <SidebarMenu>
@@ -73,11 +50,11 @@ export function NavUser({
                 <span className="truncate font-medium">{user.name}</span>
                 <span className="truncate text-xs">{user.email}</span>
               </div>
-              <ChevronsUpDown className="ml-auto size-4" />
+              <ChevronsUpDownIcon className="ml-auto size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            className="w-fit"
             side={isMobile ? "bottom" : "right"}
             align="end"
             sideOffset={4}
@@ -97,34 +74,35 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <Sparkles />
+                <SparklesIcon
+                />
                 Upgrade to Pro
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard/general">
-                  <BadgeCheck />
-                  Mon compte
-                </Link>
+              <DropdownMenuItem>
+                <BadgeCheckIcon
+                />
+                Account
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard/security">
-                  <ShieldCheck />
-                  Sécurité
-                </Link>
+              <DropdownMenuItem>
+                <CreditCardIcon
+                />
+                Billing
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <BellIcon
+                />
+                Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <form action={handleSignOut}>
-              <button type="submit" className="w-full">
-                <DropdownMenuItem className="w-full cursor-pointer">
-                  <LogOut />
-                  Se déconnecter
-                </DropdownMenuItem>
-              </button>
-            </form>
+            <DropdownMenuItem>
+              <LogOutIcon
+              />
+              Log out
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

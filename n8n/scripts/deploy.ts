@@ -87,10 +87,11 @@ async function listWorkflows(): Promise<N8nWorkflow[]> {
 }
 
 async function createWorkflow(wf: N8nWorkflow): Promise<string> {
+  const { id: _, ...payload } = wf;
   const res = await fetch(`${API_BASE}/api/v1/workflows`, {
     method: 'POST',
     headers: { 'X-N8N-API-KEY': API_KEY!, 'Content-Type': 'application/json' },
-    body: JSON.stringify(wf),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error(`Failed to create ${wf.name}: ${res.status} ${await res.text()}`);
   const created = (await res.json()) as N8nWorkflow;
@@ -99,10 +100,11 @@ async function createWorkflow(wf: N8nWorkflow): Promise<string> {
 }
 
 async function updateWorkflow(wf: N8nWorkflow, id: string): Promise<string> {
+  const { id: _, ...payload } = wf;
   const res = await fetch(`${API_BASE}/api/v1/workflows/${id}`, {
     method: 'PUT',
     headers: { 'X-N8N-API-KEY': API_KEY!, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...wf, id }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error(`Failed to update ${wf.name}: ${res.status} ${await res.text()}`);
   console.log(`[update] ${wf.name}`);

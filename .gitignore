@@ -46,3 +46,4 @@ postgres_data/
 **/.env
 **/*.log
 **/venv/
+.agents/
