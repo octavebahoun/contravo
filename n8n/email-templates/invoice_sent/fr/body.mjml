@@ -1,0 +1,1 @@
+<mjml><mj-body><mj-section><mj-column><mj-text>Bonjour {{client.name}},</mj-text><mj-text>Facture <strong>{{number}}</strong> d'un montant de {{total}}.</mj-text><mj-button href="{{portalUrl}}">Payer sur le portail</mj-button></mj-column></mj-section></mj-body></mjml>

@@ -1,0 +1,1 @@
+<mjml><mj-body><mj-section><mj-column><mj-text>Merci, nous avons bien reçu le paiement de la facture <strong>{{number}}</strong>.</mj-text></mj-column></mj-section></mj-body></mjml>

@@ -14,3 +14,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Scripts `n8n/scripts/deploy.ts` (push API n8n) et `n8n/scripts/lint.ts` (validation JSON).
 - ADR `docs/adr/0007-n8n-orchestration.md`.
 - Tests unitaires `tests/integration/n8n-webhook-verify.test.ts`.
+
+### Added — Étape 5 PR2 : Emails transactionnels
+- 13 workflows email n8n (`email_*.json`) : rendu depuis payload → fetch PDF optionnel → envoi Resend (HTTP Request `api.resend.com/emails`).
+- Router mis à jour (`router_dispatch_v1.json`) : 13 nodes Execute Workflow câblés au Switch par event.
+- 13 templates MJML FR dans `n8n/email-templates/<name>/fr/` (subject + body).
+- Provider email figé : **Resend** (MVP5 §4), expéditeur `no-reply@notifications.excellence.app`.

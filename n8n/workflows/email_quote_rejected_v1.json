@@ -1,0 +1,99 @@
+{
+  "id": "email_quote_rejected_v1",
+  "name": "email_quote_rejected_v1",
+  "nodes": [
+    {
+      "id": "e71a6ddf-8609-4b01-b6a3-abe28dc9157a",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {
+        "workflowInputs": {
+          "values": []
+        }
+      }
+    },
+    {
+      "id": "6415ed9e-b180-4aad-91ed-ab4f355d08d1",
+      "name": "Render Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        300
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const d=$('Execute Workflow Trigger').first().json.data||{};const r=d.reason||'(aucune raison fournie)';return[{json:{to:d.ownerEmail||'',subject:'Devis '+d.number+' refusé',html:'<p>Le devis <strong>'+d.number+'</strong> a été refusé.</p><p>Raison : '+r+'</p>'}}];"
+      }
+    },
+    {
+      "id": "72aa2e73-e098-48b7-b631-e9c0b40137ff",
+      "name": "Send via Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.RESEND_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": {
+          "from": "={{ $env.RESEND_FROM }}",
+          "to": [
+            "={{ $env.EXCELLENCE_TEAM_EMAIL }}"
+          ],
+          "subject": "={{ $json.subject }}",
+          "html": "={{ $json.html }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Render Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Email": {
+      "main": [
+        [
+          {
+            "node": "Send via Resend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

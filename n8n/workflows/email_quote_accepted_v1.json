@@ -1,0 +1,99 @@
+{
+  "id": "email_quote_accepted_v1",
+  "name": "email_quote_accepted_v1",
+  "nodes": [
+    {
+      "id": "e4a058a7-a774-472f-a3bb-172b011511d2",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {
+        "workflowInputs": {
+          "values": []
+        }
+      }
+    },
+    {
+      "id": "f07db0fe-a3f6-4cc5-9330-4c582e19e4a5",
+      "name": "Render Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        300
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const d=$('Execute Workflow Trigger').first().json.data||{};return[{json:{to:d.ownerEmail||'',subject:'Devis '+d.number+' accepté',html:'<p>Le devis <strong>'+d.number+'</strong> a été accepté.</p>'}}];"
+      }
+    },
+    {
+      "id": "6b7a5589-7e58-4fb5-841c-7eb64fa45393",
+      "name": "Send via Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.RESEND_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": {
+          "from": "={{ $env.RESEND_FROM }}",
+          "to": [
+            "={{ $env.EXCELLENCE_TEAM_EMAIL }}"
+          ],
+          "subject": "={{ $json.subject }}",
+          "html": "={{ $json.html }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Render Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Email": {
+      "main": [
+        [
+          {
+            "node": "Send via Resend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

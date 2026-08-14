@@ -1,0 +1,99 @@
+{
+  "id": "email_payment_failed_v1",
+  "name": "email_payment_failed_v1",
+  "nodes": [
+    {
+      "id": "e5328521-f074-4696-ace2-3c3f136d46cd",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {
+        "workflowInputs": {
+          "values": []
+        }
+      }
+    },
+    {
+      "id": "ecea6bbc-ad28-408b-9a0e-c711ea53dfaf",
+      "name": "Render Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        300
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const d=$('Execute Workflow Trigger').first().json.data||{};const c=d.client||{};return[{json:{to:c.email||d.recipientEmail,subject:'Échec de paiement — Facture '+d.number,html:'<p>Bonjour '+(c.name||'')+',</p><p>Le paiement de la facture <strong>'+d.number+'</strong> a échoué.</p><p><a href=\"'+(d.portalUrl||'#')+'\">Réessayer</a></p>'}}];"
+      }
+    },
+    {
+      "id": "d188b8b8-73aa-4b2c-98ed-d1eec3f9b15c",
+      "name": "Send via Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.RESEND_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": {
+          "from": "={{ $env.RESEND_FROM }}",
+          "to": [
+            "={{ $json.to }}"
+          ],
+          "subject": "={{ $json.subject }}",
+          "html": "={{ $json.html }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Render Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Email": {
+      "main": [
+        [
+          {
+            "node": "Send via Resend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

@@ -1,0 +1,7 @@
+<mjml><mj-body><mj-section><mj-column>
+      <mj-text>Bonjour {{client.name}},</mj-text>
+      <mj-text>Veuillez trouver ci-joint le devis <strong>{{number}}</strong>.</mj-text>
+      <mj-button href="{{portalUrl}}">Accéder au portail</mj-button>
+      <mj-text>{{org.name}}</mj-text>
+      <mj-text><a href="{{unsubscribeUrl}}">Se désabonner</a></mj-text>
+    </mj-column></mj-section></mj-body></mjml>

@@ -1,0 +1,1 @@
+<mjml><mj-body><mj-section><mj-column><mj-text>Bonjour {{client.name}},</mj-text><mj-text>Merci de donner votre avis sur la prestation.</mj-text><mj-button href="{{portalUrl}}">Laisser un avis</mj-button></mj-column></mj-section></mj-body></mjml>

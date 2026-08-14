@@ -1,0 +1,1 @@
+<mjml><mj-body><mj-section><mj-column><mj-text>Bonjour {{client.name}},</mj-text><mj-text>Le paiement de la facture <strong>{{number}}</strong> a échoué.</mj-text><mj-button href="{{portalUrl}}">Réessayer</mj-button></mj-column></mj-section></mj-body></mjml>
