@@ -1,13 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getApiContext } from '@/lib/auth/unified-auth';
+import { requirePortalAccess } from '@/lib/portal/portal-guard';
 import { consumePublicToken } from '@/lib/public-tokens';
-import { emit } from '@/lib/webhooks';
+import { transitionQuote } from '@/lib/workflows/quote.state';
+import { formatErrorResponse } from '@/lib/errors';
 import { z } from 'zod';
 
-const signSchema = z.object({
+/**
+ * Records the client's decision on a quote from the portal (MVP3 §3, §5).
+ *
+ * Runs the real state transition — the previous implementation emitted
+ * `quote.signed` and answered success while the quote stayed in its former
+ * state, so an accepted quote never became `accepted` and never spawned its
+ * contract. The transition itself emits `quote.accepted` / `quote.rejected`.
+ */
+const decisionSchema = z.object({
+  decision: z.enum(['accept', 'reject']).default('accept'),
   signerName: z.string().min(1),
   signerEmail: z.string().email(),
-  signatureBase64: z.string().min(1),
+  /** Reason shown to the issuer; only meaningful when rejecting. */
+  reason: z.string().max(2000).optional(),
 });
 
 export async function POST(
@@ -15,25 +26,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const ctx = await getApiContext();
-
-    if (ctx.authType !== 'public_token') {
-      return NextResponse.json(
-        { error: 'forbidden', message: 'Only public token access allowed' },
-        { status: 403 }
-      );
-    }
-
-    if (!ctx.scopes.includes('sign') && !ctx.scopes.includes('*')) {
-      return NextResponse.json(
-        { error: 'permission_denied', message: 'Missing required scope: sign' },
-        { status: 403 }
-      );
-    }
-
+    const ctx = await requirePortalAccess('sign');
     const { id } = await params;
-    const body = await request.json();
-    const result = signSchema.safeParse(body);
+
+    const body = await request.json().catch(() => ({}));
+    const result = decisionSchema.safeParse(body);
 
     if (!result.success) {
       return NextResponse.json(
@@ -46,9 +43,9 @@ export async function POST(
       );
     }
 
-    const { signerName, signerEmail, signatureBase64 } = result.data;
+    const { decision, signerName, signerEmail, reason } = result.data;
 
-    // Check identity
+    // The decision must come from the person the link was issued to.
     if (!ctx.recipientEmail || signerEmail.toLowerCase() !== ctx.recipientEmail.toLowerCase()) {
       return NextResponse.json(
         {
@@ -59,29 +56,33 @@ export async function POST(
       );
     }
 
-    // Consume the token (this increments the usedCount, enforcing max_uses limit)
     const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
-    await consumePublicToken(ctx.publicTokenId!, ip);
 
-    // Emit event to webhook endpoints
-    await emit('quote.signed', ctx.organizationId, {
-      quoteId: id,
-      signerName,
-      signerEmail,
-      signedAt: new Date().toISOString(),
-    });
+    const quote = await transitionQuote(
+      ctx.organizationId,
+      id,
+      decision === 'accept' ? 'accept' : 'reject',
+      {
+        acceptedByName: signerName,
+        acceptedByEmail: signerEmail,
+        acceptedByIp: ip,
+        rejectionReason: reason,
+      },
+      null,
+      ip
+    );
+
+    // Consumed only once the decision is committed, so a failed attempt does
+    // not burn one of the token's allowed uses.
+    await consumePublicToken(ctx.publicTokenId!, ip);
 
     return NextResponse.json({
       success: true,
-      message: 'Quote signed successfully',
-      signedAt: new Date().toISOString(),
+      decision,
+      status: quote.status,
+      decidedAt: new Date().toISOString(),
     });
-  } catch (err: any) {
-    const status = err?.statusCode || 500;
-    const code = err?.code || 'internal_server_error';
-    return NextResponse.json(
-      { error: code, message: err?.message || 'Unexpected error' },
-      { status }
-    );
+  } catch (err) {
+    return formatErrorResponse(err);
   }
 }

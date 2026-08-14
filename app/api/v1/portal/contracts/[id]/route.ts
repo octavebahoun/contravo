@@ -1,46 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getApiContext } from '@/lib/auth/unified-auth';
+import { db } from '@/lib/db/drizzle';
+import { contracts, organizations } from '@/lib/db/schema';
+import { and, eq, isNull } from 'drizzle-orm';
+import { ApiError } from '@/lib/rbac';
+import { formatErrorResponse } from '@/lib/errors';
+import { requirePortalAccess } from '@/lib/portal/portal-guard';
 
+/**
+ * Contract as seen by the client in the portal (MVP4 §7.1).
+ *
+ * Returns the markdown body so the page can render the terms inline, plus the
+ * signature state that decides whether the signing panel is shown.
+ */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const ctx = await getApiContext();
-
-    if (ctx.authType !== 'public_token') {
-      return NextResponse.json(
-        { error: 'forbidden', message: 'Only public token access allowed' },
-        { status: 403 }
-      );
-    }
-
-    if (!ctx.scopes.includes('read') && !ctx.scopes.includes('*')) {
-      return NextResponse.json(
-        { error: 'permission_denied', message: 'Missing required scope: read' },
-        { status: 403 }
-      );
-    }
-
+    const ctx = await requirePortalAccess('read');
     const { id } = await params;
 
-    // Return a mock contract matching the resource ID
+    const [contract] = await db
+      .select()
+      .from(contracts)
+      .where(
+        and(
+          eq(contracts.id, id),
+          eq(contracts.organizationId, ctx.organizationId),
+          isNull(contracts.deletedAt)
+        )
+      )
+      .limit(1);
+
+    if (!contract) {
+      throw new ApiError('NOT_FOUND', 'Contract not found', 404);
+    }
+
+    const [org] = await db
+      .select({ name: organizations.name, brandColor: organizations.brandColor })
+      .from(organizations)
+      .where(eq(organizations.id, ctx.organizationId))
+      .limit(1);
+
     return NextResponse.json({
       contract: {
-        id,
-        organizationId: ctx.organizationId,
-        title: 'Mock Contract',
-        status: 'draft',
-        recipientEmail: ctx.recipientEmail,
-        createdAt: new Date().toISOString(),
+        id: contract.id,
+        number: contract.number,
+        title: contract.title,
+        status: contract.status,
+        bodyMarkdown: contract.bodyMarkdown,
+        sentAt: contract.sentAt,
+        signedAt: contract.signedAt,
+        signedByName: contract.signedByName,
+        expiresAt: contract.expiresAt,
+        createdAt: contract.createdAt,
+        hasSignedPdf: Boolean(contract.signedPdfFileId),
       },
+      organization: org ? { name: org.name, brandColor: org.brandColor } : null,
+      recipientEmail: ctx.recipientEmail ?? null,
+      canSign:
+        contract.status === 'sent' &&
+        !contract.signedAt &&
+        (ctx.scopes.includes('sign') || ctx.scopes.includes('*')),
     });
-  } catch (err: any) {
-    const status = err?.statusCode || 500;
-    const code = err?.code || 'internal_server_error';
-    return NextResponse.json(
-      { error: code, message: err?.message || 'Unexpected error' },
-      { status }
-    );
+  } catch (err) {
+    return formatErrorResponse(err);
   }
 }
