@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 /**
  * Landing page copy, kept apart from the components (structure adapted from the
  * Finwise template, MIT).
