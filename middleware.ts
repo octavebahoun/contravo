@@ -46,8 +46,11 @@ export async function middleware(request: NextRequest) {
     pathname === '/api/v1/openapi.json' ||
     pathname.startsWith('/api/v1/docs');
   const isWebhookRoute = pathname === '/api/v1/webhooks/geniuspay';
+  // Signature verification is intentionally public (MVP4 §7.3): a proof that
+  // requires an account is not verifiable by a third party.
+  const isPublicVerifyRoute = pathname.startsWith('/api/v1/verify/signature/');
 
-  if (isApiRoute && !isDocsOrOpenApi && !isWebhookRoute) {
+  if (isApiRoute && !isDocsOrOpenApi && !isWebhookRoute && !isPublicVerifyRoute) {
     try {
       // Resolve client IP
       const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
