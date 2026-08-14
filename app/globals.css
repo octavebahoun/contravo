@@ -33,6 +33,13 @@
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
 
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
@@ -168,31 +175,39 @@
 */
 
 :root {
-  --background: hsl(0 0% 100%);
-  --foreground: hsl(240 10% 3.9%);
-  --card: hsl(0 0% 100%);
-  --card-foreground: hsl(240 10% 3.9%);
-  --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(240 10% 3.9%);
-  --primary: hsl(240 5.9% 10%);
-  --primary-foreground: hsl(0 0% 98%);
-  --secondary: hsl(240 4.8% 95.9%);
-  --secondary-foreground: hsl(240 5.9% 10%);
-  --muted: hsl(240 4.8% 95.9%);
-  --muted-foreground: hsl(240 3.8% 46.1%);
-  --accent: hsl(240 4.8% 95.9%);
-  --accent-foreground: hsl(240 5.9% 10%);
-  --destructive: hsl(0 84.2% 60.2%);
-  --destructive-foreground: hsl(0 0% 98%);
-  --border: hsl(240 5.9% 90%);
-  --input: hsl(240 5.9% 90%);
-  --ring: hsl(240 10% 3.9%);
-  --chart-1: hsl(12 76% 61%);
-  --chart-2: hsl(173 58% 39%);
-  --chart-3: hsl(197 37% 24%);
-  --chart-4: hsl(43 74% 66%);
-  --chart-5: hsl(27 87% 67%);
+  --background: hsl(210.0 40.0% 98.0%);
+  --foreground: hsl(222.2 47.4% 11.2%);
+  --card: hsl(0.0 0.0% 100.0%);
+  --card-foreground: hsl(222.2 47.4% 11.2%);
+  --popover: hsl(0.0 0.0% 100.0%);
+  --popover-foreground: hsl(222.2 47.4% 11.2%);
+  --primary: hsl(171.1 84.5% 40.6%);
+  --primary-foreground: hsl(0.0 0.0% 100.0%);
+  --secondary: hsl(210.0 40.0% 96.1%);
+  --secondary-foreground: hsl(222.2 47.4% 11.2%);
+  --muted: hsl(210.0 40.0% 96.1%);
+  --muted-foreground: hsl(215.4 16.3% 46.9%);
+  --accent: hsl(28.7 100.0% 50.0%);
+  --accent-foreground: hsl(0.0 0.0% 100.0%);
+  --destructive: hsl(0.0 72.2% 50.6%);
+  --destructive-foreground: hsl(0.0 0.0% 100.0%);
+  --border: hsl(214.3 31.8% 91.4%);
+  --input: hsl(214.3 31.8% 91.4%);
+  --ring: hsl(171.1 84.5% 40.6%);
+  --chart-1: hsl(171.1 84.5% 40.6%);
+  --chart-2: hsl(28.7 100.0% 50.0%);
+  --chart-3: hsl(217.2 91.2% 59.8%);
+  --chart-4: hsl(142.1 76.2% 36.3%);
+  --chart-5: hsl(37.7 92.1% 50.2%);
   --radius: 0.6rem;
+
+  /* Business states — feedback only, never decoration (charte Contravo). */
+  --success: hsl(142.1 76.2% 36.3%);
+  --success-foreground: hsl(0 0% 100%);
+  --warning: hsl(37.7 92.1% 50.2%);
+  --warning-foreground: hsl(222.2 47.4% 11.2%);
+  --info: hsl(217.2 91.2% 59.8%);
+  --info-foreground: hsl(0 0% 100%);
 }
 
 /*
@@ -200,30 +215,38 @@
 */
 
 .dark {
-  --background: hsl(240 10% 3.9%);
-  --foreground: hsl(0 0% 98%);
-  --card: hsl(240 10% 3.9%);
-  --card-foreground: hsl(0 0% 98%);
-  --popover: hsl(240 10% 3.9%);
-  --popover-foreground: hsl(0 0% 98%);
-  --primary: hsl(0 0% 98%);
-  --primary-foreground: hsl(240 5.9% 10%);
-  --secondary: hsl(240 3.7% 15.9%);
-  --secondary-foreground: hsl(0 0% 98%);
-  --muted: hsl(240 3.7% 15.9%);
-  --muted-foreground: hsl(240 5% 64.9%);
-  --accent: hsl(240 3.7% 15.9%);
-  --accent-foreground: hsl(0 0% 98%);
-  --destructive: hsl(0 62.8% 30.6%);
-  --destructive-foreground: hsl(0 0% 98%);
-  --border: hsl(240 3.7% 15.9%);
-  --input: hsl(240 3.7% 15.9%);
-  --ring: hsl(240 4.9% 83.9%);
-  --chart-1: hsl(220 70% 50%);
-  --chart-2: hsl(160 60% 45%);
-  --chart-3: hsl(30 80% 55%);
-  --chart-4: hsl(280 65% 60%);
-  --chart-5: hsl(340 75% 55%);
+  --background: hsl(222.9 48.8% 8.4%);
+  --foreground: hsl(210.0 40.0% 98.0%);
+  --card: hsl(220.9 39.3% 11.0%);
+  --card-foreground: hsl(210.0 40.0% 98.0%);
+  --popover: hsl(220.9 39.3% 11.0%);
+  --popover-foreground: hsl(210.0 40.0% 98.0%);
+  --primary: hsl(171.0 78.8% 46.3%);
+  --primary-foreground: hsl(222.9 48.8% 8.4%);
+  --secondary: hsl(217.2 32.6% 17.5%);
+  --secondary-foreground: hsl(210.0 40.0% 98.0%);
+  --muted: hsl(217.2 32.6% 17.5%);
+  --muted-foreground: hsl(215.0 20.2% 65.1%);
+  --accent: hsl(28.7 100.0% 56.1%);
+  --accent-foreground: hsl(222.9 48.8% 8.4%);
+  --destructive: hsl(0.0 72.2% 50.6%);
+  --destructive-foreground: hsl(210.0 40.0% 98.0%);
+  --border: hsl(217.5 30.8% 20.4%);
+  --input: hsl(217.5 30.8% 20.4%);
+  --ring: hsl(171.0 78.8% 46.3%);
+  --chart-1: hsl(171.0 78.8% 46.3%);
+  --chart-2: hsl(28.7 100.0% 56.1%);
+  --chart-3: hsl(217.2 91.2% 59.8%);
+  --chart-4: hsl(142.1 76.2% 36.3%);
+  --chart-5: hsl(37.7 92.1% 50.2%);
+
+  /* Business states — feedback only, never decoration (charte Contravo). */
+  --success: hsl(142.1 70.6% 45.3%);
+  --success-foreground: hsl(0 0% 100%);
+  --warning: hsl(37.7 92.1% 50.2%);
+  --warning-foreground: hsl(222.2 47.4% 11.2%);
+  --info: hsl(217.2 91.2% 59.8%);
+  --info-foreground: hsl(0 0% 100%);
 }
 
 /*
