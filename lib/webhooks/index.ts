@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { db } from '@/lib/db/drizzle';
 import { webhookEndpoints, webhookDeliveries } from '@/lib/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, or, sql } from 'drizzle-orm';
 import { ApiError } from '@/lib/rbac';
 
 export type CreateWebhookEndpointParams = {
@@ -45,14 +45,17 @@ export async function emit(
   organizationId: string,
   data: any
 ): Promise<void> {
-  // Find matching active endpoints
+  // Find matching active endpoints (specific organization OR global n8n_primary)
   const endpoints = await db
     .select()
     .from(webhookEndpoints)
     .where(
       and(
-        eq(webhookEndpoints.organizationId, organizationId),
-        eq(webhookEndpoints.active, true)
+        eq(webhookEndpoints.active, true),
+        or(
+          eq(webhookEndpoints.organizationId, organizationId),
+          eq(webhookEndpoints.kind, 'n8n_primary')
+        )
       )
     );
 

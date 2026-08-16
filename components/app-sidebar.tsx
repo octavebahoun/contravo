@@ -51,6 +51,11 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const fetcher = React.useCallback((url: string) => fetch(url).then((res) => res.json()), [])
 
@@ -62,19 +67,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return {
       name: userData?.fullName || userData?.name || "Chargement...",
       email: userData?.email || "",
-      avatar: "/avatars/user.jpg",
+      avatar: "",
     }
   }, [userData])
 
   const sidebarTeams = React.useMemo(() => {
-    if (!orgsData?.organizations) return []
+    if (!mounted || !orgsData?.organizations) return []
     return orgsData.organizations.map((org: any) => ({
       id: org.id,
       name: org.name,
       logo: <Layers className="size-4" />,
       plan: org.id === activeTeam?.id ? (activeTeam?.planName || "SaaS Platform") : "SaaS Platform",
     }))
-  }, [orgsData, activeTeam])
+  }, [orgsData, activeTeam, mounted])
 
   const currentActiveTeam = React.useMemo(() => {
     if (!activeTeam) return undefined
@@ -85,6 +90,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       plan: activeTeam.planName || "SaaS Platform",
     }
   }, [activeTeam])
+
 
   return (
     <Sidebar collapsible="icon" {...props}>
