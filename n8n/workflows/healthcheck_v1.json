@@ -41,7 +41,7 @@
               "id": "833dccaa-9d9d-413c-a3e1-3845b940960b",
               "name": "apiBase",
               "type": "string",
-              "value": "https://CHANGEME.trycloudflare.com"
+              "value": "https://contravo-7g6p.vercel.app"
             },
             {
               "id": "a998c35d-5da2-47ad-9028-980b527594e6",

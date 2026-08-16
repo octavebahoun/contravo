@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
         email: user.email,
         fullName: user.fullName,
         emailVerifiedAt: user.emailVerifiedAt,
+        isSuperAdmin: user.isSuperAdmin,
       },
       memberships: userMemberships,
     });

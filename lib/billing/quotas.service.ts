@@ -11,6 +11,7 @@ import {
   files,
   Subscription,
   QuotaUsage,
+  organizations,
 } from '@/lib/db/schema';
 import { PLANS, PlanId, QuotaKey } from './plans';
 import { eq, and, sql } from 'drizzle-orm';
@@ -187,7 +188,23 @@ export async function assertQuota(
   const planId = (sub.planId as PlanId) || 'free';
   const plan = PLANS[planId] || PLANS.free;
 
-  const limit = plan.quotas[quotaKey];
+  let limit: number | boolean | string | null = plan.quotas[quotaKey];
+
+  const [org] = await db
+    .select()
+    .from(organizations)
+    .where(eq(organizations.id, organizationId))
+    .limit(1);
+
+  if (org) {
+    if (quotaKey === 'maxMembers' && org.customMaxMembers !== null) limit = org.customMaxMembers;
+    else if (quotaKey === 'maxClients' && org.customMaxClients !== null) limit = org.customMaxClients;
+    else if (quotaKey === 'maxProjects' && org.customMaxProjects !== null) limit = org.customMaxProjects;
+    else if (quotaKey === 'maxStorageBytes' && org.customMaxStorageBytes !== null) limit = Number(org.customMaxStorageBytes);
+    else if (quotaKey === 'maxApiKeys' && org.customMaxApiKeys !== null) limit = org.customMaxApiKeys;
+    else if (quotaKey === 'maxWebhookEndpoints' && org.customMaxWebhookEndpoints !== null) limit = org.customMaxWebhookEndpoints;
+  }
+
   if (limit === null || limit === undefined) {
     return; // Unlimited
   }

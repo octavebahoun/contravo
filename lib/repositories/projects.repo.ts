@@ -109,14 +109,14 @@ export async function updateProject(
     throw new ApiError('NOT_FOUND', 'Project not found', 404);
   }
 
-  const [project] = await tdb.update(
+  const [project] = (await tdb.update(
     projects,
     {
       ...input,
       updatedAt: new Date(),
     },
     eq(projects.id, id)
-  ).returning();
+  ).returning()) as any;
 
   const statusChanged = input.status !== undefined && input.status !== existing.status;
 
@@ -202,14 +202,14 @@ export async function deleteProject(
   }
 
   // 3. Perform soft delete
-  const [deletedProject] = await tdb.update(
+  const [deletedProject] = (await tdb.update(
     projects,
     {
       deletedAt: new Date(),
       updatedAt: new Date(),
     },
     eq(projects.id, id)
-  ).returning();
+  ).returning()) as any;
 
   await createAuditLog({
     organizationId,
@@ -243,11 +243,11 @@ export async function addProjectMember(
     throw new ApiError('NOT_FOUND', 'Project not found', 404);
   }
 
-  const [member] = await tdb.insert(projectMembers, {
+  const [member] = (await tdb.insert(projectMembers, {
     projectId,
     userId,
     role,
-  }).returning();
+  }).returning()) as any;
 
   await createAuditLog({
     organizationId,

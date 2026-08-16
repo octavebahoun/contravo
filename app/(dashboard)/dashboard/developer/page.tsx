@@ -38,10 +38,19 @@ export default function DeveloperPage() {
     'projects:read',
   ]);
 
+  const { data: userData } = useSWR('/api/user', fetcher);
+  const { data: activeTeam } = useSWR('/api/team', fetcher);
+
   const { data: keysData, isLoading, mutate } = useSWR<{ apiKeys: ApiKeyItem[] }>(
     '/api/v1/api-keys',
     fetcher
   );
+
+  const currentUserMember = activeTeam?.teamMembers?.find(
+    (member: any) => member.user?.id === userData?.id
+  );
+  
+  const isAuthorized = currentUserMember?.role === 'owner' || currentUserMember?.role === 'admin';
 
   const apiKeysList = keysData?.apiKeys || [];
 
@@ -107,6 +116,30 @@ export default function DeveloperPage() {
     "clientId": "cli_309248239"
   }
 }`;
+
+  if (isLoading || !userData || !activeTeam) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#0052ff]" />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <section className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto space-y-8 flex items-center justify-center min-h-[50vh]">
+        <Card className="max-w-md w-full rounded-2xl border border-gray-200 bg-white p-6 shadow-sm text-center">
+          <div className="mx-auto w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-4">
+            <ShieldCheck className="h-6 w-6 text-red-600" />
+          </div>
+          <h2 className="text-lg font-medium text-gray-900 mb-2">Accès restreint</h2>
+          <p className="text-sm text-gray-500 mb-6">
+            Cette section est réservée aux administrateurs de l'organisation. Veuillez contacter votre administrateur pour obtenir des accès.
+          </p>
+        </Card>
+      </section>
+    );
+  }
 
   return (
     <section className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto space-y-8">

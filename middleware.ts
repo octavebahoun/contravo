@@ -16,6 +16,55 @@ export async function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-request-id', requestId);
 
+  // 0. Handle Admin routes (/admin/* and /api/v1/admin/*)
+  const isAdminRoute = pathname.startsWith('/admin');
+  const isAdminApiRoute = pathname.startsWith('/api/v1/admin');
+
+  if (isAdminRoute || isAdminApiRoute) {
+    const sessionCookie = request.cookies.get('session');
+    if (!sessionCookie) {
+      if (isAdminApiRoute) {
+        return new NextResponse(
+          JSON.stringify({ error: 'unauthenticated', message: 'Authentication required' }),
+          { status: 401, headers: { 'Content-Type': 'application/json', 'x-request-id': requestId } }
+        );
+      }
+      return NextResponse.redirect(new URL('/sign-in', request.url));
+    }
+
+    try {
+      const user = await getSessionUser(sessionCookie.value);
+      if (!user || !user.isSuperAdmin) {
+        if (isAdminApiRoute) {
+          return new NextResponse(
+            JSON.stringify({ error: 'permission_denied', message: 'Accès réservé au Super-Admin Contravo.' }),
+            { status: 403, headers: { 'Content-Type': 'application/json', 'x-request-id': requestId } }
+          );
+        }
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+
+      requestHeaders.set('x-auth-type', 'session');
+      requestHeaders.set('x-user-id', user.id);
+      requestHeaders.set('x-is-super-admin', 'true');
+
+      return NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
+    } catch (error) {
+      console.error('Admin route check failed:', error);
+      if (isAdminApiRoute) {
+        return new NextResponse(
+          JSON.stringify({ error: 'internal_server_error', message: 'Internal server error checking admin access' }),
+          { status: 500, headers: { 'Content-Type': 'application/json', 'x-request-id': requestId } }
+        );
+      }
+      return NextResponse.redirect(new URL('/sign-in', request.url));
+    }
+  }
+
   // 1. Handle Dashboard routes
   const isProtectedRoute = pathname.startsWith('/dashboard');
   const sessionCookie = request.cookies.get('session');
@@ -32,6 +81,33 @@ export async function middleware(request: NextRequest) {
         res.cookies.delete('session');
         return res;
       }
+
+      // Check if organization is suspended
+      const organizationId = request.cookies.get('organization_id')?.value;
+      if (organizationId) {
+        const [org] = await db
+          .select()
+          .from(organizations)
+          .where(eq(organizations.id, organizationId))
+          .limit(1);
+
+        if (org && org.subscriptionStatus === 'suspended') {
+          return NextResponse.redirect(new URL('/suspended', request.url));
+        }
+      } else {
+        const ms = await db
+          .select({
+            organization: organizations,
+          })
+          .from(memberships)
+          .innerJoin(organizations, eq(memberships.organizationId, organizations.id))
+          .where(eq(memberships.userId, user.id))
+          .limit(1);
+
+        if (ms.length > 0 && ms[0].organization.subscriptionStatus === 'suspended') {
+          return NextResponse.redirect(new URL('/suspended', request.url));
+        }
+      }
     } catch (error) {
       console.error('Middleware session check failed:', error);
       const res = NextResponse.redirect(new URL('/sign-in', request.url));
@@ -40,8 +116,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 2. Handle API v1 routes (except docs, openapi.json, and webhooks)
-  const isApiRoute = pathname.startsWith('/api/v1');
+  // 2. Handle API v1 routes (except docs, openapi.json, webhooks, and admin)
+  const isApiRoute = pathname.startsWith('/api/v1') && !pathname.startsWith('/api/v1/admin');
   const isDocsOrOpenApi =
     pathname === '/api/v1/openapi.json' ||
     pathname.startsWith('/api/v1/docs');
@@ -221,12 +297,28 @@ export async function middleware(request: NextRequest) {
       if (authContext.publicTokenId) requestHeaders.set('x-public-token-id', authContext.publicTokenId);
       if (authContext.recipientEmail) requestHeaders.set('x-recipient-email', authContext.recipientEmail);
 
-      // Fetch organization details for rate limiting
+      // Fetch organization details for rate limiting and suspension check
       const [org] = await db
         .select()
         .from(organizations)
         .where(eq(organizations.id, authContext.organizationId))
         .limit(1);
+
+      if (org && org.subscriptionStatus === 'suspended') {
+        return new NextResponse(
+          JSON.stringify({
+            error: 'suspended',
+            message: 'Votre organisation est suspendue. Veuillez contacter le support Contravo.',
+          }),
+          {
+            status: 403,
+            headers: {
+              'Content-Type': 'application/json',
+              'x-request-id': requestId,
+            },
+          }
+        );
+      }
 
       const plan = (org?.plan || 'free') as 'free' | 'pro' | 'enterprise';
 

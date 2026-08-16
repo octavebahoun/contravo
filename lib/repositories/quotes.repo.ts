@@ -6,6 +6,7 @@ import { ApiError } from '@/lib/rbac';
 import { createAuditLog } from '@/lib/audit';
 import { emit } from '@/lib/webhooks';
 import { getNextSequenceNumber } from './sequences.repo';
+import { buildEventPayload } from '@/lib/webhooks/payload-builder';
 
 export type CreateQuoteInput = Omit<
   typeof quotes.$inferInsert,
@@ -151,6 +152,23 @@ export async function createQuote(
     const quoteWithItems = { ...quote, items: insertedItems };
 
     await emit('quote.created', organizationId, { quote: quoteWithItems });
+
+    if (quote.status === 'sent') {
+      try {
+        const sentPayload = await buildEventPayload({
+          organizationId,
+          entityKind: 'quote',
+          entityId: quote.id,
+          entity: quoteWithItems,
+          withPortalUrl: true,
+          withPdfUrl: true,
+          extra: undefined,
+        });
+        await emit('quote.sent', organizationId, sentPayload);
+      } catch (emitErr) {
+        console.error(`Failed to emit quote.sent for created quote ${quote.id}:`, emitErr);
+      }
+    }
 
     return quoteWithItems;
   });

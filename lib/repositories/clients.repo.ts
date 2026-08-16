@@ -20,10 +20,10 @@ export async function createClient(
 ) {
   const tdb = tenantDb(organizationId);
 
-  const [client] = await tdb.insert(clients, {
+  const [client] = (await tdb.insert(clients, {
     ...input,
     createdBy: actorUserId || null,
-  }).returning();
+  }).returning()) as any;
 
   await createAuditLog({
     organizationId,
@@ -106,14 +106,14 @@ export async function updateClient(
     throw new ApiError('NOT_FOUND', 'Client not found', 404);
   }
 
-  const [client] = await tdb.update(
+  const [client] = (await tdb.update(
     clients,
     {
       ...input,
       updatedAt: new Date(),
     },
     eq(clients.id, id)
-  ).returning();
+  ).returning()) as any;
 
   const changed: string[] = [];
   for (const key of Object.keys(input)) {
@@ -195,14 +195,14 @@ export async function deleteClient(
   }
 
   // 3. Perform soft delete
-  const [deletedClient] = await tdb.update(
+  const [deletedClient] = (await tdb.update(
     clients,
     {
       deletedAt: new Date(),
       updatedAt: new Date(),
     },
     eq(clients.id, id)
-  ).returning();
+  ).returning()) as any;
 
   await createAuditLog({
     organizationId,
@@ -235,14 +235,14 @@ export async function archiveClient(
     throw new ApiError('NOT_FOUND', 'Client not found', 404);
   }
 
-  const [client] = await tdb.update(
+  const [client] = (await tdb.update(
     clients,
     {
       isArchived: true,
       updatedAt: new Date(),
     },
     eq(clients.id, id)
-  ).returning();
+  ).returning()) as any;
 
   await createAuditLog({
     organizationId,
@@ -275,14 +275,14 @@ export async function unarchiveClient(
     throw new ApiError('NOT_FOUND', 'Client not found', 404);
   }
 
-  const [client] = await tdb.update(
+  const [client] = (await tdb.update(
     clients,
     {
       isArchived: false,
       updatedAt: new Date(),
     },
     eq(clients.id, id)
-  ).returning();
+  ).returning()) as any;
 
   await createAuditLog({
     organizationId,
