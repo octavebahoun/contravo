@@ -271,11 +271,11 @@ export default function BillingPage() {
                 <div className="border-t border-gray-100 pt-4 space-y-2 text-xs text-[#5b616e]">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-[#05b169]" />
-                    <span>Membres & Clients **Illimités**</span>
+                    <span>Membres & Clients <strong>Illimités</strong></span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-[#05b169]" />
-                    <span>Projets **Illimités**</span>
+                    <span>Projets <strong>Illimités</strong></span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-[#05b169]" />

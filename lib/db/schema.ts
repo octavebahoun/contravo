@@ -38,6 +38,7 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash').notNull(),
   fullName: text('full_name').notNull(),
   emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
+  isSuperAdmin: boolean('is_super_admin').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -60,6 +61,12 @@ export const organizations = pgTable('organizations', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  customMaxMembers: integer('custom_max_members'),
+  customMaxClients: integer('custom_max_clients'),
+  customMaxProjects: integer('custom_max_projects'),
+  customMaxStorageBytes: bigint('custom_max_storage_bytes', { mode: 'bigint' }),
+  customMaxApiKeys: integer('custom_max_api_keys'),
+  customMaxWebhookEndpoints: integer('custom_max_webhook_endpoints'),
 });
 
 export const files = pgTable('files', {

@@ -1,67 +1,60 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { menuItems } from '../_data/content';
 
-/**
- * Landing header with a mobile drawer (structure from the Finwise template, MIT).
- *
- * Sticky and translucent so the grid backdrop of the hero stays visible while
- * scrolling.
- */
 export function LandingHeader() {
   const [open, setOpen] = useState(false);
 
-  return (
-    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
-      <div className="relative mx-auto max-w-7xl">
-        {/* Left vertical border */}
-        <div className="absolute inset-y-0 left-0 w-px bg-border/40" />
-        {/* Right vertical border */}
-        <div className="absolute inset-y-0 right-0 w-px bg-border/40" />
+  const navLinks = [
+    { label: 'Produit', href: '#produit' },
+    { label: 'Tarifs', href: '#tarifs' },
+    { label: 'Docs', href: '#docs' },
+  ];
 
-        <nav className="flex items-center justify-between px-6 py-3">
-          <Link href="/" className="flex items-center" aria-label="Contravo — accueil">
-            <Image
-              src="/logo.webp"
-              alt="Contravo"
-              width={132}
-              height={36}
-              className="h-9 w-auto object-contain"
-              priority
-            />
+  return (
+    <header className="sticky top-0 z-50 border-b border-border/80 bg-background/90 backdrop-blur-md">
+      <div className="mx-auto max-w-7xl px-6">
+        <nav className="flex items-center justify-between py-4">
+          {/* Logo brand uppercase monospace/sans brutalist */}
+          <Link href="/" className="font-heading font-black tracking-widest text-lg text-foreground hover:text-primary transition-colors">
+            CONTRAVO
           </Link>
 
-          <ul className="hidden items-center gap-8 md:flex">
-            {menuItems.map((item) => (
-              <li key={item.href}>
-                <a
-                  href={item.href}
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          {/* Desktop navigation */}
+          <div className="hidden md:flex items-center gap-8">
+            <ul className="flex items-center gap-6">
+              {navLinks.map((link) => (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    className="text-sm font-heading font-semibold uppercase tracking-wider text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+              <li>
+                <Link
+                  href="/sign-in"
+                  className="text-sm font-heading font-semibold uppercase tracking-wider text-muted-foreground hover:text-primary transition-colors"
                 >
-                  {item.label}
-                </a>
+                  Connexion
+                </Link>
               </li>
-            ))}
-          </ul>
-
-          <div className="hidden items-center gap-3 md:flex">
-            <Button variant="ghost" asChild>
-              <Link href="/sign-in">Se connecter</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/sign-up">Créer un compte</Link>
+            </ul>
+            <Button size="sm" asChild className="rounded-none font-heading uppercase tracking-wider text-xs px-5">
+              <Link href="/sign-up">Essayer 14 jours</Link>
             </Button>
           </div>
 
+          {/* Mobile menu button */}
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="rounded-lg p-2 text-foreground md:hidden"
+            className="rounded-none p-2 text-foreground md:hidden border border-border hover:bg-muted"
             aria-label={open ? 'Fermer le menu' : 'Ouvrir le menu'}
             aria-expanded={open}
           >
@@ -70,32 +63,41 @@ export function LandingHeader() {
         </nav>
       </div>
 
-      {open ? (
+      {/* Mobile drawer */}
+      {open && (
         <div className="border-t border-border bg-background md:hidden">
-          <ul className="space-y-1 px-4 py-3">
-            {menuItems.map((item) => (
-              <li key={item.href}>
+          <ul className="space-y-1 px-6 py-4">
+            {navLinks.map((link) => (
+              <li key={link.href}>
                 <a
-                  href={item.href}
+                  href={link.href}
                   onClick={() => setOpen(false)}
-                  className="block rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  className="block py-2 text-sm font-heading font-semibold uppercase tracking-wider text-muted-foreground hover:text-primary"
                 >
-                  {item.label}
+                  {link.label}
                 </a>
               </li>
             ))}
+            <li>
+              <Link
+                href="/sign-in"
+                onClick={() => setOpen(false)}
+                className="block py-2 text-sm font-heading font-semibold uppercase tracking-wider text-muted-foreground hover:text-primary"
+              >
+                Connexion
+              </Link>
+            </li>
           </ul>
 
-          <div className="flex flex-col gap-2 border-t border-border px-4 py-3">
-            <Button variant="outline" asChild>
-              <Link href="/sign-in">Se connecter</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/sign-up">Créer un compte</Link>
+          <div className="px-6 pb-6">
+            <Button asChild className="w-full rounded-none font-heading uppercase tracking-wider text-xs">
+              <Link href="/sign-up" onClick={() => setOpen(false)}>
+                Essayer 14 jours
+              </Link>
             </Button>
           </div>
         </div>
-      ) : null}
+      )}
     </header>
   );
 }

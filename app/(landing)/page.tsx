@@ -1,14 +1,18 @@
 import type { Metadata } from 'next';
 import {
-  Benefits,
-  CTA,
   Hero,
-  Pricing,
-  Stats,
+  LogosBand,
+  BeforeAfter,
+  Features,
+  ProductPreview,
   Steps,
+  PortailSplit,
+  PaymentSplit,
   Testimonials,
+  Pricing,
+  FAQ,
+  CTA,
 } from './_components/sections';
-import { FAQ } from './_components/faq-footer';
 import { siteDetails } from './_data/content';
 
 export const metadata: Metadata = {
@@ -16,17 +20,21 @@ export const metadata: Metadata = {
   description: siteDetails.description,
 };
 
-/** Public landing page (structure adapted from the Finwise template, MIT). */
+/** Public landing page matching the brutalist wireframe layout. */
 export default function LandingPage() {
   return (
     <>
       <Hero />
-      <Benefits />
+      <LogosBand />
+      <BeforeAfter />
+      <Features />
+      <ProductPreview />
       <Steps />
-      <Pricing />
+      <PortailSplit />
+      <PaymentSplit />
       <Testimonials />
+      <Pricing />
       <FAQ />
-      <Stats />
       <CTA />
     </>
   );

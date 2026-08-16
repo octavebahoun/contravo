@@ -121,7 +121,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarGroup>
           <SidebarGroupLabel>Paramètres</SidebarGroupLabel>
           <SidebarMenu>
-            {data.settingsNav.map((item) => {
+            {data.settingsNav.filter(item => {
+              if (item.url === "/dashboard/developer") {
+                const currentUserMember = activeTeam?.teamMembers?.find(
+                  (m: any) => m.user?.id === userData?.id
+                );
+                return currentUserMember?.role === "owner" || currentUserMember?.role === "admin";
+              }
+              return true;
+            }).map((item) => {
               const isActive = pathname === item.url
               return (
                 <SidebarMenuItem key={item.url}>
@@ -136,6 +144,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             })}
           </SidebarMenu>
         </SidebarGroup>
+
+        {userData?.isSuperAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Administration</SidebarGroupLabel>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname.startsWith('/admin')} tooltip="Super-Admin">
+                  <Link href="/admin">
+                    <Shield className="text-primary" />
+                    <span className="font-semibold text-primary">Super-Admin</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter>

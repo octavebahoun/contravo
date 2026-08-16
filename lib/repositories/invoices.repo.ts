@@ -6,6 +6,7 @@ import { ApiError } from '@/lib/rbac';
 import { createAuditLog } from '@/lib/audit';
 import { emit } from '@/lib/webhooks';
 import { getNextSequenceNumber } from './sequences.repo';
+import { buildEventPayload } from '@/lib/webhooks/payload-builder';
 
 export type CreateInvoiceInput = Omit<
   typeof invoices.$inferInsert,
@@ -155,6 +156,23 @@ export async function createInvoice(
     const invoiceWithItems = { ...invoice, items: insertedItems, payments: [] };
 
     await emit('invoice.created', organizationId, { invoice: invoiceWithItems });
+
+    if (invoice.status === 'sent') {
+      try {
+        const sentPayload = await buildEventPayload({
+          organizationId,
+          entityKind: 'invoice',
+          entityId: invoice.id,
+          entity: invoiceWithItems,
+          withPortalUrl: true,
+          withPdfUrl: true,
+          extra: undefined,
+        });
+        await emit('invoice.sent', organizationId, sentPayload);
+      } catch (emitErr) {
+        console.error(`Failed to emit invoice.sent for created invoice ${invoice.id}:`, emitErr);
+      }
+    }
 
     return invoiceWithItems;
   });
