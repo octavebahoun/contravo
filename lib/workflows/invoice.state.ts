@@ -43,7 +43,10 @@ export async function transitionInvoice(
   const updateFields: any = { status: rule.to };
 
   if (action === 'send') {
-    updateFields.issueDate = new Date();
+    // `issue_date` is a `date` column, which drizzle maps in string mode: a Date
+    // instance reaches postgres.js unserialized and makes it throw on
+    // Buffer.byteLength. Sending an invoice answered 500 every single time.
+    updateFields.issueDate = new Date().toISOString().split('T')[0];
   }
 
   const updatedInvoice = await updateInvoice(
