@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ const mockChartData = [
 ];
 
 export default function ClientsPage() {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [isOpen, setIsOpen] = useState(false);
@@ -331,7 +333,11 @@ export default function ClientsPage() {
               </TableHeader>
               <TableBody>
                 {filteredClients.map((client) => (
-                  <TableRow key={client.id} className="border-gray-100 hover:bg-gray-50/50">
+                  <TableRow
+                    key={client.id}
+                    onClick={() => router.push(`/dashboard/clients/${client.id}`)}
+                    className="border-gray-100 hover:bg-gray-50/50 cursor-pointer"
+                  >
                     <TableCell className="font-medium text-xs text-[#0a0b0d]">
                       <div>{client.displayName}</div>
                       {client.companyName && (

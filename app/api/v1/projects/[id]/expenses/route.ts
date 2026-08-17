@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApiContext, checkScope } from '@/lib/auth/unified-auth';
-import { listExpenses } from '@/lib/repositories/expenses.repo';
+import { listExpenses, serializeExpense } from '@/lib/repositories/expenses.repo';
 import { formatErrorResponse } from '@/lib/errors';
 
 /** GET /api/v1/projects/:id/expenses — shortcut for /expenses?projectId= (MVP3 §5). */
@@ -22,7 +22,9 @@ export async function GET(
       limit: parseInt(searchParams.get('limit') || '20', 10),
     });
 
-    return NextResponse.json({ expenses });
+    // `amountCents` is a bigint, which NextResponse.json cannot serialize: this
+    // route answered 500 on any project that had at least one expense.
+    return NextResponse.json({ expenses: expenses.map(serializeExpense) });
   } catch (err) {
     return formatErrorResponse(err);
   }

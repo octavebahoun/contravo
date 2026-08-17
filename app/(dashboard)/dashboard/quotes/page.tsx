@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,8 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Quote {
   id: string;
-  quoteNumber: string;
+  /** The API serializes the column as `number`; `quoteNumber` never existed. */
+  number: string;
   clientId: string;
   projectId: string;
   totalCents: string | number;
@@ -37,6 +39,7 @@ interface Project {
 }
 
 export default function QuotesPage() {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isOpen, setIsOpen] = useState(false);
@@ -67,10 +70,8 @@ export default function QuotesPage() {
   const clients = clientsData?.clients || [];
   const projects = projectsData?.projects || [];
 
-  const filteredQuotes = quotes.filter(
-    (q) =>
-      (q.quoteNumber || '').toLowerCase().includes(search.toLowerCase()) ||
-      (q.clientId || '').toLowerCase().includes(search.toLowerCase())
+  const filteredQuotes = quotes.filter((q) =>
+    (q.number || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const acceptedCount = quotes.filter((q) => q.status === 'accepted').length;
@@ -442,10 +443,14 @@ export default function QuotesPage() {
               </TableHeader>
               <TableBody>
                 {filteredQuotes.map((q) => (
-                  <TableRow key={q.id} className="border-gray-100 hover:bg-gray-50/50">
+                  <TableRow
+                    key={q.id}
+                    onClick={() => router.push(`/dashboard/quotes/${q.id}`)}
+                    className="border-gray-100 hover:bg-gray-50/50 cursor-pointer"
+                  >
                     <TableCell className="font-medium text-xs text-[#0a0b0d] flex items-center gap-2">
                       <FileSpreadsheet className="h-4 w-4 text-[#7c828a]" />
-                      <span>{q.quoteNumber}</span>
+                      <span>{q.number}</span>
                     </TableCell>
                     <TableCell className="text-xs text-[#5b616e]">
                       {getClientName(q.clientId)}
@@ -456,7 +461,11 @@ export default function QuotesPage() {
                     </TableCell>
                     <TableCell>{getStatusBadge(q.status)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
+                      {/* The row navigates to the detail page; the actions must not. */}
+                      <div
+                        className="flex items-center justify-end gap-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {q.status === 'draft' && (
                           <Button
                             variant="ghost"

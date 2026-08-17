@@ -5,6 +5,24 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — Vues détail (client, projet, devis, facture)
+- Quatre pages `[id]` et des lignes de tableau cliquables. Les quatre modules étaient **en liste seule** : cliquer une ligne ne faisait rien, et tout ce que l'API exposait par entité (lignes de devis, paiements, rentabilité, livrables, dépenses) était inatteignable depuis l'interface.
+- `/dashboard/clients/[id]` : fiche complète, édition en place, archivage/réactivation, total facturé, reste à encaisser, projets et factures du client.
+- `/dashboard/projects/[id]` : machine à états (activer, mettre en pause, reprendre, livrer, annuler, archiver — seules les transitions que le serveur accepte sont proposées), rentabilité, livrables, dépenses, devis et factures rattachés. C'est aussi le seul endroit qui appelle **`POST /api/v1/projects/:id/review-request`** : la route existait, aucun bouton ne la déclenchait.
+- `/dashboard/quotes/[id]` et `/dashboard/invoices/[id]` : lignes, totaux, dates de cycle de vie, PDF, et les transitions que l'équipe possède. Accepter ou refuser reste du ressort du client, via le portail.
+- `app/(dashboard)/dashboard/_components/detail-ui.tsx` : formatage monétaire et de dates partagé. Les montants ne sont pas divisés (XOF n'a pas de subdivision) et la locale est figée à `fr-FR`, sinon le serveur et le navigateur en choisissent une différente et React signale une erreur d'hydratation.
+
+### Added — Encaissement manuel d'une facture
+- `POST /api/v1/invoices/:id/payments` et le formulaire correspondant sur la vue détail. `recordPayment()` existait dans le dépôt mais n'était atteignable que par le webhook GeniusPay : **un virement, un Mobile Money ou des espèces ne pouvaient être enregistrés nulle part**, donc aucune facture ne pouvait passer à `paid` sans passer par la passerelle.
+- Refuse un montant nul ou négatif, et refuse tout encaissement sur une facture `draft`, `paid`, `cancelled` ou `refunded` — sinon le recalcul la rouvrait silencieusement en `partial`.
+- Validé en réel : 8 000 XOF → statut `partial`, puis 12 000 XOF → `paid` avec `paidAt` renseigné, événement `invoice.paid` livré à n8n en HTTP 200. Les deux gardes renvoient bien `400`. Données de test supprimées.
+
+### Fixed — Le N° de devis et de facture ne s'affichait jamais
+- Les écrans Devis, Factures et le tableau de bord lisaient `quoteNumber` / `invoiceNumber`. La colonne s'appelle `number` et l'API la sérialise telle quelle : **la colonne « N° » était vide sur les trois écrans**, et la recherche par numéro ne pouvait rien trouver.
+
+### Fixed — Les dépenses d'un projet renvoyaient 500
+- `GET /api/v1/projects/:id/expenses` retournait les lignes brutes ; `amountCents` est un `bigint`, que `NextResponse.json` ne sait pas sérialiser. La route échouait dès qu'un projet avait au moins une dépense. `serializeExpense` est désormais appliqué, comme sur `/api/v1/expenses`.
+
 ### Fixed — L'envoi de facture répondait 500
 - `invoice.state.ts` affectait `updateFields.issueDate = new Date()`. `issue_date` est une colonne `date`, que drizzle mappe en mode chaîne : l'objet `Date` atteignait postgres.js non sérialisé et faisait jeter `Buffer.byteLength`. **`POST /api/v1/invoices/:id/transition {action:'send'}` échouait systématiquement en 500**, donc aucune facture ne pouvait être envoyée, y compris par le bouton « Envoyer » de l'écran Factures. Les 8 colonnes `date` du schéma ont été auditées : c'était le seul cas.
 - Chaîne complète validée en production sur FAC-2026-0003 : routeur n8n (branche `invoice.sent`) → `email_invoice_sent_v1` → `Has PDF?` en branche `true` → téléchargement R2 sans credential → pièce jointe de 3467 octets (`%PDF-`) → Resend accepté (`bcff7a45-8a1a-4c3e-98cf-41bb218c294c`).

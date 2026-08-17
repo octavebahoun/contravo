@@ -11,8 +11,15 @@ Changes to the public HTTP API (`/api/v1/*`) are documented here.
 - `POST /api/v1/webhooks/excellence-events` et `POST /api/v1/webhooks/geniuspay-excellence` répondaient `401` pour la même raison. Ils sont authentifiés par HMAC et sont maintenant exemptés, au même titre que `/api/v1/webhooks/geniuspay`. `POST /api/v1/webhooks/verify` reste protégé par API key (sinon il devient un oracle de signature ouvert).
 - Les en-têtes internes (`x-auth-type`, `x-user-id`, `x-organization-id`, `x-is-super-admin`, …) fournis par le client sont désormais purgés à l'entrée du middleware ; seules les valeurs qu'il calcule atteignent les handlers.
 - `GET|POST /api/v1/expenses` et `GET|PATCH /api/v1/expenses/:id` renvoyaient `500` (`amountCents` bigint non sérialisable). Les montants sont désormais transmis en chaînes décimales, comme sur les devis et factures. Idem `fileSizeBytes` sur les livrables.
+- `GET /api/v1/projects/:id/expenses` renvoyait `500` pour la même raison : le raccourci retournait les lignes brutes sans passer par `serializeExpense`. Il échouait dès qu'un projet avait au moins une dépense.
 
 ### Added
+- `GET|POST /api/v1/invoices/:id/payments`
+  - `GET` liste les encaissements d'une facture (scope `invoices:read`).
+  - `POST` enregistre un paiement manuel (scope `invoices:write`) : `amountCents` (chaîne décimale), `method` (`bank_transfer`|`mobile_money`|`card`|`cash`|`check`|`other`), `paidAt`, `reference`, `notes` optionnels. `source` est forcé à `manual`.
+  - Recalcule `amountPaidCents`, fait passer la facture en `partial` ou `paid`, et émet `invoice.paid` lorsqu'elle est soldée.
+  - `400` si le montant est nul ou négatif, ou si la facture n'est pas `sent`, `partial` ou `overdue`.
+  - Réponse `201` : `{ payment, invoice: { id, status, amountPaidCents, totalCents, paidAt } }`.
 - `GET /api/v1/deliverables`
   - Liste les livrables de toute l'organisation (filtres `projectId`, `status`, `page`, `limit`).
   - Scope requis : `deliverables:read`.
