@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApiContext, checkScope } from '@/lib/auth/unified-auth';
 import { createClient, listClients } from '@/lib/repositories/clients.repo';
+import { assertQuota, recomputeQuotaUsage } from '@/lib/billing/quotas.service';
 import { formatErrorResponse } from '@/lib/errors';
 import { z } from 'zod';
 
@@ -52,12 +53,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = createClientSchema.parse(body);
 
+    await assertQuota(ctx.organizationId, 'maxClients');
+
     const client = await createClient(
       ctx.organizationId,
       validated,
       ctx.userId,
       request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '127.0.0.1'
     );
+
+    await recomputeQuotaUsage(ctx.organizationId);
 
     return NextResponse.json(client, { status: 201 });
   } catch (err) {

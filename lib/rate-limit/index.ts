@@ -27,11 +27,17 @@ if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) 
   });
 }
 
-export type RateLimitTier = 'free' | 'pro' | 'enterprise';
+/**
+ * Tiers mirror the billing plans of `lib/billing/plans.ts` (free | pro | business).
+ * `enterprise` is kept as an alias of `business` for keys minted before MVP6
+ * renamed the top plan — dropping it would silently downgrade those orgs to Free.
+ */
+export type RateLimitTier = 'free' | 'pro' | 'business' | 'enterprise';
 
 export const TIER_LIMITS: Record<RateLimitTier, number> = {
   free: 100,
   pro: 1000,
+  business: 5000,
   enterprise: 5000,
 };
 

@@ -47,3 +47,7 @@ postgres_data/
 **/*.log
 **/venv/
 .agents/
+
+# Claude Code local tooling
+/.claude/
+/skills-lock.json

@@ -93,7 +93,10 @@ export async function buildEventPayload(
   };
 
   if (entity.totalCents !== undefined && entity.totalCents !== null) {
-    payload.totalCents = Number(entity.totalCents);
+    // Decimal string, like the API returns for the same column and like
+    // `toJsonSafe` produces for the raw rows other call sites emit. `Number()`
+    // here made the field's type depend on which code path built the event.
+    payload.totalCents = String(entity.totalCents);
     payload.currency = entity.currency ?? null;
   }
 

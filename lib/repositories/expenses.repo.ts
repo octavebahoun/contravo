@@ -13,6 +13,15 @@ export type CreateExpenseInput = Omit<
 
 export type UpdateExpenseInput = Partial<CreateExpenseInput>;
 
+/**
+ * `amountCents` is a bigint column, which `NextResponse.json` cannot serialize.
+ * Same convention as the quotes and invoices routes: minor units cross the wire
+ * as decimal strings.
+ */
+export function serializeExpense<T extends { amountCents: bigint }>(expense: T) {
+  return { ...expense, amountCents: expense.amountCents.toString() };
+}
+
 export async function createExpense(
   organizationId: string,
   input: CreateExpenseInput,

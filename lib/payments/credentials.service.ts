@@ -3,8 +3,20 @@ import { db } from '../db/drizzle';
 import { paymentGatewayCredentials } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
+/**
+ * Resolves the key-encryption key used to wrap merchant gateway secrets.
+ *
+ * There is deliberately no fallback value: a default would be identical across
+ * every deployment and published in the repository, so a missing variable must
+ * fail loudly rather than encrypt production secrets with a known key.
+ */
 function getKek(): Buffer {
-  const kekStr = process.env.PAYMENT_CREDENTIALS_KEK || 'mock_kek_must_be_32_bytes_long_!';
+  const kekStr = process.env.PAYMENT_CREDENTIALS_KEK;
+  if (!kekStr) {
+    throw new Error(
+      'PAYMENT_CREDENTIALS_KEK is not set — refusing to encrypt gateway credentials without it.'
+    );
+  }
   let kek: Buffer;
   if (kekStr.length === 64 && /^[0-9a-fA-F]+$/.test(kekStr)) {
     kek = Buffer.from(kekStr, 'hex');

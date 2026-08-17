@@ -6,6 +6,20 @@ import { ApiError } from '@/lib/rbac';
 import { createAuditLog } from '@/lib/audit';
 import { emit } from '@/lib/webhooks';
 
+/**
+ * `fileSizeBytes` is a bigint column, which `NextResponse.json` cannot
+ * serialize once an upload has filled it. Minor detail, same convention as the
+ * other money/size columns: it crosses the wire as a decimal string.
+ */
+export function serializeDeliverable<T extends { fileSizeBytes: bigint | null }>(
+  deliverable: T
+) {
+  return {
+    ...deliverable,
+    fileSizeBytes: deliverable.fileSizeBytes?.toString() ?? null,
+  };
+}
+
 export type CreateDeliverableInput = Omit<
   typeof deliverables.$inferInsert,
   | 'id'

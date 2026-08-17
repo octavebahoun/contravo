@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApiContext, checkScope } from '@/lib/auth/unified-auth';
 import { generateApiKey } from '@/lib/api-keys';
+import { assertQuota, recomputeQuotaUsage } from '@/lib/billing/quotas.service';
 import { db } from '@/lib/db/drizzle';
 import { apiKeys } from '@/lib/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
@@ -72,6 +73,8 @@ export async function POST(request: NextRequest) {
 
     const { name, scopes, expiresAt } = result.data;
 
+    await assertQuota(ctx.organizationId, 'maxApiKeys');
+
     const apiKey = await generateApiKey({
       name,
       organizationId: ctx.organizationId,
@@ -80,9 +83,12 @@ export async function POST(request: NextRequest) {
       createdBy: ctx.userId || null,
     });
 
+    await recomputeQuotaUsage(ctx.organizationId);
+
     return NextResponse.json(apiKey, { status: 201 });
   } catch (err: any) {
-    const status = err?.statusCode || 500;
+    // `status` covers QuotaExceededError, which carries no `statusCode`.
+    const status = err?.statusCode || err?.status || 500;
     const code = err?.code || 'internal_server_error';
     return NextResponse.json(
       { error: code, message: err?.message || 'Unexpected error' },

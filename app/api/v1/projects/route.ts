@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApiContext, checkScope } from '@/lib/auth/unified-auth';
 import { createProject, listProjects } from '@/lib/repositories/projects.repo';
+import { assertQuota, recomputeQuotaUsage } from '@/lib/billing/quotas.service';
 import { formatErrorResponse } from '@/lib/errors';
 import { z } from 'zod';
 
@@ -54,6 +55,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = createProjectSchema.parse(body);
 
+    await assertQuota(ctx.organizationId, 'maxProjects');
+
     const project = await createProject(
       ctx.organizationId,
       {
@@ -63,6 +66,8 @@ export async function POST(request: NextRequest) {
       ctx.userId,
       request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '127.0.0.1'
     );
+
+    await recomputeQuotaUsage(ctx.organizationId);
 
     const serializedProject = {
       ...project,

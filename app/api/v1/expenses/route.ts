@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApiContext, checkScope } from '@/lib/auth/unified-auth';
-import { createExpense, listExpenses } from '@/lib/repositories/expenses.repo';
+import { createExpense, listExpenses, serializeExpense } from '@/lib/repositories/expenses.repo';
 import { formatErrorResponse } from '@/lib/errors';
 import { z } from 'zod';
 
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       limit: parseInt(searchParams.get('limit') || '20', 10),
     });
 
-    return NextResponse.json({ expenses });
+    return NextResponse.json({ expenses: expenses.map(serializeExpense) });
   } catch (err) {
     return formatErrorResponse(err);
   }
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       request.headers.get('x-forwarded-for') || '127.0.0.1'
     );
 
-    return NextResponse.json(expense, { status: 201 });
+    return NextResponse.json(serializeExpense(expense), { status: 201 });
   } catch (err) {
     return formatErrorResponse(err);
   }
