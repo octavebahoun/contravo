@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { db } from '@/lib/db/drizzle';
-import { users } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { users, passwordResetTokens, sessions } from '@/lib/db/schema';
+import { eq, and, isNull, gt } from 'drizzle-orm';
 import { resetPasswordSchema } from '@/lib/validation';
 import { hashPassword } from '@/lib/auth/session';
 import { ApiError } from '@/lib/rbac';
@@ -14,31 +15,60 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = await resetPasswordSchema.parseAsync(body);
 
-    const prefix = 'reset-password-';
-    if (!validated.token.startsWith(prefix)) {
-      throw new ApiError('INVALID_TOKEN', 'The password reset token is invalid or expired', 400);
-    }
+    // The token is looked up by hash: only the holder of the emailed value can
+    // produce it, and the table never contains a usable link.
+    const tokenHash = crypto.createHash('sha256').update(validated.token).digest('hex');
 
-    const userId = validated.token.substring(prefix.length);
-    const result = await db
+    const [resetToken] = await db
       .select()
-      .from(users)
-      .where(eq(users.id, userId))
+      .from(passwordResetTokens)
+      .where(
+        and(
+          eq(passwordResetTokens.tokenHash, tokenHash),
+          isNull(passwordResetTokens.usedAt),
+          gt(passwordResetTokens.expiresAt, new Date())
+        )
+      )
       .limit(1);
 
-    if (result.length === 0) {
+    if (!resetToken) {
       throw new ApiError('INVALID_TOKEN', 'The password reset token is invalid or expired', 400);
     }
 
-    const user = result[0];
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, resetToken.userId))
+      .limit(1);
+
+    if (!user) {
+      throw new ApiError('INVALID_TOKEN', 'The password reset token is invalid or expired', 400);
+    }
+
     const passwordHash = await hashPassword(validated.newPassword);
 
-    await db
-      .update(users)
-      .set({ passwordHash })
-      .where(eq(users.id, user.id));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({ passwordHash, updatedAt: new Date() })
+        .where(eq(users.id, user.id));
 
-    const ipAddress = request.headers.get('x-forwarded-for') || (request as any).ip || undefined;
+      // Single use: burning the token inside the transaction closes the window
+      // where two concurrent requests could both reset the password.
+      await tx
+        .update(passwordResetTokens)
+        .set({ usedAt: new Date() })
+        .where(eq(passwordResetTokens.id, resetToken.id));
+
+      // A reset is the standard remedy for a compromised account, so every
+      // existing session has to go — otherwise the attacker keeps their cookie.
+      await tx
+        .update(sessions)
+        .set({ revokedAt: new Date() })
+        .where(and(eq(sessions.userId, user.id), isNull(sessions.revokedAt)));
+    });
+
+    const ipAddress = request.headers.get('x-forwarded-for') || undefined;
     await createAuditLog({
       actorUserId: user.id,
       action: 'auth.password-reset-completed',
