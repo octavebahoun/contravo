@@ -7,14 +7,28 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, CheckCircle2, ShieldAlert, ArrowUpRight, Zap, Building2, User } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Loader2, CheckCircle2, ShieldAlert, ArrowUpRight, Zap, Building2, User, CalendarClock } from 'lucide-react';
 import { toast } from 'sonner';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+/** The v1 routes answer `{ error: { message } }`; older ones answer `{ message }`. */
+const readError = (data: any, fallback: string) =>
+  data?.error?.message || data?.message || (typeof data?.error === 'string' ? data.error : null) || fallback;
+
 interface UsageData {
   planId: string;
   status: string;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: string;
   quotas: {
     maxMembers: number | null;
     maxClients: number | null;
@@ -34,6 +48,9 @@ interface UsageData {
 export default function BillingPage() {
   const { data: usageData, error, isLoading, mutate } = useSWR<UsageData>('/api/v1/billing', fetcher);
   const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
+  const [confirmDowngrade, setConfirmDowngrade] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isResuming, setIsResuming] = useState(false);
 
   const handleSubscribe = async (planId: string) => {
     try {
@@ -46,7 +63,7 @@ export default function BillingPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.message || data.error || 'Erreur lors de l’initialisation du paiement');
+        throw new Error(readError(data, 'Erreur lors de l’initialisation du paiement'));
       }
 
       if (data.checkoutUrl) {
@@ -60,8 +77,52 @@ export default function BillingPage() {
     }
   };
 
+  /** Schedules the downgrade to Free; access to the paid plan runs to the period end. */
+  const handleDowngrade = async () => {
+    try {
+      setIsCancelling(true);
+      const res = await fetch('/api/v1/billing/cancel', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(readError(data, 'Impossible de programmer la rétrogradation'));
+      }
+
+      toast.success('Rétrogradation programmée. Votre forfait actuel reste actif jusqu’à la fin de la période.');
+      setConfirmDowngrade(false);
+      await mutate();
+    } catch (err: any) {
+      toast.error(err.message || 'Impossible de programmer la rétrogradation');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  const handleResume = async () => {
+    try {
+      setIsResuming(true);
+      const res = await fetch('/api/v1/billing/resume', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(readError(data, 'Impossible de reprendre l’abonnement'));
+      }
+
+      toast.success('Rétrogradation annulée. Votre abonnement continue.');
+      await mutate();
+    } catch (err: any) {
+      toast.error(err.message || 'Impossible de reprendre l’abonnement');
+    } finally {
+      setIsResuming(false);
+    }
+  };
+
   const currentPlan = usageData?.planId || 'free';
   const status = usageData?.status || 'active';
+  const cancelAtPeriodEnd = usageData?.cancelAtPeriodEnd ?? false;
+
+  const formatPeriodEnd = (iso?: string) =>
+    iso
+      ? new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+      : '';
 
   const formatStorage = (bytes: number) => {
     if (bytes >= 1024 * 1024 * 1024) {
@@ -108,6 +169,31 @@ export default function BillingPage() {
               Veuillez régulariser votre abonnement pour éviter la suspension des fonctionnalités Pro.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Rétrogradation programmée : encore réversible tant que la période court */}
+      {cancelAtPeriodEnd && currentPlan !== 'free' && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[#f4b000]/5 border border-[#f4b000]/25">
+          <div className="flex items-start gap-4 text-[#0a0b0d]">
+            <CalendarClock className="h-5 w-5 shrink-0 mt-0.5 text-[#f4b000]" />
+            <div className="text-sm">
+              <p className="font-semibold">Rétrogradation vers Gratuit programmée.</p>
+              <p className="mt-1 text-xs text-[#5b616e]">
+                Votre forfait {currentPlan === 'pro' ? 'Pro' : 'Business'} reste actif jusqu’au{' '}
+                {formatPeriodEnd(usageData?.currentPeriodEnd)}.
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={handleResume}
+            disabled={isResuming}
+            variant="outline"
+            className="rounded-full border-gray-300 text-[#0a0b0d] hover:bg-white text-xs font-semibold h-10 shrink-0"
+          >
+            {isResuming ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Reprendre l’abonnement
+          </Button>
         </div>
       )}
 
@@ -168,11 +254,16 @@ export default function BillingPage() {
                 </div>
 
                 <Button
-                  disabled={currentPlan === 'free'}
+                  disabled={currentPlan === 'free' || cancelAtPeriodEnd || isCancelling}
+                  onClick={() => setConfirmDowngrade(true)}
                   variant="outline"
                   className="w-full rounded-full border-gray-300 text-[#0a0b0d] hover:bg-gray-50 text-xs font-semibold h-11 mt-4"
                 >
-                  {currentPlan === 'free' ? 'Plan Actif' : 'Gratuit'}
+                  {currentPlan === 'free'
+                    ? 'Plan Actif'
+                    : cancelAtPeriodEnd
+                    ? 'Rétrogradation programmée'
+                    : 'Rétrograder vers Gratuit'}
                 </Button>
               </CardContent>
             </Card>
@@ -402,6 +493,40 @@ export default function BillingPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={confirmDowngrade} onOpenChange={setConfirmDowngrade}>
+        <DialogContent className="rounded-2xl sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-normal text-[#0a0b0d]">
+              Rétrograder vers le plan Gratuit ?
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#5b616e] pt-2">
+              Votre forfait actuel reste actif jusqu’au {formatPeriodEnd(usageData?.currentPeriodEnd)}. À cette
+              date vous repasserez aux limites du plan Gratuit : 3 membres, 10 clients, 5 projets, 500 MB de
+              stockage. Aucun remboursement n’est effectué pour la période en cours, et vous pouvez annuler
+              cette rétrogradation à tout moment avant l’échéance.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setConfirmDowngrade(false)}
+              disabled={isCancelling}
+              className="rounded-full border-gray-300 text-xs font-semibold h-10"
+            >
+              Garder mon forfait
+            </Button>
+            <Button
+              onClick={handleDowngrade}
+              disabled={isCancelling}
+              className="rounded-full bg-[#cf202f] hover:bg-[#b01b28] text-white text-xs font-semibold h-10"
+            >
+              {isCancelling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Confirmer la rétrogradation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

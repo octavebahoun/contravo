@@ -51,6 +51,30 @@ export async function getSubscription(
     .limit(1);
 
   if (sub) {
+    // A cancellation scheduled with `cancelAtPeriodEnd` has to actually take
+    // effect once the paid period is over. Applying it lazily on read keeps the
+    // downgrade correct without depending on a cron being alive.
+    if (
+      sub.cancelAtPeriodEnd &&
+      sub.planId !== 'free' &&
+      sub.currentPeriodEnd.getTime() <= Date.now()
+    ) {
+      const [downgraded] = await db
+        .update(subscriptions)
+        .set({
+          planId: 'free',
+          status: 'active',
+          cancelAtPeriodEnd: false,
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: new Date('2099-12-31T23:59:59Z'),
+          updatedAt: new Date(),
+        })
+        .where(eq(subscriptions.id, sub.id))
+        .returning();
+
+      return downgraded;
+    }
+
     return sub;
   }
 
