@@ -6,6 +6,7 @@ import { recordPayment as recordInvoicePayment } from '../../repositories/invoic
 import { GeniusPayClient } from './geniuspay-client';
 import { emit } from '../../webhooks';
 import { buildEventPayload } from '../../webhooks/payload-builder';
+import { getAppUrl } from '@/lib/config/app-url';
 
 
 
@@ -101,8 +102,8 @@ export async function createPaymentIntent(
         phone: clientRecord.phone || undefined,
         country: 'CI', // Default to CI (Côte d'Ivoire) as standard country scope
       },
-      successUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/portal/invoices/${invoiceId}?status=success`,
-      errorUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/portal/invoices/${invoiceId}?status=failed`,
+      successUrl: `${getAppUrl()}/portal/invoices/${invoiceId}?status=success`,
+      errorUrl: `${getAppUrl()}/portal/invoices/${invoiceId}?status=failed`,
       metadata: {
         organization_id: organizationId,
         invoice_id: invoiceId,

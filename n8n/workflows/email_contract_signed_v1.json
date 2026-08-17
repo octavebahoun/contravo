@@ -88,14 +88,6 @@
               "outputPropertyName": "data"
             }
           }
-        },
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth"
-      },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "",
-          "name": "EXCELLENCE_API_KEY"
         }
       }
     },

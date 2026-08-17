@@ -1,7 +1,9 @@
 import { db } from '@/lib/db/drizzle';
-import { clients, memberships, organizations, users } from '@/lib/db/schema';
-import { and, eq, inArray } from 'drizzle-orm';
+import { clients, files, memberships, organizations, users } from '@/lib/db/schema';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { generatePublicToken } from '@/lib/public-tokens';
+import { getPresignedGetUrl } from '@/lib/storage/presign';
+import { getAppUrl } from '@/lib/config/app-url';
 
 /**
  * Builds the `data` payload carried by outbound webhook events (MVP3 §6).
@@ -35,7 +37,7 @@ const PORTAL_PATH: Record<EntityKind, string> = {
 };
 
 function baseUrl(): string {
-  return process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL || 'http://localhost:3000';
+  return getAppUrl();
 }
 
 /**
@@ -57,6 +59,58 @@ async function loadTeamEmails(organizationId: string): Promise<string[]> {
     );
 
   return rows.map((r) => r.email).filter(Boolean);
+}
+
+/** How long the presigned PDF link in a webhook payload stays usable. */
+const PDF_URL_TTL_SECONDS = 3600;
+
+/** `files.kind` holding the generated PDF for each entity kind. */
+const PDF_FILE_KIND: Partial<Record<EntityKind, string>> = {
+  quote: 'quote_pdf',
+  invoice: 'invoice_pdf',
+  contract: 'contract_pdf',
+};
+
+/**
+ * Presigned R2 link to the entity's generated PDF.
+ *
+ * This used to be `/api/v1/<entity>/<id>/pdf/download`, which n8n called with
+ * its API key. That could never work: `n8n_primary` is a global endpoint
+ * receiving events from every organization, while an API key belongs to exactly
+ * one — so every PDF from any other organization answered 404, and tenant
+ * isolation was right to refuse. Signing the object directly removes the need
+ * for a credential entirely, works for all organizations, and the link expires
+ * on its own.
+ *
+ * Returns null when no PDF exists yet, so the email goes out with a portal link
+ * instead of an attachment rather than not going out at all.
+ */
+async function buildPdfUrl(
+  organizationId: string,
+  entityKind: EntityKind,
+  entityId: string
+): Promise<string | null> {
+  const kind = PDF_FILE_KIND[entityKind];
+  if (!kind) return null;
+
+  const [file] = await db
+    .select({ r2Key: files.r2Key, filename: files.filename })
+    .from(files)
+    .where(
+      and(
+        eq(files.organizationId, organizationId),
+        eq(files.linkedEntityType, entityKind),
+        eq(files.linkedEntityId, entityId),
+        eq(files.kind, kind),
+        eq(files.status, 'ready')
+      )
+    )
+    .orderBy(desc(files.createdAt))
+    .limit(1);
+
+  if (!file) return null;
+
+  return getPresignedGetUrl(file.r2Key, organizationId, PDF_URL_TTL_SECONDS, file.filename);
 }
 
 export type BuildPayloadParams = {
@@ -150,10 +204,10 @@ export async function buildEventPayload(
     }
 
     if (params.withPdfUrl) {
-      // n8n follows this with its API key; the server answers a 302 to a
-      // short-lived presigned R2 URL (MVP4 §8.2).
-      const path = entityKind === 'quote' ? 'quotes' : entityKind === 'invoice' ? 'invoices' : 'contracts';
-      payload.pdfUrl = `${baseUrl()}/api/v1/${path}/${entityId}/pdf/download`;
+      const pdfUrl = await buildPdfUrl(organizationId, entityKind, entityId);
+      if (pdfUrl) {
+        payload.pdfUrl = pdfUrl;
+      }
     }
   } catch (error) {
     // A webhook payload is never worth failing a business transition for.

@@ -5,6 +5,7 @@ import { eq, and, isNull, gt } from 'drizzle-orm';
 import { ApiError } from '@/lib/rbac';
 import { assertQuota } from '@/lib/billing/quotas.service';
 import { emit } from '@/lib/webhooks';
+import { getAppUrl } from '@/lib/config/app-url';
 
 /** An invitation link stays valid for a week. */
 const INVITATION_TTL_DAYS = 7;
@@ -86,7 +87,7 @@ export async function createOrganizationInvitation(input: CreateInvitationInput)
     .where(eq(users.id, input.invitedByUserId))
     .limit(1);
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const baseUrl = getAppUrl();
 
   // The raw token leaves the system exactly once, here. Only its hash is stored.
   await emit('invitation.sent', input.organizationId, {

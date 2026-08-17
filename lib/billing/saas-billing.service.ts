@@ -12,6 +12,7 @@ import { eq, and, desc, sql } from 'drizzle-orm';
 import { GeniusPayClient } from '../payments/geniuspay/geniuspay-client';
 import { emit } from '../webhooks';
 import { getSubscription } from './quotas.service';
+import { getAppUrl } from '../config/app-url';
 
 export class BillingServiceError extends Error {
   constructor(message: string, public statusCode: number = 400) {
@@ -92,7 +93,7 @@ export async function createSubscriptionCheckout(
   let checkoutUrl: string;
   let gatewayReference: string | null = null;
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://contravo-7g6p.vercel.app';
+  const baseUrl = getAppUrl();
   const successUrl = `${baseUrl}/dashboard/billing?status=success&cycle_id=${cycle.id}`;
   const errorUrl = `${baseUrl}/dashboard/billing?status=failed&cycle_id=${cycle.id}`;
 

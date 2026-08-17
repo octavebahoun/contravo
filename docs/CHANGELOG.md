@@ -5,6 +5,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — Écran Fichiers
+- `/dashboard/files` : liste des documents de l'organisation, recherche par nom, filtre par type, envoi, téléchargement et suppression. Les routes d'upload et de téléchargement existaient, mais **aucune ne permettait d'énumérer les fichiers** : tout ce qu'une organisation stockait sur R2 était inatteignable depuis l'interface.
+- Route `GET /api/v1/files` : liste paginée avec `kind`, `status` et `search`, plus le total d'octets calculé en SQL sur l'organisation entière (et non sur la page renvoyée).
+- L'envoi passe par un PUT présigné directement vers R2 : le fichier ne transite pas par le serveur applicatif. Type MIME, taille et quota de stockage restent validés côté serveur au moment du présignage.
+- `POST /api/v1/uploads/presign` passait la chaîne `'system'` comme `uploaded_by_user_id` en l'absence d'utilisateur (cas clé API), ce qui violait la clé étrangère uuid. La colonne étant nullable, `null` est désormais transmis.
+
 ### Added — Parcours d'invitation d'équipe
 - Page publique `/invite/[token]` : nom de l'organisation, auteur de l'invitation, rôle proposé, et acceptation en un clic. Le jeton était généré et stocké mais **aucun email n'était envoyé et aucun écran ne permettait de l'accepter** — un invité ne pouvait jamais rejoindre une organisation.
 - Événement `invitation.sent`, template MJML `invitation_sent/fr`, workflow `email_invitation_sent_v1` et branche dans `router_dispatch_v1`.

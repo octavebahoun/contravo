@@ -112,7 +112,7 @@
       ],
       "parameters": {
         "language": "javaScript",
-        "jsCode": "const res = $('Call Excellence API').first().json || {};\n// fullResponse + neverError : on juge sur le code HTTP, pas sur la forme du corps\n// (une reponse d'erreur JSON est aussi un objet non vide).\nconst ok = res.statusCode >= 200 && res.statusCode < 300;\nlet failures = Number($workflow.staticData.failures || 0);\nfailures = ok ? 0 : failures + 1;\n$workflow.staticData.failures = failures;\nreturn [{ json: { failures, alert: failures >= 3, statusCode: res.statusCode || null } }];\n"
+        "jsCode": "const res = $('Call Excellence API').first().json || {};\n// fullResponse + neverError : on juge sur le code HTTP, pas sur la forme du corps\n// (une reponse d'erreur JSON est aussi un objet non vide).\nconst ok = res.statusCode >= 200 && res.statusCode < 300;\n\n// $workflow n'expose que { id, name, active } : la donnee persistante passe par\n// $getWorkflowStaticData. Lire $workflow.staticData jetait un TypeError a chaque\n// execution, donc le compteur d'echecs consecutifs n'a jamais fonctionne et\n// aucune alerte n'a jamais pu partir.\nconst staticData = $getWorkflowStaticData('global');\nlet failures = Number(staticData.failures || 0);\nfailures = ok ? 0 : failures + 1;\nstaticData.failures = failures;\n\nreturn [{ json: { failures, alert: failures >= 3, statusCode: res.statusCode || null } }];\n"
       }
     },
     {

@@ -7,6 +7,7 @@ import { requestPasswordResetSchema } from '@/lib/validation';
 import { formatErrorResponse } from '@/lib/errors';
 import { createAuditLog } from '@/lib/audit';
 import { emit } from '@/lib/webhooks';
+import { getAppUrl } from '@/lib/config/app-url';
 
 /** A reset link is only usable for one hour. */
 const TOKEN_TTL_MINUTES = 60;
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
         ipAddress,
       });
 
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const baseUrl = getAppUrl();
 
       // n8n turns this into the actual email. The raw token leaves the system
       // exactly once, here, and is never stored in a readable form.
