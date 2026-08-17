@@ -5,6 +5,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed — Next épinglé en 15.5.23, sortie des canary
+- Le projet tournait sur `15.6.0-canary.59` : une canary d'une version **jamais sortie en stable**, la ligne étant passée de 15.5.x à 16.x. C'est le suspect principal du crash `removeChild` de `/dashboard/contracts`, dont le balisage avait été audité et jugé valide. 15.5.23 est le tag `backport`, c'est-à-dire la ligne 15.5 encore maintenue.
+- `experimental.ppr` et `experimental.clientSegmentCache` ont été retirés : réservés aux canary, `next build` refuse de démarrer avec eux sur une version stable. Ce sont des optimisations de rendu — les routes qui étaient en pré-rendu partiel sont désormais simplement rendues à la demande, sans perte fonctionnelle.
+- `next build` réécrit lui-même `tsconfig.json` (`"jsx": "react-jsx"` → `"preserve"`, Next compilant le JSX via SWC). Vitest héritait de ce réglage et a cessé de transformer le JSX : **tous les tests `.tsx`, et tous les `.ts` important le service PDF, ne se parsaient plus**. La configuration JSX est maintenant portée par `vitest.config.mjs`, via `oxc` puisque Vite 8 transforme avec oxc/rolldown et non plus esbuild.
+- Les 16 écrans du tableau de bord et les 100 tests passent sur la version épinglée. Le crash `removeChild` lui-même se constate au clic : à confirmer côté navigateur.
+
 ### Fixed — Un événement était émis avant que l'écriture qui le justifie soit commitée
 - `emit()` était appelé depuis l'intérieur de `db.transaction()` mais écrivait par la connexion **globale**. Trois défauts distincts en découlaient :
   1. la ligne d'outbox atterrissait hors de la transaction — une écriture métier annulée ensuite laissait quand même un webhook en file, **et déjà envoyé**, pour une entité qui n'a jamais existé ;
