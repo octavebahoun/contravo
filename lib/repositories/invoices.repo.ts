@@ -4,7 +4,7 @@ import { tenantDb } from '@/lib/db/tenant-db';
 import { invoices, invoiceItems, invoicePayments, clients, projects } from '@/lib/db/schema';
 import { ApiError } from '@/lib/rbac';
 import { createAuditLog } from '@/lib/audit';
-import { emit } from '@/lib/webhooks';
+import { emit, withOutbox } from '@/lib/webhooks';
 import { getNextSequenceNumber } from './sequences.repo';
 import { buildEventPayload } from '@/lib/webhooks/payload-builder';
 
@@ -69,7 +69,7 @@ export async function createInvoice(
   actorUserId?: string | null,
   ipAddress?: string | null
 ) {
-  return await db.transaction(async (tx) => {
+  const created = await withOutbox(async (tx, outbox) => {
     // 1. Validate client exist
     const [client] = await tx
       .select()
@@ -155,27 +155,33 @@ export async function createInvoice(
 
     const invoiceWithItems = { ...invoice, items: insertedItems, payments: [] };
 
-    await emit('invoice.created', organizationId, { invoice: invoiceWithItems });
-
-    if (invoice.status === 'sent') {
-      try {
-        const sentPayload = await buildEventPayload({
-          organizationId,
-          entityKind: 'invoice',
-          entityId: invoice.id,
-          entity: invoiceWithItems,
-          withPortalUrl: true,
-          withPdfUrl: true,
-          extra: undefined,
-        });
-        await emit('invoice.sent', organizationId, sentPayload);
-      } catch (emitErr) {
-        console.error(`Failed to emit invoice.sent for created invoice ${invoice.id}:`, emitErr);
-      }
-    }
+    await outbox.emit('invoice.created', organizationId, { invoice: invoiceWithItems });
 
     return invoiceWithItems;
   });
+
+  // Deliberately after the commit. Building this payload renders the PDF and
+  // mints a portal token, and both read through the global connection — inside
+  // the transaction they could not see the invoice being created, so the render
+  // failed and the `catch` below swallowed the whole `invoice.sent` event.
+  if (created.status === 'sent') {
+    try {
+      const sentPayload = await buildEventPayload({
+        organizationId,
+        entityKind: 'invoice',
+        entityId: created.id,
+        entity: created,
+        withPortalUrl: true,
+        withPdfUrl: true,
+        extra: undefined,
+      });
+      await emit('invoice.sent', organizationId, sentPayload);
+    } catch (emitErr) {
+      console.error(`Failed to emit invoice.sent for created invoice ${created.id}:`, emitErr);
+    }
+  }
+
+  return created;
 }
 
 export async function getInvoiceById(organizationId: string, id: string) {
@@ -249,7 +255,7 @@ export async function updateInvoice(
   actorUserId?: string | null,
   ipAddress?: string | null
 ) {
-  return await db.transaction(async (tx) => {
+  return await withOutbox(async (tx, outbox) => {
     const [existing] = await tx
       .select()
       .from(invoices)
@@ -364,7 +370,7 @@ export async function updateInvoice(
 
     const invoiceWithItems = { ...invoice, items: updatedItems, payments: paymentsList };
 
-    await emit('invoice.updated', organizationId, { invoice: invoiceWithItems, changed });
+    await outbox.emit('invoice.updated', organizationId, { invoice: invoiceWithItems, changed });
 
     return invoiceWithItems;
   });
@@ -431,7 +437,7 @@ export async function recordPayment(
   actorUserId?: string | null,
   ipAddress?: string | null
 ) {
-  return await db.transaction(async (tx) => {
+  return await withOutbox(async (tx, outbox) => {
     // 1. Get the invoice
     const [invoice] = await tx
       .select()
@@ -508,9 +514,9 @@ export async function recordPayment(
 
     // Emit events
     if (status === 'paid') {
-      await emit('invoice.paid', organizationId, { invoice: updatedInvoice, totalPaid: totalPaid.toString() });
+      await outbox.emit('invoice.paid', organizationId, { invoice: updatedInvoice, totalPaid: totalPaid.toString() });
     } else {
-      await emit('invoice.updated', organizationId, { invoice: updatedInvoice, changed: ['amountPaidCents', 'status'] });
+      await outbox.emit('invoice.updated', organizationId, { invoice: updatedInvoice, changed: ['amountPaidCents', 'status'] });
     }
 
     return { payment, invoice: updatedInvoice };

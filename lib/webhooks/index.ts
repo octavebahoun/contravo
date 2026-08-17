@@ -342,11 +342,35 @@ export function signPayload(payload: string, secret: string, timestamp: number):
   return `t=${timestamp},v1=${hmac.digest('hex')}`;
 }
 
-export async function emit(
+/**
+ * The transaction object drizzle hands to a `db.transaction` callback.
+ *
+ * Derived from `db` rather than written out: typing it as `any` would silently
+ * strip the inference from every `tx.select()` in the repositories.
+ */
+export type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** A queued delivery, ready to be sent once its transaction has committed. */
+export type PendingDispatch = {
+  deliveryId: string;
+  url: string;
+  secret: string;
+  payload: any;
+};
+
+/**
+ * Writes the outbox rows for one event and returns what still has to be sent.
+ *
+ * Takes the connection to write through, so it can run inside a caller's
+ * transaction: the rows then commit — or roll back — atomically with the
+ * business write that produced them.
+ */
+async function queueDeliveries(
+  conn: typeof db | DbTransaction,
   event: string,
   organizationId: string | null,
   data: any
-): Promise<void> {
+): Promise<PendingDispatch[]> {
   // Account-level events (password reset, for one) belong to no organization.
   // They only reach the global n8n_primary endpoint; feeding `null` into the
   // uuid comparison below would make Postgres reject the whole query.
@@ -358,14 +382,17 @@ export async function emit(
     : eq(webhookEndpoints.kind, 'n8n_primary');
 
   // Find matching active endpoints (specific organization OR global n8n_primary)
-  const endpoints = await db
+  const endpoints = await conn
     .select()
     .from(webhookEndpoints)
     .where(and(eq(webhookEndpoints.active, true), scope));
 
   const matchedEndpoints = endpoints.filter(
-    (ep) => ep.events.includes(event) || ep.events.includes('*')
+    (ep: typeof webhookEndpoints.$inferSelect) =>
+      ep.events.includes(event) || ep.events.includes('*')
   );
+
+  const pending: PendingDispatch[] = [];
 
   for (const ep of matchedEndpoints) {
     const eventId = `evt_${crypto.randomBytes(16).toString('hex')}`;
@@ -382,7 +409,7 @@ export async function emit(
       apiVersion: 'v1',
     });
 
-    const [delivery] = await db
+    const [delivery] = await conn
       .insert(webhookDeliveries)
       .values({
         endpointId: ep.id,
@@ -393,11 +420,83 @@ export async function emit(
       })
       .returning();
 
-    // Trigger delivery in background (does not block application execution)
-    dispatchDelivery(delivery.id, ep.url, ep.secret, payload).catch((err) => {
-      console.error(`Error dispatching webhook delivery ${delivery.id}:`, err);
+    pending.push({ deliveryId: delivery.id, url: ep.url, secret: ep.secret, payload });
+  }
+
+  return pending;
+}
+
+/** Fires queued deliveries in the background, never throwing at the caller. */
+export function dispatchPending(pending: PendingDispatch[]): void {
+  for (const item of pending) {
+    dispatchDelivery(item.deliveryId, item.url, item.secret, item.payload).catch((err) => {
+      console.error(`Error dispatching webhook delivery ${item.deliveryId}:`, err);
     });
   }
+}
+
+/**
+ * Queues an event and sends it immediately.
+ *
+ * Correct for call sites that are *not* inside a transaction. Inside one, use
+ * {@link withOutbox} instead — see the note there for what goes wrong otherwise.
+ */
+export async function emit(
+  event: string,
+  organizationId: string | null,
+  data: any
+): Promise<void> {
+  const pending = await queueDeliveries(db, event, organizationId, data);
+  dispatchPending(pending);
+}
+
+/** Collects events raised inside a transaction. */
+export type Outbox = {
+  emit(event: string, organizationId: string | null, data: any): Promise<void>;
+};
+
+/**
+ * Runs a transaction whose events are queued with it and sent after it commits.
+ *
+ * `emit()` used to be called from inside `db.transaction()` while writing
+ * through the *global* connection, which produced three distinct faults:
+ *
+ * 1. The delivery row landed outside the transaction. A business write that
+ *    rolled back afterwards still left a queued — and already sent — webhook for
+ *    an entity that never existed.
+ * 2. `dispatchDelivery` fired before the commit, so a consumer could call back
+ *    and read the entity before it was visible. n8n fetching a quote it had just
+ *    been told about, and getting a 404, is that race.
+ * 3. Anything thrown while building or inserting the event aborted the business
+ *    transaction. A `bigint` in a payload once rolled back the invoice that
+ *    caused it.
+ *
+ * @example
+ * return withOutbox(async (tx, outbox) => {
+ *   const [row] = await tx.insert(quotes).values(...).returning();
+ *   await outbox.emit('quote.created', organizationId, { quote: row });
+ *   return row;
+ * });
+ */
+export async function withOutbox<T>(
+  fn: (tx: DbTransaction, outbox: Outbox) => Promise<T>
+): Promise<T> {
+  const pending: PendingDispatch[] = [];
+
+  const result = await db.transaction(async (tx) => {
+    const outbox: Outbox = {
+      async emit(event, organizationId, data) {
+        pending.push(...(await queueDeliveries(tx, event, organizationId, data)));
+      },
+    };
+
+    return fn(tx, outbox);
+  });
+
+  // Only now is what the consumer will come back to read actually visible.
+  dispatchPending(pending);
+
+  return result;
 }
 
 /** Maximum attempts before a delivery is considered exhausted (see backoff below). */

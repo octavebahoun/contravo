@@ -5,6 +5,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed — Un événement était émis avant que l'écriture qui le justifie soit commitée
+- `emit()` était appelé depuis l'intérieur de `db.transaction()` mais écrivait par la connexion **globale**. Trois défauts distincts en découlaient :
+  1. la ligne d'outbox atterrissait hors de la transaction — une écriture métier annulée ensuite laissait quand même un webhook en file, **et déjà envoyé**, pour une entité qui n'a jamais existé ;
+  2. `dispatchDelivery` partait avant le commit, donc un consommateur pouvait rappeler et lire l'entité avant qu'elle soit visible. n8n récupérant un devis qu'on venait de lui annoncer, et recevant un 404, c'est cette course ;
+  3. toute erreur pendant la construction ou l'insertion de l'événement annulait la transaction métier — un `bigint` dans un payload avait déjà fait annuler la facture qui l'avait produit.
+- `withOutbox(fn)` remplace `db.transaction(fn)` sur les 9 transactions concernées : les événements sont insérés **avec** la transaction et dépêchés **après** son commit.
+- `tests/webhook-outbox.test.ts` fige l'invariant, dont le cas que l'ancien code ne pouvait pas passer : un événement émis puis suivi d'un échec ne laisse aucune ligne derrière lui.
+
+### Fixed — Un devis ou une facture créé directement en « envoyé » n'envoyait jamais son email
+- `buildEventPayload(withPdfUrl)` était appelé dans la transaction de création. Il rend le PDF, et `loadQuotePdfData` lit par la connexion globale : la ligne en cours de création lui était **invisible**, il jetait `NOT_FOUND`, et le `catch` avalait l'événement `quote.sent` / `invoice.sent` en entier. Or c'est exactement ce que fait le formulaire du tableau de bord, qui crée avec `status: 'sent'`.
+- L'émission a lieu après le commit. Vérifié : `quote.sent` part désormais avec son `pdfUrl` et son lien portail.
+- Un devis créé directement en `sent` ne renseignait pas `sentAt` et affichait « Envoyé le — » pour toujours.
+
 ### Added — Relances de facture J+7 / J+14 / J+30
 - MVP5 §3.2 prévoit ces relances, et toutes les pièces existaient — la transition `mark_overdue`, l'événement `invoice.overdue`, le workflow `email_invoice_overdue_v1` — mais **rien ne les déclenchait**. Le seul chemin était un humain cliquant un bouton : une facture impayée était silencieusement oubliée.
 - `POST /api/internal/cron/invoice-reminders`, authentifié par `CRON_SECRET` en comparaison à temps constant, et le workflow n8n `cron_invoice_reminders_v1` qui l'appelle chaque jour à 8 h.

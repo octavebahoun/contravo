@@ -4,7 +4,7 @@ import { tenantDb } from '@/lib/db/tenant-db';
 import { quotes, quoteItems, clients, projects } from '@/lib/db/schema';
 import { ApiError } from '@/lib/rbac';
 import { createAuditLog } from '@/lib/audit';
-import { emit } from '@/lib/webhooks';
+import { emit, withOutbox } from '@/lib/webhooks';
 import { getNextSequenceNumber } from './sequences.repo';
 import { buildEventPayload } from '@/lib/webhooks/payload-builder';
 
@@ -68,7 +68,7 @@ export async function createQuote(
   actorUserId?: string | null,
   ipAddress?: string | null
 ) {
-  return await db.transaction(async (tx) => {
+  const created = await withOutbox(async (tx, outbox) => {
     // 1. Validate project and client exist
     const [project] = await tx
       .select()
@@ -106,6 +106,9 @@ export async function createQuote(
         organizationId,
         number,
         status: input.status || 'draft',
+        // The `send` transition stamps this; a quote created straight into
+        // `sent` skipped it and displayed "Envoyé le —" ever after.
+        ...(input.status === 'sent' ? { sentAt: new Date() } : {}),
         subtotalCents: totals.subtotalCents,
         discountCents: totals.discountCents,
         taxCents: totals.taxCents,
@@ -151,27 +154,33 @@ export async function createQuote(
 
     const quoteWithItems = { ...quote, items: insertedItems };
 
-    await emit('quote.created', organizationId, { quote: quoteWithItems });
-
-    if (quote.status === 'sent') {
-      try {
-        const sentPayload = await buildEventPayload({
-          organizationId,
-          entityKind: 'quote',
-          entityId: quote.id,
-          entity: quoteWithItems,
-          withPortalUrl: true,
-          withPdfUrl: true,
-          extra: undefined,
-        });
-        await emit('quote.sent', organizationId, sentPayload);
-      } catch (emitErr) {
-        console.error(`Failed to emit quote.sent for created quote ${quote.id}:`, emitErr);
-      }
-    }
+    await outbox.emit('quote.created', organizationId, { quote: quoteWithItems });
 
     return quoteWithItems;
   });
+
+  // Deliberately after the commit. Building this payload renders the PDF and
+  // mints a portal token, and both read through the global connection — inside
+  // the transaction they could not see the quote being created, so the render
+  // failed and the `catch` below swallowed the whole `quote.sent` event.
+  if (created.status === 'sent') {
+    try {
+      const sentPayload = await buildEventPayload({
+        organizationId,
+        entityKind: 'quote',
+        entityId: created.id,
+        entity: created,
+        withPortalUrl: true,
+        withPdfUrl: true,
+        extra: undefined,
+      });
+      await emit('quote.sent', organizationId, sentPayload);
+    } catch (emitErr) {
+      console.error(`Failed to emit quote.sent for created quote ${created.id}:`, emitErr);
+    }
+  }
+
+  return created;
 }
 
 export async function getQuoteById(organizationId: string, id: string) {
@@ -238,7 +247,7 @@ export async function updateQuote(
   actorUserId?: string | null,
   ipAddress?: string | null
 ) {
-  return await db.transaction(async (tx) => {
+  return await withOutbox(async (tx, outbox) => {
     const [existing] = await tx
       .select()
       .from(quotes)
@@ -347,7 +356,7 @@ export async function updateQuote(
 
     const quoteWithItems = { ...quote, items: updatedItems };
 
-    await emit('quote.updated', organizationId, { quote: quoteWithItems, changed });
+    await outbox.emit('quote.updated', organizationId, { quote: quoteWithItems, changed });
 
     return quoteWithItems;
   });
