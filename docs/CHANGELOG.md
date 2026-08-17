@@ -5,6 +5,32 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed — Tous les montants en XOF étaient divisés par 100
+- Le XOF n'a pas de subdivision (exposant ISO 4217 à 0) : une colonne `*_cents` d'un document métier contient des francs entiers, et `25000` vaut 25 000 XOF. Quatre surfaces divisaient malgré tout par 100, dont **les trois que le client voit** :
+  - **le PDF joint à chaque email** imprimait « 250,00 XOF » sur une facture de 25 000 XOF ;
+  - **le portail client** affichait le même centième, donc un chiffre différent de celui que le tableau de bord montrait à l'émetteur ;
+  - **le montant envoyé à GeniusPay** : une facture de 25 000 XOF aurait été encaissée 250 XOF (l'API attend des unités entières, `{"amount": 5000}` pour 5 000 XOF) ;
+  - l'admin SaaS libellait en euros un MRR en XOF et le divisait par 100 (« 150,00 € » pour 15 000 XOF).
+- `lib/money.ts` centralise la convention et connaît les devises sans subdivision. Le PDF, le portail et les vues détail y délèguent, donc les trois ne peuvent plus diverger. `tests/money-convention.test.ts` fige le contrat.
+- `PLANS.priceMonthlyCents` et `subscription_cycles.amount_cents` restent, eux, en **centièmes de XOF** (15 000 XOF = `1_500_000`). Cette divergence est documentée plutôt que migrée : ce côté-là divise déjà par 100 avant d'encaisser et des cycles historiques existent. `formatSaasPrice` sert à les afficher.
+- Le MRR admin lisait des prix codés en dur au lieu de `PLANS` ; il suivait donc silencieusement l'ancien tarif après un changement. La tuile « organisations actives » comptait aussi les organisations supprimées.
+
+### Fixed — Le webhook GeniusPay créditait le montant demandé, pas le montant reçu
+- `recordPayment` recevait `intent.amountCents` : un paiement d'un montant différent de l'intention était enregistré **comme s'il l'avait soldée intégralement**. Le contrôle existant ne comparait que le corps du webhook à la transaction re-interrogée — deux valeurs venant de la passerelle — et ne détectait donc pas cet écart. Le montant crédité vient désormais de la transaction confirmée, et un écart avec l'intention bloque l'imputation en journalisant `amount_differs_from_intent`.
+- Les frais et le net de passerelle étaient multipliés par 100 en dur, ce qui les centuplait en XOF.
+
+### Fixed — La régénération d'un PDF répondait 500
+- La clé R2 d'un document est stable (`org/<id>/invoices/<id>/invoice-<numéro>.pdf`), mais `uploadServerFile` insérait toujours une nouvelle ligne : la contrainte `files_r2_key_unique` sautait. **`POST /api/v1/{invoices,quotes,contracts}/:id/pdf/regenerate` échouait donc dès qu'une première version existait**, et aucun document ne pouvait être corrigé. La ligne existante est maintenant mise à jour en place — même document, même `pdf_file_id` — et le quota de stockage bouge du delta de taille au lieu de compter un fichier de plus.
+
+### Fixed — En local, les pages du portail interrogeaient l'API de production
+- Les cinq pages `app/portal/*` construisaient l'URL de leur propre API avec `NEXT_PUBLIC_APP_URL`, qui contient l'adresse publique destinée aux liens envoyés aux clients. Un serveur local affichait donc les données de production, et tout champ ajouté localement à l'API était absent de la réponse. `getSelfOrigin()` utilise l'origine de la requête en cours ; `getAppUrl()` reste la bonne réponse pour ce qui sort du processus (emails, PDF, liens portail).
+
+### Added — Paiement en ligne depuis le portail client
+- `POST /api/v1/portal/invoices/:id/pay` et le bouton « Payer en ligne ». `createPaymentIntent()` existait mais **aucune route ne l'appelait** : le client ne pouvait que lire les coordonnées bancaires. La moitié webhook était complète depuis le début (signature HMAC, fenêtre de 5 min, idempotence sur `(provider, event_id)`, et re-interrogation de la transaction auprès de GeniusPay avant toute imputation).
+- L'intention ne porte plus `totalCents` mais le **solde restant dû**, et le paiement est refusé sur une facture `draft`, `paid`, `cancelled` ou `refunded`.
+- Le bouton n'apparaît que si l'organisation a une passerelle active (`onlinePayment` dans la réponse du portail) : pas de bouton mort. Un refus de la passerelle renvoie un `502` explicite au lieu du « An unexpected error occurred » d'un `Error` nu, et les coordonnées bancaires restent proposées en repli.
+- Le jeton public n'est volontairement pas consommé à l'ouverture du checkout : un client qui abandonne doit pouvoir revenir.
+
 ### Added — Vues détail (client, projet, devis, facture)
 - Quatre pages `[id]` et des lignes de tableau cliquables. Les quatre modules étaient **en liste seule** : cliquer une ligne ne faisait rien, et tout ce que l'API exposait par entité (lignes de devis, paiements, rentabilité, livrables, dépenses) était inatteignable depuis l'interface.
 - `/dashboard/clients/[id]` : fiche complète, édition en place, archivage/réactivation, total facturé, reste à encaisser, projets et factures du client.

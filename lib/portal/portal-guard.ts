@@ -36,14 +36,6 @@ export type PortalOrg = {
   logoUrl: string | null;
 };
 
-/**
- * Formats a cents amount for display in the portal.
- *
- * @param cents - Amount in minor units, as bigint or number.
- */
-export function formatPortalAmount(cents: bigint | number, currency: string): string {
-  const value = Number(cents) / 100;
-  const [units, decimals] = value.toFixed(2).split('.');
-  const grouped = units.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  return `${grouped},${decimals} ${currency}`;
-}
+// A `formatPortalAmount` helper used to live here, unused and dividing every
+// amount by 100. Money formatting belongs to `lib/money.ts`, which the portal
+// components import directly.

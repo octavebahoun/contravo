@@ -7,6 +7,8 @@ import { GeniusPayClient } from './geniuspay-client';
 import { emit } from '../../webhooks';
 import { buildEventPayload } from '../../webhooks/payload-builder';
 import { getAppUrl } from '@/lib/config/app-url';
+import { fromGatewayAmount, toGatewayAmount } from '@/lib/money';
+import { ApiError } from '@/lib/rbac';
 
 
 
@@ -33,7 +35,23 @@ export async function createPaymentIntent(
     .where(and(eq(invoices.id, invoiceId), eq(invoices.organizationId, organizationId), sql`deleted_at IS NULL`));
 
   if (!invoiceRecord) {
-    throw new Error('Invoice not found');
+    throw new ApiError('NOT_FOUND', 'Invoice not found', 404);
+  }
+
+  // Only what is still owed may be collected. A closed invoice must not be
+  // payable at all, and a partially paid one must be charged its balance —
+  // charging `totalCents` again would take money already received.
+  if (!['sent', 'partial', 'overdue'].includes(invoiceRecord.status)) {
+    throw new ApiError(
+      'VALIDATION_ERROR',
+      `Cette facture n’est pas payable (statut '${invoiceRecord.status}').`,
+      400
+    );
+  }
+
+  const amountDueCents = BigInt(invoiceRecord.amountDueCents ?? 0n);
+  if (amountDueCents <= 0n) {
+    throw new ApiError('VALIDATION_ERROR', 'Cette facture est déjà soldée.', 400);
   }
 
   const [clientRecord] = await db
@@ -42,7 +60,7 @@ export async function createPaymentIntent(
     .where(and(eq(clients.id, invoiceRecord.clientId), eq(clients.organizationId, organizationId)));
 
   if (!clientRecord) {
-    throw new Error('Client not found for the invoice');
+    throw new ApiError('NOT_FOUND', 'Client not found for the invoice', 404);
   }
 
   // 2. Fetch active payment gateway credentials for GeniusPay
@@ -58,7 +76,13 @@ export async function createPaymentIntent(
     );
 
   if (!credentials) {
-    throw new Error('Active GeniusPay credentials not configured for this organization');
+    // The organization never connected its gateway. The portal must say so
+    // plainly and fall back to the bank details, not answer 500.
+    throw new ApiError(
+      'PAYMENT_NOT_CONFIGURED',
+      'Le paiement en ligne n’est pas activé pour cette organisation.',
+      409
+    );
   }
 
   // 3. Decrypt the API Secret
@@ -82,7 +106,7 @@ export async function createPaymentIntent(
       invoiceId,
       provider: 'geniuspay',
       environment: credentials.environment,
-      amountCents: BigInt(invoiceRecord.totalCents),
+      amountCents: amountDueCents,
       currency: invoiceRecord.currency,
       status: 'created',
       initiatedFromIp: initiatedFromIp || null,
@@ -93,7 +117,10 @@ export async function createPaymentIntent(
   // 6. Call GeniusPay to initiate checkout
   try {
     const response = await client.initiatePayment({
-      amount: Number(invoiceRecord.totalCents) / 100,
+      // GeniusPay takes the amount in the currency's normal unit — its own
+      // examples post `{"amount": 5000}` for 5 000 XOF. Dividing by 100 here
+      // undercharged every XOF invoice by a factor of 100.
+      amount: toGatewayAmount(amountDueCents, invoiceRecord.currency),
       currency: invoiceRecord.currency,
       description: `Paiement Facture ${invoiceRecord.number}`,
       customer: {
@@ -140,7 +167,17 @@ export async function createPaymentIntent(
       })
       .where(eq(paymentIntents.id, localIntent.id));
 
-    throw err;
+    if (err instanceof ApiError) throw err;
+
+    // A gateway refusal is not an application crash. Raised as a typed error so
+    // the portal shows the client something actionable instead of the generic
+    // "An unexpected error occurred" that a bare `Error` turns into.
+    console.error('GeniusPay initiation failed:', err);
+    throw new ApiError(
+      'PAYMENT_INITIATION_FAILED',
+      'Le paiement en ligne est momentanément indisponible. Réessayez ou réglez par virement.',
+      502
+    );
   }
 }
 
@@ -336,8 +373,33 @@ export async function processGeniusPayWebhook(
       .where(and(eq(paymentIntents.gatewayReference, reference), eq(paymentIntents.organizationId, orgId)));
 
     if (eventType === 'payment.success') {
-      const feesCents = refetchedPayment.data?.fees ? BigInt(Math.round(refetchedPayment.data.fees * 100)) : 0n;
-      const netCents = refetchedPayment.data?.net_amount ? BigInt(Math.round(refetchedPayment.data.net_amount * 100)) : 0n;
+      // The gateway reports amounts in the currency's normal unit; storage uses
+      // its minor unit. `* 100` was hardcoded here, which for XOF — a currency
+      // with no minor unit — inflated fees and the net amount a hundredfold.
+      const gatewayCurrency = intent?.currency || refetchedPayment.data?.currency || 'XOF';
+      const feesCents = fromGatewayAmount(refetchedPayment.data?.fees, gatewayCurrency);
+      const netCents = fromGatewayAmount(refetchedPayment.data?.net_amount, gatewayCurrency);
+      const settledCents = fromGatewayAmount(refetchedAmount, gatewayCurrency);
+
+      // What the gateway actually collected must match what we asked for. The
+      // check above only compared the webhook body against the re-fetched
+      // transaction — both gateway-side — so a payment for a different amount
+      // than the intent was credited as if it settled the intent in full.
+      if (intent && settledCents !== BigInt(intent.amountCents)) {
+        await db
+          .update(paymentWebhookEvents)
+          .set({ processingError: 'amount_differs_from_intent' })
+          .where(eq(paymentWebhookEvents.id, webhookEventRecord.id));
+
+        console.error(
+          `CRITICAL SECURITY ALERT: settled amount differs from intent ${intent.id}. ` +
+            `Gateway: ${settledCents}, intent: ${intent.amountCents}`
+        );
+        return {
+          status: 200,
+          body: { success: true, message: 'Settled amount differs from the payment intent' },
+        };
+      }
 
       if (intent) {
         await db
@@ -361,7 +423,10 @@ export async function processGeniusPayWebhook(
           orgId,
           invoiceId,
           {
-            amountCents: intent?.amountCents || BigInt(Math.round(refetchedAmount * 100)),
+            // The amount the gateway confirms, not the one we hoped for. They
+            // are now known to be equal when an intent exists, and this is the
+            // only correct value when it does not.
+            amountCents: settledCents,
             method: 'geniuspay',
             source: 'geniuspay',
             paymentIntentId: intent?.id || null,

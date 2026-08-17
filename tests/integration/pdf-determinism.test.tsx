@@ -169,13 +169,21 @@ describe('PDF determinism (MVP4 §6.3)', () => {
 
 describe('PDF formatting helpers', () => {
   it('groups thousands without narrow spaces (missing from Helvetica)', () => {
-    expect(formatMoney(129000000, 'XOF')).toBe('1 290 000,00 XOF');
+    expect(formatMoney(129000000, 'XOF')).toBe('129 000 000 XOF');
     expect(formatMoney(129000000, 'XOF')).not.toMatch(/\u202f/);
+  });
+
+  it('does not divide a currency that has no minor unit', () => {
+    // This expectation used to read '250,00 XOF': the PDF attached to every
+    // invoice email printed a hundredth of the real amount.
+    expect(formatMoney(25000, 'XOF')).toBe('25 000 XOF');
   });
 
   it('formats zero and negative amounts', () => {
     expect(formatMoney(0, 'EUR')).toBe('0,00 EUR');
     expect(formatMoney(-50050, 'EUR')).toBe('-500,50 EUR');
+    expect(formatMoney(0, 'XOF')).toBe('0 XOF');
+    expect(formatMoney(-25000, 'XOF')).toBe('-25 000 XOF');
   });
 
   it('formats rates from basis points', () => {

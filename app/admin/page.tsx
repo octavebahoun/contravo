@@ -15,6 +15,7 @@ import {
   Activity,
   HeartPulse,
 } from "lucide-react"
+import { formatSaasPrice } from "@/lib/money"
 
 const fetcher = (url: string) => fetch(url).then((res) => {
   if (!res.ok) throw new Error("Erreur de chargement")
@@ -32,12 +33,10 @@ export default function AdminDashboardPage() {
     )
   }
 
-  const formatEuro = (cents: number) => {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "EUR",
-    }).format(cents / 100)
-  }
+  // The plans are priced in XOF, not in euros: this used to label the figure
+  // "€" and divide it by 100 on top of an amount that was already whole XOF,
+  // so an MRR of 15 000 XOF was displayed as "150,00 €".
+  const formatPrice = (hundredthsOfXof: number) => formatSaasPrice(hundredthsOfXof)
 
   return (
     <div className="space-y-6">
@@ -61,10 +60,10 @@ export default function AdminDashboardPage() {
             ) : (
               <>
                 <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                  {formatEuro(data.mrr)}
+                  {formatPrice(data.mrr)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  ARR estimé : {formatEuro(data.arr)}
+                  ARR estimé : {formatPrice(data.arr)}
                 </p>
               </>
             )}

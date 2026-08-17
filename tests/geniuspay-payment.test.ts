@@ -106,7 +106,7 @@ describe('GeniusPay Payment Integration and Webhook Pipeline Suite', () => {
         data: {
           id: 12345,
           reference: mockRef,
-          amount: 500.0,
+          amount: 50000,
           currency: 'XOF',
           status: 'pending',
           checkout_url: mockCheckoutUrl,
@@ -120,7 +120,11 @@ describe('GeniusPay Payment Integration and Webhook Pipeline Suite', () => {
         initiatedFromIp: '127.0.0.1',
       });
 
-      expect(initiateSpy).toHaveBeenCalled();
+      // XOF has no minor unit: a 50 000 XOF invoice must be sent as 50000, not
+      // 500. The service used to divide by 100 and undercharge a hundredfold.
+      expect(initiateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ amount: 50000, currency: 'XOF' })
+      );
       expect(intent).toBeDefined();
       expect(intent.status).toBe('pending');
       expect(intent.gatewayReference).toBe(mockRef);
@@ -175,10 +179,10 @@ describe('GeniusPay Payment Integration and Webhook Pipeline Suite', () => {
         timestamp: Math.floor(Date.now() / 1000),
         data: {
           reference: mockRef,
-          amount: 500.0,
+          amount: 50000,
           currency: 'XOF',
-          fees: 10.0,
-          net_amount: 490.0,
+          fees: 1000,
+          net_amount: 49000,
           status: 'completed',
           payment_method: 'orange_money',
           completed_at: new Date().toISOString(),
@@ -208,10 +212,10 @@ describe('GeniusPay Payment Integration and Webhook Pipeline Suite', () => {
         data: {
           id: 999,
           reference: mockRef,
-          amount: 500.0,
+          amount: 50000,
           currency: 'XOF',
-          fees: 10.0,
-          net_amount: 490.0,
+          fees: 1000,
+          net_amount: 49000,
           status: 'completed',
           payment_method: 'orange_money',
           completed_at: payloadObj.data.completed_at,
@@ -300,7 +304,7 @@ describe('GeniusPay Payment Integration and Webhook Pipeline Suite', () => {
           invoiceId,
           provider: 'geniuspay',
           environment: 'sandbox',
-          amountCents: 50000n, // 500.0 XOF
+          amountCents: 50000n, // 50 000 XOF
           currency: 'XOF',
           status: 'pending',
           gatewayReference: mockRef,
@@ -308,7 +312,7 @@ describe('GeniusPay Payment Integration and Webhook Pipeline Suite', () => {
         })
         .returning();
 
-      // Payload claiming 500.0 XOF was paid
+      // Payload claiming 50 000 XOF was paid
       const eventId = `evt_mismatch_${Math.random().toString(36).substring(2, 10)}`;
       const payloadObj = {
         id: eventId,
@@ -317,7 +321,7 @@ describe('GeniusPay Payment Integration and Webhook Pipeline Suite', () => {
         timestamp: Math.floor(Date.now() / 1000),
         data: {
           reference: mockRef,
-          amount: 500.0, // Payload claims 500.0
+          amount: 50000, // Payload claims 50 000 XOF
           currency: 'XOF',
           metadata: {
             organization_id: orgId,
@@ -339,13 +343,13 @@ describe('GeniusPay Payment Integration and Webhook Pipeline Suite', () => {
         'x-webhook-environment': 'sandbox',
       };
 
-      // Mock remote response to return 5.0 XOF (e.g. attacker tampered with webhook payload)
+      // Mock remote response to return 500 XOF (e.g. attacker tampered with webhook payload)
       const getPaymentSpy = vi.spyOn(GeniusPayClient.prototype, 'getPayment').mockResolvedValue({
         success: true,
         data: {
           id: 1001,
           reference: mockRef,
-          amount: 5.0, // REAL transaction amount is only 5.0 XOF!
+          amount: 500, // REAL transaction amount is only 500 XOF!
           currency: 'XOF',
           status: 'completed',
           environment: 'sandbox',

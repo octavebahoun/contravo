@@ -9,20 +9,8 @@ import { Badge } from '@/components/ui/badge';
  * being copy-pasted four times.
  */
 
-/**
- * Formats a minor-unit amount.
- *
- * XOF has no subunit: the stored value is already the displayed value, so
- * nothing is divided. The locale is pinned because the server and the browser
- * would otherwise pick different ones and React would flag a hydration
- * mismatch.
- */
-export function formatMoney(cents: string | number | bigint | null | undefined, currency = 'XOF') {
-  if (cents === null || cents === undefined || cents === '') return `0 ${currency}`;
-  const value = typeof cents === 'string' ? Number(cents) : Number(cents);
-  if (!Number.isFinite(value)) return `0 ${currency}`;
-  return `${value.toLocaleString('fr-FR')} ${currency}`;
-}
+/** Re-exported so a detail page has one import for its formatting helpers. */
+export { formatMoney } from '@/lib/money';
 
 /** `2026-08-17` or an ISO timestamp → `17/08/2026`. */
 export function formatDate(value?: string | null) {
