@@ -10,6 +10,7 @@ import { updateAccount } from '@/app/(login)/actions';
 import { User } from '@/lib/db/schema';
 import useSWR from 'swr';
 import { Suspense } from 'react';
+import { LogoUploader } from './_components/logo-uploader';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -116,6 +117,10 @@ export default function GeneralPage() {
           </form>
         </CardContent>
       </Card>
+
+      <div className="mt-6">
+        <LogoUploader />
+      </div>
     </section>
   );
 }

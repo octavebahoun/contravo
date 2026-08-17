@@ -5,6 +5,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — Logo d'organisation dans les emails
+- `GET /api/v1/organizations/:id/logo` : route publique, non authentifiée, qui sert le logo depuis R2. Volontairement pas d'URL présignée — elle expire en une heure, et un client ouvrant son devis trois jours plus tard verrait une image cassée. Un logo n'est pas un secret.
+- La route ne sert que le fichier déclaré dans `logo_file_id`, et seulement s'il s'agit d'une image `ready` appartenant à cette organisation. Sans ces deux contrôles, elle permettrait de lire n'importe quel objet du bucket par identifiant. Limitée par IP, `nosniff`, cache long.
+- `POST` / `DELETE` sur le même chemin définissent et retirent le logo (permission `org.update`). Le contournement du middleware est restreint à `GET`.
+- Champ d'upload dans Réglages → Général : présignage, envoi direct vers R2, analyse antivirus, puis rattachement. 2 Mo maximum, PNG/JPEG/WebP/GIF.
+- `payload.org.logoUrl` est enfin renseigné. Les templates MJML lisaient `{{org.logoUrl}}` depuis le début, mais le payload ne portait que `name` et `brandColor` : **aucun email n'a jamais affiché de logo**.
+
+
 ### Added — Écran Fichiers
 - `/dashboard/files` : liste des documents de l'organisation, recherche par nom, filtre par type, envoi, téléchargement et suppression. Les routes d'upload et de téléchargement existaient, mais **aucune ne permettait d'énumérer les fichiers** : tout ce qu'une organisation stockait sur R2 était inatteignable depuis l'interface.
 - Route `GET /api/v1/files` : liste paginée avec `kind`, `status` et `search`, plus le total d'octets calculé en SQL sur l'organisation entière (et non sur la page renvoyée).
