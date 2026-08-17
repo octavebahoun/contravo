@@ -105,9 +105,9 @@ function formatSize(bytes: string | number) {
 }
 
 function FileIcon({ mimeType }: { mimeType: string }) {
-  if (mimeType.startsWith('image/')) return <ImageIcon className="h-4 w-4 text-[#7c828a]" />;
-  if (mimeType === 'application/pdf') return <FileText className="h-4 w-4 text-[#cf202f]" />;
-  return <Paperclip className="h-4 w-4 text-[#7c828a]" />;
+  if (mimeType.startsWith('image/')) return <ImageIcon className="h-4 w-4 text-muted-foreground" />;
+  if (mimeType === 'application/pdf') return <FileText className="h-4 w-4 text-destructive" />;
+  return <Paperclip className="h-4 w-4 text-muted-foreground" />;
 }
 
 export default function FilesPage() {
@@ -230,7 +230,7 @@ export default function FilesPage() {
         action={
           <Button
             onClick={() => setIsUploadOpen(true)}
-            className="rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold px-5 h-11 shadow-sm"
+            className="rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold px-5 h-11 shadow-sm"
           >
             <Upload className="mr-2 h-4 w-4" /> Envoyer un fichier
           </Button>
@@ -242,34 +242,34 @@ export default function FilesPage() {
           label="Fichiers"
           value={data?.pagination?.total ?? 0}
           hint="Sur l’ensemble de l’organisation"
-          icon={<Paperclip className="h-4 w-4 text-[#0052ff]" />}
+          icon={<Paperclip className="h-4 w-4 text-primary" />}
         />
         <MetricCard
           label="Espace utilisé"
           value={formatSize(data?.totalBytes ?? 0)}
           hint="Décompté de votre quota de stockage"
-          icon={<HardDrive className="h-4 w-4 text-[#7c828a]" />}
+          icon={<HardDrive className="h-4 w-4 text-muted-foreground" />}
         />
         <MetricCard
           label="En cours de traitement"
           value={files.filter((f) => f.status === 'uploading' || f.status === 'scanning').length}
           hint="Envoi ou analyse antivirus"
-          icon={<Loader2 className="h-4 w-4 text-[#f4b000]" />}
+          icon={<Loader2 className="h-4 w-4 text-warning" />}
         />
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#7c828a]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Rechercher par nom de fichier…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 rounded-full h-11 text-xs"
+            className="pl-9 rounded-lg h-11 text-xs"
           />
         </div>
         <Select value={kindFilter} onValueChange={setKindFilter}>
-          <SelectTrigger className="w-full sm:w-56 rounded-full h-11 text-xs">
+          <SelectTrigger className="w-full sm:w-56 rounded-lg h-11 text-xs">
             <SelectValue placeholder="Tous les types" />
           </SelectTrigger>
           <SelectContent>
@@ -283,14 +283,14 @@ export default function FilesPage() {
         </Select>
       </div>
 
-      <Card className="rounded-2xl border border-gray-200 bg-white">
+      <Card className="rounded-xl border border-border bg-card">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex justify-center items-center py-16">
-              <Loader2 className="h-6 w-6 animate-spin text-[#0052ff]" />
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : files.length === 0 ? (
-            <div className="text-center py-16 text-[#7c828a] text-xs">
+            <div className="text-center py-16 text-muted-foreground text-xs">
               {search || kindFilter !== 'all'
                 ? 'Aucun fichier ne correspond à cette recherche.'
                 : 'Aucun fichier pour l’instant.'}
@@ -298,14 +298,14 @@ export default function FilesPage() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-100 bg-[#f7f7f7]/50 hover:bg-[#f7f7f7]/50">
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Nom</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Type</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Taille</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Ajouté par</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Date</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Statut</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d] text-right">
+                <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="text-xs font-semibold text-foreground">Nom</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Type</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Taille</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Ajouté par</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Date</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Statut</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground text-right">
                     Actions
                   </TableHead>
                 </TableRow>
@@ -318,23 +318,23 @@ export default function FilesPage() {
                   };
                   const isDownloadable = file.status === 'ready';
                   return (
-                    <TableRow key={file.id} className="border-gray-100 hover:bg-gray-50/50">
-                      <TableCell className="text-xs font-medium text-[#0a0b0d]">
+                    <TableRow key={file.id} className="border-border hover:bg-muted/50">
+                      <TableCell className="text-xs font-medium text-foreground">
                         <span className="flex items-center gap-2">
                           <FileIcon mimeType={file.mimeType} />
                           <span className="truncate max-w-[260px]">{file.filename}</span>
                         </span>
                       </TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">
+                      <TableCell className="text-xs text-muted-foreground">
                         {KIND_LABELS[file.kind] || file.kind}
                       </TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">
+                      <TableCell className="text-xs text-muted-foreground">
                         {formatSize(file.sizeBytes)}
                       </TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">
+                      <TableCell className="text-xs text-muted-foreground">
                         {file.uploadedByName || 'Généré automatiquement'}
                       </TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">
+                      <TableCell className="text-xs text-muted-foreground">
                         {formatDate(file.createdAt)}
                       </TableCell>
                       <TableCell>
@@ -347,7 +347,7 @@ export default function FilesPage() {
                             size="sm"
                             disabled={!isDownloadable || downloadingId === file.id}
                             onClick={() => handleDownload(file)}
-                            className="h-8 rounded-full text-[11px] text-[#0052ff] hover:bg-[#0052ff]/10"
+                            className="h-8 rounded-full text-[11px] text-primary hover:bg-primary/10"
                           >
                             {downloadingId === file.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -359,7 +359,7 @@ export default function FilesPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => setPendingDelete(file)}
-                            className="h-8 rounded-full text-[11px] text-[#cf202f] hover:bg-[#cf202f]/10"
+                            className="h-8 rounded-full text-[11px] text-destructive hover:bg-destructive/10"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -375,19 +375,19 @@ export default function FilesPage() {
       </Card>
 
       <Dialog open={isUploadOpen} onOpenChange={(open) => !isUploading && setIsUploadOpen(open)}>
-        <DialogContent className="rounded-2xl sm:max-w-md">
+        <DialogContent className="rounded-xl sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg font-normal text-[#0a0b0d]">
+            <DialogTitle className="text-lg font-normal text-foreground">
               Envoyer un fichier
             </DialogTitle>
-            <DialogDescription className="text-xs text-[#5b616e]">
+            <DialogDescription className="text-xs text-muted-foreground">
               Le fichier est analysé par l’antivirus avant d’être disponible.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[#0a0b0d]">Type de document</label>
+              <label className="text-xs font-medium text-foreground">Type de document</label>
               <Select value={uploadKind} onValueChange={setUploadKind} disabled={isUploading}>
                 <SelectTrigger className="rounded-xl h-11 text-xs">
                   <SelectValue />
@@ -400,7 +400,7 @@ export default function FilesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-[11px] text-[#7c828a]">
+              <p className="text-[11px] text-muted-foreground">
                 Les PDF de devis, contrats et factures sont générés par Contravo, ils n’ont pas à
                 être envoyés ici.
               </p>
@@ -419,7 +419,7 @@ export default function FilesPage() {
             <Button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="w-full rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold h-11"
+              className="w-full rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-11"
             >
               {isUploading ? (
                 <>
@@ -436,12 +436,12 @@ export default function FilesPage() {
       </Dialog>
 
       <Dialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
-        <DialogContent className="rounded-2xl sm:max-w-md">
+        <DialogContent className="rounded-xl sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg font-normal text-[#0a0b0d]">
+            <DialogTitle className="text-lg font-normal text-foreground">
               Supprimer ce fichier ?
             </DialogTitle>
-            <DialogDescription className="text-xs text-[#5b616e] pt-2">
+            <DialogDescription className="text-xs text-muted-foreground pt-2">
               {pendingDelete?.filename} sera définitivement effacé du stockage. Si ce document est
               rattaché à un devis, un contrat ou une facture, le lien sera rompu.
             </DialogDescription>
@@ -451,14 +451,14 @@ export default function FilesPage() {
               variant="outline"
               onClick={() => setPendingDelete(null)}
               disabled={isDeleting}
-              className="rounded-full border-gray-300 text-xs font-semibold h-10"
+              className="rounded-lg border-border text-xs font-semibold h-10"
             >
               Annuler
             </Button>
             <Button
               onClick={handleDelete}
               disabled={isDeleting}
-              className="rounded-full bg-[#cf202f] hover:bg-[#b01b28] text-white text-xs font-semibold h-10"
+              className="rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground text-xs font-semibold h-10"
             >
               {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Supprimer

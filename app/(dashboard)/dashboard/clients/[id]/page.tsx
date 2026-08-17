@@ -28,12 +28,13 @@ import {
   User,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Stamp, type StampTone } from '@/components/stamp';
+import { MetricCard } from '../../_components/module-ui';
 import {
   BackLink,
   DetailFallback,
   InfoGrid,
   InfoRow,
-  StatusPill,
   formatDate,
   formatMoney,
 } from '../../_components/detail-ui';
@@ -88,23 +89,23 @@ interface Invoice {
   dueDate: string;
 }
 
-const PROJECT_STATUS: Record<string, { label: string; tone: 'blue' | 'green' | 'red' | 'amber' | 'gray' }> = {
-  draft: { label: 'Brouillon', tone: 'gray' },
-  active: { label: 'En cours', tone: 'blue' },
-  on_hold: { label: 'En pause', tone: 'amber' },
-  delivered: { label: 'Livré', tone: 'green' },
-  cancelled: { label: 'Annulé', tone: 'red' },
-  archived: { label: 'Archivé', tone: 'gray' },
+const PROJECT_STATUS: Record<string, { label: string; tone: StampTone }> = {
+  draft: { label: 'Brouillon', tone: 'ink' },
+  active: { label: 'En cours', tone: 'warning' },
+  on_hold: { label: 'En pause', tone: 'warning' },
+  delivered: { label: 'Livré', tone: 'success' },
+  cancelled: { label: 'Annulé', tone: 'ink' },
+  archived: { label: 'Archivé', tone: 'ink' },
 };
 
-const INVOICE_STATUS: Record<string, { label: string; tone: 'blue' | 'green' | 'red' | 'amber' | 'gray' }> = {
-  draft: { label: 'Brouillon', tone: 'gray' },
-  sent: { label: 'Envoyée', tone: 'blue' },
-  partial: { label: 'Partielle', tone: 'amber' },
-  paid: { label: 'Payée', tone: 'green' },
-  overdue: { label: 'En retard', tone: 'red' },
-  cancelled: { label: 'Annulée', tone: 'gray' },
-  refunded: { label: 'Remboursée', tone: 'amber' },
+const INVOICE_STATUS: Record<string, { label: string; tone: StampTone }> = {
+  draft: { label: 'Brouillon', tone: 'ink' },
+  sent: { label: 'En attente', tone: 'warning' },
+  partial: { label: 'Partielle', tone: 'warning' },
+  paid: { label: 'Payée', tone: 'success' },
+  overdue: { label: 'En retard', tone: 'destructive' },
+  cancelled: { label: 'Annulée', tone: 'ink' },
+  refunded: { label: 'Remboursée', tone: 'ink' },
 };
 
 export default function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -208,7 +209,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     return (
       <section className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto">
         <DetailFallback>
-          <Loader2 className="h-5 w-5 animate-spin text-[#0052ff]" />
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
         </DetailFallback>
       </section>
     );
@@ -225,26 +226,27 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
   return (
     <section className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto space-y-8">
-      <div className="space-y-4 border-b border-gray-100 pb-6">
+      <div className="space-y-4 border-b border-border pb-6">
         <BackLink href="/dashboard/clients" label="Retour aux clients" />
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
               {client.type === 'company' ? (
-                <Building2 className="h-5 w-5 text-[#0052ff]" />
+                <Building2 className="h-5 w-5 text-primary" />
               ) : (
-                <User className="h-5 w-5 text-[#0052ff]" />
+                <User className="h-5 w-5 text-primary" />
               )}
-              <h1 className="text-2xl lg:text-3xl font-normal text-[#0a0b0d] tracking-tight">
+              <h1 className="font-heading text-2xl lg:text-3xl font-bold tracking-tight text-foreground">
                 {client.displayName}
               </h1>
-              <StatusPill
+              <Stamp
+                animate
                 label={client.isArchived ? 'Archivé' : 'Actif'}
-                tone={client.isArchived ? 'gray' : 'green'}
+                tone={client.isArchived ? 'ink' : 'success'}
               />
             </div>
-            <p className="text-[#5b616e] text-sm mt-1">
+            <p className="text-muted-foreground text-sm mt-1">
               {client.type === 'company' ? 'Entreprise' : 'Particulier'} · {client.email}
             </p>
           </div>
@@ -253,7 +255,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             <Button
               variant="outline"
               onClick={openEdit}
-              className="rounded-full text-xs font-semibold border-gray-200 h-11 px-5"
+              className="text-xs font-semibold h-11 px-5"
             >
               <Pencil className="mr-2 h-4 w-4" /> Modifier
             </Button>
@@ -261,7 +263,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               variant="outline"
               onClick={handleArchiveToggle}
               disabled={isArchiving}
-              className="rounded-full text-xs font-semibold border-gray-200 h-11 px-5"
+              className="text-xs font-semibold h-11 px-5"
             >
               {isArchiving ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -277,40 +279,26 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <Card className="rounded-2xl border border-gray-200 bg-white">
-          <CardHeader className="p-5 pb-2">
-            <CardTitle className="text-xs font-medium text-[#5b616e]">Total facturé</CardTitle>
-          </CardHeader>
-          <CardContent className="p-5 pt-0">
-            <div className="text-2xl font-medium text-[#0a0b0d]">{formatMoney(totalInvoiced)}</div>
-            <p className="text-[11px] text-[#7c828a] mt-1">Hors brouillons et annulations</p>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border border-gray-200 bg-white">
-          <CardHeader className="p-5 pb-2">
-            <CardTitle className="text-xs font-medium text-[#5b616e]">Reste à encaisser</CardTitle>
-          </CardHeader>
-          <CardContent className="p-5 pt-0">
-            <div className="text-2xl font-medium text-[#0a0b0d]">{formatMoney(totalDue)}</div>
-            <p className="text-[11px] text-[#7c828a] mt-1">Factures envoyées ou en retard</p>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border border-gray-200 bg-white">
-          <CardHeader className="p-5 pb-2">
-            <CardTitle className="text-xs font-medium text-[#5b616e]">Projets</CardTitle>
-          </CardHeader>
-          <CardContent className="p-5 pt-0">
-            <div className="text-2xl font-medium text-[#0a0b0d]">{projects.length}</div>
-            <p className="text-[11px] text-[#7c828a] mt-1">Rattachés à ce client</p>
-          </CardContent>
-        </Card>
+        <MetricCard
+          label="Total facturé"
+          value={formatMoney(totalInvoiced)}
+          hint="Hors brouillons et annulations"
+        />
+        <MetricCard
+          label="Reste à encaisser"
+          value={formatMoney(totalDue)}
+          hint="Factures envoyées ou en retard"
+        />
+        <MetricCard
+          label="Projets"
+          value={projects.length}
+          hint="Rattachés à ce client"
+        />
       </div>
 
-      <Card className="rounded-2xl border border-gray-200 bg-white">
+      <Card className="rounded-xl border border-border bg-card">
         <CardHeader className="p-5 pb-3">
-          <CardTitle className="text-sm font-medium text-[#0a0b0d]">Informations</CardTitle>
+          <CardTitle className="text-sm font-medium text-foreground">Informations</CardTitle>
         </CardHeader>
         <CardContent className="p-5 pt-0 space-y-5">
           <InfoGrid>
@@ -318,59 +306,73 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             <InfoRow label="Raison sociale">{client.companyName || '—'}</InfoRow>
             <InfoRow label="Email">{client.email}</InfoRow>
             <InfoRow label="Téléphone">{client.phone || '—'}</InfoRow>
-            <InfoRow label="N° de TVA">{client.vatNumber || '—'}</InfoRow>
+            <InfoRow label="N° de TVA">
+              <span className="tabular-mono">{client.vatNumber || '—'}</span>
+            </InfoRow>
             <InfoRow label="Créé le">{formatDate(client.createdAt)}</InfoRow>
           </InfoGrid>
 
           {client.notes && (
-            <div className="space-y-1 pt-2 border-t border-gray-100">
-              <div className="text-[11px] text-[#7c828a] pt-3">Notes internes</div>
-              <p className="text-xs text-[#0a0b0d] whitespace-pre-wrap">{client.notes}</p>
+            <div className="space-y-1 pt-2 border-t border-border">
+              <div className="text-[11px] text-muted-foreground pt-3">Notes internes</div>
+              <p className="text-xs text-foreground whitespace-pre-wrap">{client.notes}</p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl border border-gray-200 bg-white">
-        <CardHeader className="p-5 border-b border-gray-100">
-          <CardTitle className="text-sm font-medium text-[#0a0b0d] flex items-center gap-2">
-            <FolderKanban className="h-4 w-4 text-[#7c828a]" /> Projets
+      <Card className="rounded-xl border border-border bg-card">
+        <CardHeader className="p-5 border-b border-border">
+          <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
+            <FolderKanban className="h-4 w-4 text-muted-foreground" /> Projets
           </CardTitle>
-          <CardDescription className="text-xs text-[#5b616e]">
+          <CardDescription className="text-xs text-muted-foreground">
             Cliquez une ligne pour ouvrir le projet.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {projects.length === 0 ? (
-            <div className="text-center py-10 text-[#7c828a] text-xs">Aucun projet pour ce client.</div>
+            <div className="flex flex-col items-center gap-3 py-10 text-center">
+              <p className="text-xs text-muted-foreground">
+                Aucun projet pour ce client. Créez le premier, il s'envoie en 5 minutes.
+              </p>
+              <Button
+                onClick={() => router.push('/dashboard/projects')}
+                className="bg-primary hover:bg-primary/90 text-xs font-semibold"
+              >
+                <FolderKanban className="mr-2 h-4 w-4" /> Créer un projet
+              </Button>
+            </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-100 bg-[#f7f7f7]/50 hover:bg-[#f7f7f7]/50">
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Code</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Projet</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Budget</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Échéance</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d] text-right">Statut</TableHead>
+                <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="text-xs font-semibold text-foreground">Code</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Projet</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Budget</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Échéance</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground text-right">Statut</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {projects.map((project) => {
-                  const status = PROJECT_STATUS[project.status] ?? { label: project.status, tone: 'gray' as const };
+                  const status = PROJECT_STATUS[project.status] ?? { label: project.status, tone: 'ink' as const };
                   return (
                     <TableRow
                       key={project.id}
                       onClick={() => router.push(`/dashboard/projects/${project.id}`)}
-                      className="border-gray-100 hover:bg-gray-50/50 cursor-pointer"
+                      className="border-border hover:bg-muted/50 cursor-pointer"
                     >
-                      <TableCell className="text-xs text-[#5b616e]">{project.code}</TableCell>
-                      <TableCell className="text-xs font-medium text-[#0a0b0d]">{project.name}</TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">
-                        {formatMoney(project.budgetCents, project.currency)}
+                      <TableCell className="text-xs text-muted-foreground">
+                        <span className="tabular-mono">{project.code}</span>
                       </TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">{formatDate(project.dueDate)}</TableCell>
+                      <TableCell className="text-xs font-medium text-foreground">{project.name}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        <span className="tabular-mono">{formatMoney(project.budgetCents, project.currency)}</span>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatDate(project.dueDate)}</TableCell>
                       <TableCell className="text-right">
-                        <StatusPill label={status.label} tone={status.tone} />
+                        <Stamp label={status.label} tone={status.tone} />
                       </TableCell>
                     </TableRow>
                   );
@@ -381,50 +383,65 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl border border-gray-200 bg-white">
-        <CardHeader className="p-5 border-b border-gray-100">
-          <CardTitle className="text-sm font-medium text-[#0a0b0d] flex items-center gap-2">
-            <FileText className="h-4 w-4 text-[#7c828a]" /> Factures
+      <Card className="rounded-xl border border-border bg-card">
+        <CardHeader className="p-5 border-b border-border">
+          <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
+            <FileText className="h-4 w-4 text-muted-foreground" /> Factures
           </CardTitle>
-          <CardDescription className="text-xs text-[#5b616e]">
+          <CardDescription className="text-xs text-muted-foreground">
             Historique de facturation de ce client.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {invoices.length === 0 ? (
-            <div className="text-center py-10 text-[#7c828a] text-xs">Aucune facture pour ce client.</div>
+            <div className="flex flex-col items-center gap-3 py-10 text-center">
+              <p className="text-xs text-muted-foreground">
+                Aucune facture pour ce client. Créez la première, elle s'envoie en 5 minutes.
+              </p>
+              <Button
+                onClick={() => router.push('/dashboard/invoices')}
+                className="bg-primary hover:bg-primary/90 text-xs font-semibold"
+              >
+                <FileText className="mr-2 h-4 w-4" /> Créer une facture
+              </Button>
+            </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-100 bg-[#f7f7f7]/50 hover:bg-[#f7f7f7]/50">
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">N°</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Émission</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Échéance</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Total</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Reste dû</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d] text-right">Statut</TableHead>
+                <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="text-xs font-semibold text-foreground">N°</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Émission</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Échéance</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Total</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Reste dû</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground text-right">Statut</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {invoices.map((invoice) => {
-                  const status = INVOICE_STATUS[invoice.status] ?? { label: invoice.status, tone: 'gray' as const };
+                  const status = INVOICE_STATUS[invoice.status] ?? { label: invoice.status, tone: 'ink' as const };
+                  const isPaid = invoice.status === 'paid';
                   return (
                     <TableRow
                       key={invoice.id}
                       onClick={() => router.push(`/dashboard/invoices/${invoice.id}`)}
-                      className="border-gray-100 hover:bg-gray-50/50 cursor-pointer"
+                      className="border-border hover:bg-muted/50 cursor-pointer"
                     >
-                      <TableCell className="text-xs font-medium text-[#0a0b0d]">{invoice.number}</TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">{formatDate(invoice.issueDate)}</TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">{formatDate(invoice.dueDate)}</TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">
-                        {formatMoney(invoice.totalCents, invoice.currency)}
+                      <TableCell className="text-xs font-medium text-foreground">
+                        <span className="tabular-mono">{invoice.number}</span>
                       </TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">
-                        {formatMoney(invoice.amountDueCents, invoice.currency)}
+                      <TableCell className="text-xs text-muted-foreground">{formatDate(invoice.issueDate)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatDate(invoice.dueDate)}</TableCell>
+                      <TableCell className="tabular-mono text-xs text-muted-foreground">
+                        <span className={`tabular-mono ${isPaid ? 'text-accent' : ''}`}>
+                          {formatMoney(invoice.totalCents, invoice.currency)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        <span className="tabular-mono">{formatMoney(invoice.amountDueCents, invoice.currency)}</span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <StatusPill label={status.label} tone={status.tone} />
+                        <Stamp label={status.label} tone={status.tone} />
                       </TableCell>
                     </TableRow>
                   );
@@ -436,18 +453,18 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       </Card>
 
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="sm:max-w-[425px] rounded-2xl">
+        <DialogContent className="sm:max-w-[425px] rounded-xl">
           <form onSubmit={handleSave}>
             <DialogHeader>
-              <DialogTitle className="text-lg font-normal text-[#0a0b0d]">Modifier le client</DialogTitle>
-              <DialogDescription className="text-xs text-[#5b616e]">
+              <DialogTitle className="text-lg font-normal text-foreground">Modifier le client</DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
                 Les modifications sont journalisées dans l’audit.
               </DialogDescription>
             </DialogHeader>
 
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label className="text-xs font-medium text-[#0a0b0d]">Nom d’affichage *</Label>
+                <Label className="text-xs font-medium text-foreground">Nom d’affichage *</Label>
                 <Input
                   value={form.displayName}
                   onChange={(e) => setForm({ ...form, displayName: e.target.value })}
@@ -457,7 +474,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               </div>
 
               <div className="grid gap-2">
-                <Label className="text-xs font-medium text-[#0a0b0d]">Raison sociale</Label>
+                <Label className="text-xs font-medium text-foreground">Raison sociale</Label>
                 <Input
                   value={form.companyName}
                   onChange={(e) => setForm({ ...form, companyName: e.target.value })}
@@ -466,7 +483,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               </div>
 
               <div className="grid gap-2">
-                <Label className="text-xs font-medium text-[#0a0b0d]">Email *</Label>
+                <Label className="text-xs font-medium text-foreground">Email *</Label>
                 <Input
                   type="email"
                   value={form.email}
@@ -478,7 +495,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label className="text-xs font-medium text-[#0a0b0d]">Téléphone</Label>
+                  <Label className="text-xs font-medium text-foreground">Téléphone</Label>
                   <Input
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -486,7 +503,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label className="text-xs font-medium text-[#0a0b0d]">N° de TVA</Label>
+                  <Label className="text-xs font-medium text-foreground">N° de TVA</Label>
                   <Input
                     value={form.vatNumber}
                     onChange={(e) => setForm({ ...form, vatNumber: e.target.value })}
@@ -496,7 +513,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               </div>
 
               <div className="grid gap-2">
-                <Label className="text-xs font-medium text-[#0a0b0d]">Notes internes</Label>
+                <Label className="text-xs font-medium text-foreground">Notes internes</Label>
                 <Textarea
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
@@ -510,7 +527,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               <Button
                 type="submit"
                 disabled={isSaving}
-                className="w-full rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold h-11"
+                className="w-full bg-primary hover:bg-primary/90 text-xs font-semibold h-11"
               >
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enregistrer'}
               </Button>

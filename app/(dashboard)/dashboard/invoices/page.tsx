@@ -6,13 +6,14 @@ import useSWR from 'swr';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Plus, Search, FileText, CheckCircle2, Clock, AlertTriangle, Loader2, Download, Trash2, Send, Ban } from 'lucide-react';
 import { toast } from 'sonner';
+import { Stamp, type StampTone } from '@/components/stamp';
+import { ModuleHeader, MetricCard } from '../_components/module-ui';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -166,59 +167,48 @@ export default function InvoicesPage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return (
-          <Badge className="bg-[#05b169]/10 text-[#05b169] border-[#05b169]/20 rounded-full text-[10px] font-medium shadow-none">
-            Payée
-          </Badge>
-        );
-      case 'sent':
-        return (
-          <Badge className="bg-[#0052ff]/10 text-[#0052ff] border-[#0052ff]/20 rounded-full text-[10px] font-medium shadow-none">
-            Envoyée
-          </Badge>
-        );
-      case 'overdue':
-        return (
-          <Badge className="bg-[#cf202f]/10 text-[#cf202f] border-[#cf202f]/20 rounded-full text-[10px] font-medium shadow-none">
-            En retard
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="rounded-full text-[10px] text-gray-500 border-gray-200">
-            Brouillon
-          </Badge>
-        );
-    }
+  /**
+   * Le statut d'une facture est un cachet, jamais une couleur seule : le
+   * libellé porte l'information, le ton ne fait que la souligner.
+   */
+  const INVOICE_STAMP: Record<string, { label: string; tone: StampTone }> = {
+    paid: { label: 'Payée', tone: 'success' },
+    partial: { label: 'Partielle', tone: 'warning' },
+    sent: { label: 'En attente', tone: 'warning' },
+    overdue: { label: 'En retard', tone: 'destructive' },
+    cancelled: { label: 'Annulée', tone: 'ink' },
+    refunded: { label: 'Remboursée', tone: 'ink' },
+  };
+
+  const getStatusStamp = (status: string) => {
+    const s = INVOICE_STAMP[status] ?? { label: 'Brouillon', tone: 'ink' as const };
+    return <Stamp label={s.label} tone={s.tone} />;
   };
 
   return (
     <section className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto space-y-8">
       {/* Header Coinbase Blue */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-normal text-[#0a0b0d] tracking-tight font-sans">
+          <h1 className="font-heading text-2xl lg:text-3xl font-bold tracking-tight text-foreground">
             Factures Client
           </h1>
-          <p className="text-[#5b616e] text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-1">
             Générez des factures professionnelles, suivez les encaissements et gérez les relances.
           </p>
         </div>
 
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button className="rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold px-5 h-11 shadow-sm">
+            <Button className="rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold px-5 h-11 shadow-sm">
               <Plus className="mr-2 h-4 w-4" /> Créer une Facture
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[550px] rounded-2xl">
+          <DialogContent className="sm:max-w-[550px] rounded-xl">
             <form onSubmit={handleCreateInvoice}>
               <DialogHeader>
-                <DialogTitle className="text-lg font-normal text-[#0a0b0d]">Créer une nouvelle facture</DialogTitle>
-                <DialogDescription className="text-xs text-[#5b616e]">
+                <DialogTitle className="text-lg font-normal text-foreground">Créer une nouvelle facture</DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
                   Renseignez les détails du client et les lignes de facturation.
                 </DialogDescription>
               </DialogHeader>
@@ -226,7 +216,7 @@ export default function InvoicesPage() {
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label className="text-xs font-medium text-[#0a0b0d]">Client *</Label>
+                    <Label className="text-xs font-medium text-foreground">Client *</Label>
                     <Select
                       value={formData.clientId}
                       onValueChange={(val) => setFormData({ ...formData, clientId: val })}
@@ -245,7 +235,7 @@ export default function InvoicesPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label className="text-xs font-medium text-[#0a0b0d]">Date d'échéance</Label>
+                    <Label className="text-xs font-medium text-foreground">Date d'échéance</Label>
                     <Input
                       type="date"
                       value={formData.dueDate}
@@ -257,7 +247,7 @@ export default function InvoicesPage() {
 
                 {/* Articles Lignes */}
                 <div className="space-y-3 pt-2">
-                  <Label className="text-xs font-medium text-[#0a0b0d]">Prestations & Articles</Label>
+                  <Label className="text-xs font-medium text-foreground">Prestations & Articles</Label>
                   {items.map((item, index) => (
                     <div key={index} className="flex items-center gap-2">
                       <Input
@@ -296,8 +286,9 @@ export default function InvoicesPage() {
                         type="button"
                         variant="ghost"
                         size="icon"
+                        aria-label={`Retirer la ligne ${index + 1}`}
                         onClick={() => handleRemoveItem(index)}
-                        className="h-9 w-9 text-red-500 hover:text-red-600 shrink-0"
+                        className="h-9 w-9 text-destructive hover:text-destructive shrink-0"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -307,7 +298,7 @@ export default function InvoicesPage() {
                     type="button"
                     variant="outline"
                     onClick={handleAddItem}
-                    className="rounded-full text-xs font-medium border-gray-200 mt-1"
+                    className="rounded-full text-xs font-medium border-border mt-1"
                   >
                     + Ajouter une ligne
                   </Button>
@@ -318,7 +309,7 @@ export default function InvoicesPage() {
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold h-11"
+                  className="w-full rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-11"
                 >
                   {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Générer et envoyer la facture'}
                 </Button>
@@ -330,50 +321,50 @@ export default function InvoicesPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <Card className="rounded-2xl border border-gray-200 bg-white">
+        <Card className="rounded-xl border border-border bg-card">
           <CardHeader className="p-5 flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-[#5b616e]">Total Encaissé</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-[#05b169]" />
+            <CardTitle className="text-xs font-medium text-muted-foreground">Total Encaissé</CardTitle>
+            <CheckCircle2 className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent className="p-5 pt-0">
-            <div className="text-2xl font-medium text-[#0a0b0d]">{formatAmount(totalPaidCents)}</div>
-            <p className="text-[11px] text-[#7c828a] mt-1">Factures marquées réglées</p>
+            <div className="tabular-mono text-2xl font-medium text-foreground">{formatAmount(totalPaidCents)}</div>
+            <p className="text-[11px] text-muted-foreground mt-1">Factures marquées réglées</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border border-gray-200 bg-white">
+        <Card className="rounded-xl border border-border bg-card">
           <CardHeader className="p-5 flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-[#5b616e]">En Attente de Paiement</CardTitle>
-            <Clock className="h-4 w-4 text-[#0052ff]" />
+            <CardTitle className="text-xs font-medium text-muted-foreground">En Attente de Paiement</CardTitle>
+            <Clock className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent className="p-5 pt-0">
-            <div className="text-2xl font-medium text-[#0a0b0d]">{formatAmount(totalPendingCents)}</div>
-            <p className="text-[11px] text-[#7c828a] mt-1">Factures envoyées & en cours</p>
+            <div className="tabular-mono text-2xl font-medium text-foreground">{formatAmount(totalPendingCents)}</div>
+            <p className="text-[11px] text-muted-foreground mt-1">Factures envoyées & en cours</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border border-gray-200 bg-white">
+        <Card className="rounded-xl border border-border bg-card">
           <CardHeader className="p-5 flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-[#5b616e]">Nombre de Factures</CardTitle>
-            <FileText className="h-4 w-4 text-[#7c828a]" />
+            <CardTitle className="text-xs font-medium text-muted-foreground">Nombre de Factures</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="p-5 pt-0">
-            <div className="text-2xl font-medium text-[#0a0b0d]">{invoices.length}</div>
-            <p className="text-[11px] text-[#7c828a] mt-1">Émises au total</p>
+            <div className="text-2xl font-medium text-foreground">{invoices.length}</div>
+            <p className="text-[11px] text-muted-foreground mt-1">Émises au total</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Table Shadcn Factures */}
-      <Card className="rounded-2xl border border-gray-200 bg-white">
-        <CardHeader className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <Card className="rounded-xl border border-border bg-card">
+        <CardHeader className="p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#7c828a]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Rechercher N° de facture..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 rounded-xl border-gray-200 text-xs"
+              className="pl-9 rounded-xl border-border text-xs"
             />
           </div>
 
@@ -394,23 +385,23 @@ export default function InvoicesPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-[#0052ff]" />
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : filteredInvoices.length === 0 ? (
-            <div className="text-center py-12 text-[#7c828a] text-xs">
+            <div className="text-center py-12 text-muted-foreground text-xs">
               Aucune facture enregistrée.
             </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-100 bg-[#f7f7f7]/50 hover:bg-[#f7f7f7]/50">
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">N° Facture</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Client</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Émission</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Échéance</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Montant Total</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Statut</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d] text-right">Actions</TableHead>
+                <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="text-xs font-semibold text-foreground">N° Facture</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Client</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Émission</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Échéance</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Montant Total</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Statut</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -418,21 +409,21 @@ export default function InvoicesPage() {
                   <TableRow
                     key={inv.id}
                     onClick={() => router.push(`/dashboard/invoices/${inv.id}`)}
-                    className="border-gray-100 hover:bg-gray-50/50 cursor-pointer"
+                    className="border-border hover:bg-muted/50 cursor-pointer"
                   >
-                    <TableCell className="font-medium text-xs text-[#0a0b0d] flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-[#7c828a]" />
+                    <TableCell className="font-medium text-xs text-foreground flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
                       <span>{inv.number}</span>
                     </TableCell>
-                    <TableCell className="text-xs text-[#5b616e]">
+                    <TableCell className="text-xs text-muted-foreground">
                       {getClientName(inv.clientId)}
                     </TableCell>
-                    <TableCell className="text-xs text-[#5b616e]">{inv.issueDate}</TableCell>
-                    <TableCell className="text-xs text-[#5b616e]">{inv.dueDate}</TableCell>
-                    <TableCell className="text-xs font-medium text-[#0a0b0d]">
+                    <TableCell className="text-xs text-muted-foreground">{inv.issueDate}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{inv.dueDate}</TableCell>
+                    <TableCell className="tabular-mono text-xs font-medium text-foreground">
                       {formatAmount(inv.totalCents)}
                     </TableCell>
-                    <TableCell>{getStatusBadge(inv.status)}</TableCell>
+                    <TableCell>{getStatusStamp(inv.status)}</TableCell>
                     <TableCell className="text-right">
                       {/* The row navigates to the detail page; the actions must not. */}
                       <div
@@ -445,7 +436,7 @@ export default function InvoicesPage() {
                             size="sm"
                             disabled={pendingId === inv.id}
                             onClick={() => handleTransition(inv.id, 'send')}
-                            className="h-8 rounded-full text-[11px] text-[#0052ff] hover:bg-[#0052ff]/10"
+                            className="h-8 rounded-full text-[11px] text-primary hover:bg-primary/10"
                           >
                             {pendingId === inv.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -462,7 +453,7 @@ export default function InvoicesPage() {
                             size="sm"
                             disabled={pendingId === inv.id}
                             onClick={() => handleTransition(inv.id, 'cancel')}
-                            className="h-8 rounded-full text-[11px] text-[#cf202f] hover:bg-[#cf202f]/10"
+                            className="h-8 rounded-full text-[11px] text-destructive hover:bg-destructive/10"
                           >
                             <Ban className="h-3.5 w-3.5" />
                             Annuler
@@ -473,7 +464,7 @@ export default function InvoicesPage() {
                           asChild
                           variant="ghost"
                           size="sm"
-                          className="h-8 rounded-full text-[11px] text-[#5b616e] hover:bg-gray-100"
+                          className="h-8 rounded-full text-[11px] text-muted-foreground hover:bg-muted"
                         >
                           <a href={`/api/v1/invoices/${inv.id}/pdf/download`}>
                             <Download className="h-3.5 w-3.5" />

@@ -213,6 +213,7 @@ export default function AdminOrganizationsPage() {
               <Button
                 variant="outline"
                 size="icon"
+                aria-label="Réinitialiser les filtres"
                 onClick={() => {
                   setSearch("")
                   setPlanFilter("all")
@@ -252,7 +253,7 @@ export default function AdminOrganizationsPage() {
                 </TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-red-500">
+                  <TableCell colSpan={6} className="text-center py-8 text-destructive">
                     Erreur de chargement des organisations.
                   </TableCell>
                 </TableRow>
@@ -264,14 +265,14 @@ export default function AdminOrganizationsPage() {
                 </TableRow>
               ) : (
                 data.organizations.map((org: Organization) => (
-                  <TableRow key={org.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/20">
+                  <TableRow key={org.id} className="hover:bg-muted">
                     <TableCell>
                       <div className="font-semibold">{org.name}</div>
                       <div className="text-xs text-muted-foreground">{org.slug}</div>
                     </TableCell>
                     <TableCell>
                       {org.plan === "free" ? (
-                        <Badge variant="outline" className="bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900/40 dark:text-slate-400 uppercase font-mono text-[10px]">
+                        <Badge variant="outline" className="bg-muted text-foreground border-border uppercase font-mono text-[10px]">
                           {org.plan}
                         </Badge>
                       ) : org.plan === "pro" ? (
@@ -290,11 +291,11 @@ export default function AdminOrganizationsPage() {
                           <Ban className="h-3 w-3" /> Suspendu
                         </Badge>
                       ) : org.subscriptionStatus === "cancelled" ? (
-                        <Badge className="bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 w-fit">
+                        <Badge className="bg-warning/10 text-warning border-warning/20 w-fit">
                           Annulé
                         </Badge>
                       ) : (
-                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 w-fit">
+                        <Badge className="bg-accent/10 text-accent border-accent/20 w-fit">
                           Actif
                         </Badge>
                       )}
@@ -314,7 +315,7 @@ export default function AdminOrganizationsPage() {
                           !org.customMaxClients &&
                           !org.customMaxProjects &&
                           !org.customMaxStorageBytes && (
-                            <span className="italic text-gray-400">Limites par défaut</span>
+                            <span className="italic text-muted-foreground">Limites par défaut</span>
                           )}
                       </div>
                     </TableCell>
@@ -335,8 +336,8 @@ export default function AdminOrganizationsPage() {
                         >
                           {org.subscriptionStatus === "suspended" ? (
                             <>
-                              <UserCheck className="h-3.5 w-3.5 mr-1 text-emerald-600" />
-                              <span className="text-emerald-600">Réactiver</span>
+                              <UserCheck className="h-3.5 w-3.5 mr-1 text-accent" />
+                              <span className="text-accent">Réactiver</span>
                             </>
                           ) : (
                             <>

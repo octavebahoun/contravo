@@ -28,26 +28,26 @@ export function AuthShell({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      <div className="relative hidden bg-zinc-950 lg:block border-l border-zinc-800">
-        <div className="absolute inset-0 flex flex-col justify-between p-12 bg-[radial-gradient(#1A433A_1.5px,transparent_1.5px)] [background-size:24px_24px]">
+      <div className="relative hidden bg-muted lg:block border-l border-border">
+        <div className="absolute inset-0 flex flex-col justify-between p-12 bg-[radial-gradient(var(--border)_1.5px,transparent_1.5px)] [background-size:24px_24px]">
           <div className="flex items-center gap-2">
-            <div className="rounded-full bg-emerald-950 border border-emerald-800 text-emerald-400 h-8 w-8 flex items-center justify-center font-bold text-xs font-mono">
+            <div className="rounded-lg bg-accent/10 border border-accent/20 text-accent h-8 w-8 flex items-center justify-center font-bold text-xs font-mono">
               C
             </div>
-            <span className="font-mono text-xs text-zinc-400 tracking-wider">CONTRAVO // SECURE_PORTAL</span>
+            <span className="font-mono text-xs text-muted-foreground tracking-wider">CONTRAVO // SECURE_PORTAL</span>
           </div>
 
           <div className="space-y-6">
-            <h2 className="text-3xl font-normal tracking-tight text-white max-w-md leading-tight">
+            <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground max-w-md leading-tight">
               Gérez vos contrats et factures avec une clarté absolue.
             </h2>
-            <p className="text-zinc-400 text-sm max-w-sm leading-relaxed">
+            <p className="text-muted-foreground text-sm max-w-sm leading-relaxed">
               Une interface sans distraction, conçue pour les équipes exigeantes qui recherchent l'efficacité et la sécurité de signature.
             </p>
           </div>
 
-          <div className="border-t border-zinc-900 pt-6">
-            <blockquote className="text-xs italic text-zinc-400 leading-relaxed">
+          <div className="border-t border-border pt-6">
+            <blockquote className="text-xs italic text-muted-foreground leading-relaxed">
               "La signature électronique sécurisée par empreinte cryptographique SHA-256 nous assure une traçabilité totale et inaltérable."
             </blockquote>
           </div>

@@ -70,10 +70,10 @@ interface Delivery {
 }
 
 const DELIVERY_STATUS: Record<string, { label: string; className: string }> = {
-  success: { label: 'Livré', className: 'bg-[#05b169]/10 text-[#05b169] border-[#05b169]/20' },
-  pending: { label: 'En cours', className: 'bg-[#0052ff]/10 text-[#0052ff] border-[#0052ff]/20' },
-  failed: { label: 'Échec, nouvelle tentative', className: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
-  exhausted: { label: 'Abandonné', className: 'bg-[#cf202f]/10 text-[#cf202f] border-[#cf202f]/20' },
+  success: { label: 'Livré', className: 'bg-accent/10 text-accent border-accent/20' },
+  pending: { label: 'En cours', className: 'bg-primary/10 text-primary border-primary/20' },
+  failed: { label: 'Échec, nouvelle tentative', className: 'bg-warning/10 text-warning border-warning/20/20' },
+  exhausted: { label: 'Abandonné', className: 'bg-destructive/10 text-destructive border-destructive/20' },
 };
 
 function formatDateTime(value?: string | null) {
@@ -254,13 +254,13 @@ export function WebhookEndpoints() {
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-2xl border border-gray-200 bg-white">
-        <CardHeader className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <Card className="rounded-xl border border-border bg-card">
+        <CardHeader className="p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <CardTitle className="text-sm font-medium text-[#0a0b0d] flex items-center gap-2">
-              <Webhook className="h-4 w-4 text-[#0052ff]" /> Endpoints webhook
+            <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Webhook className="h-4 w-4 text-primary" /> Endpoints webhook
             </CardTitle>
-            <CardDescription className="text-xs text-[#5b616e]">
+            <CardDescription className="text-xs text-muted-foreground">
               Les événements sont signés (<code className="font-mono">X-Webhook-Signature</code>) et
               réessayés six fois en cas d’échec.
             </CardDescription>
@@ -268,7 +268,7 @@ export function WebhookEndpoints() {
 
           <Button
             onClick={() => setIsCreating(true)}
-            className="rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold h-10 px-5"
+            className="rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-10 px-5"
           >
             <Plus className="mr-2 h-4 w-4" /> Nouvel endpoint
           </Button>
@@ -277,34 +277,34 @@ export function WebhookEndpoints() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex justify-center py-10">
-              <Loader2 className="h-5 w-5 animate-spin text-[#0052ff]" />
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
             </div>
           ) : endpoints.length === 0 ? (
-            <div className="text-center py-10 text-xs text-[#7c828a]">
+            <div className="text-center py-10 text-xs text-muted-foreground">
               Aucun endpoint. Ajoutez l’URL de votre automatisation pour recevoir les événements.
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-border">
               {endpoints.map((endpoint) => (
                 <div key={endpoint.id} className="p-5 space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <code className="text-xs font-mono text-[#0a0b0d] break-all">
+                        <code className="text-xs font-mono text-foreground break-all">
                           {endpoint.url}
                         </code>
                         <Badge
                           variant="outline"
                           className={
                             endpoint.active
-                              ? 'bg-[#05b169]/10 text-[#05b169] border-[#05b169]/20 rounded-full text-[10px]'
-                              : 'bg-gray-100 text-gray-500 border-gray-200 rounded-full text-[10px]'
+                              ? 'bg-accent/10 text-accent border-accent/20 rounded-full text-[10px]'
+                              : 'bg-muted text-muted-foreground border-border rounded-full text-[10px]'
                           }
                         >
                           {endpoint.active ? 'Actif' : 'Inactif'}
                         </Badge>
                       </div>
-                      <p className="text-[11px] text-[#7c828a] mt-1">
+                      <p className="text-[11px] text-muted-foreground mt-1">
                         Créé le {formatDateTime(endpoint.createdAt)}
                       </p>
                     </div>
@@ -315,7 +315,7 @@ export function WebhookEndpoints() {
                         size="sm"
                         disabled={pendingId === endpoint.id}
                         onClick={() => handleTest(endpoint)}
-                        className="h-8 rounded-full text-[11px] text-[#0052ff] hover:bg-[#0052ff]/10"
+                        className="h-8 rounded-full text-[11px] text-primary hover:bg-primary/10"
                       >
                         {pendingId === endpoint.id ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -329,7 +329,7 @@ export function WebhookEndpoints() {
                         size="sm"
                         disabled={pendingId === endpoint.id}
                         onClick={() => handleRotate(endpoint)}
-                        className="h-8 rounded-full text-[11px] text-[#5b616e] hover:bg-gray-100"
+                        className="h-8 rounded-full text-[11px] text-muted-foreground hover:bg-muted"
                       >
                         <KeyRound className="h-3.5 w-3.5" /> Nouveau secret
                       </Button>
@@ -338,7 +338,7 @@ export function WebhookEndpoints() {
                         size="sm"
                         disabled={pendingId === endpoint.id}
                         onClick={() => handleToggleActive(endpoint)}
-                        className="h-8 rounded-full text-[11px] text-[#5b616e] hover:bg-gray-100"
+                        className="h-8 rounded-full text-[11px] text-muted-foreground hover:bg-muted"
                       >
                         {endpoint.active ? 'Désactiver' : 'Réactiver'}
                       </Button>
@@ -347,7 +347,7 @@ export function WebhookEndpoints() {
                         size="sm"
                         disabled={pendingId === endpoint.id}
                         onClick={() => handleDelete(endpoint)}
-                        className="h-8 rounded-full text-[11px] text-[#cf202f] hover:bg-[#cf202f]/10"
+                        className="h-8 rounded-full text-[11px] text-destructive hover:bg-destructive/10"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -356,7 +356,7 @@ export function WebhookEndpoints() {
 
                   <div className="flex flex-wrap gap-1.5">
                     {endpoint.events.includes(WEBHOOK_EVENT_WILDCARD) ? (
-                      <Badge variant="outline" className="rounded-full text-[10px] border-gray-200 text-[#5b616e]">
+                      <Badge variant="outline" className="rounded-full text-[10px] border-border text-muted-foreground">
                         Tous les événements
                       </Badge>
                     ) : (
@@ -364,7 +364,7 @@ export function WebhookEndpoints() {
                         <Badge
                           key={event}
                           variant="outline"
-                          className="rounded-full text-[10px] border-gray-200 text-[#5b616e] font-mono"
+                          className="rounded-full text-[10px] border-border text-muted-foreground font-mono"
                           title={WEBHOOK_EVENT_LABELS[event] || event}
                         >
                           {event}
@@ -379,44 +379,44 @@ export function WebhookEndpoints() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl border border-gray-200 bg-white">
-        <CardHeader className="p-5 border-b border-gray-100">
-          <CardTitle className="text-sm font-medium text-[#0a0b0d]">Dernières livraisons</CardTitle>
-          <CardDescription className="text-xs text-[#5b616e]">
+      <Card className="rounded-xl border border-border bg-card">
+        <CardHeader className="p-5 border-b border-border">
+          <CardTitle className="text-sm font-medium text-foreground">Dernières livraisons</CardTitle>
+          <CardDescription className="text-xs text-muted-foreground">
             Une livraison abandonnée après six tentatives peut être renvoyée à la main.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {deliveries.length === 0 ? (
-            <div className="text-center py-10 text-xs text-[#7c828a]">
+            <div className="text-center py-10 text-xs text-muted-foreground">
               Aucune livraison pour l’instant.
             </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-100 bg-[#f7f7f7]/50 hover:bg-[#f7f7f7]/50">
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Événement</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Date</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Tentatives</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Réponse</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Statut</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d] text-right">Action</TableHead>
+                <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="text-xs font-semibold text-foreground">Événement</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Date</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Tentatives</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Réponse</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Statut</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {deliveries.map((delivery) => {
                   const status = DELIVERY_STATUS[delivery.status] ?? {
                     label: delivery.status,
-                    className: 'bg-gray-100 text-gray-500 border-gray-200',
+                    className: 'bg-muted text-muted-foreground border-border',
                   };
                   return (
-                    <TableRow key={delivery.id} className="border-gray-100">
-                      <TableCell className="text-xs font-mono text-[#0a0b0d]">{delivery.event}</TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">
+                    <TableRow key={delivery.id} className="border-border">
+                      <TableCell className="text-xs font-mono text-foreground">{delivery.event}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
                         {formatDateTime(delivery.createdAt)}
                       </TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">{delivery.attempts}</TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">
+                      <TableCell className="text-xs text-muted-foreground">{delivery.attempts}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
                         {delivery.lastResponseCode ?? '—'}
                       </TableCell>
                       <TableCell>
@@ -434,7 +434,7 @@ export function WebhookEndpoints() {
                             size="sm"
                             disabled={pendingId === delivery.id}
                             onClick={() => handleRedeliver(delivery)}
-                            className="h-8 rounded-full text-[11px] text-[#0052ff] hover:bg-[#0052ff]/10"
+                            className="h-8 rounded-full text-[11px] text-primary hover:bg-primary/10"
                           >
                             {pendingId === delivery.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -455,13 +455,13 @@ export function WebhookEndpoints() {
       </Card>
 
       <Dialog open={isCreating} onOpenChange={setIsCreating}>
-        <DialogContent className="sm:max-w-[560px] rounded-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[560px] rounded-xl max-h-[85vh] overflow-y-auto">
           <form onSubmit={handleCreate}>
             <DialogHeader>
-              <DialogTitle className="text-lg font-normal text-[#0a0b0d]">
+              <DialogTitle className="text-lg font-normal text-foreground">
                 Nouvel endpoint webhook
               </DialogTitle>
-              <DialogDescription className="text-xs text-[#5b616e]">
+              <DialogDescription className="text-xs text-muted-foreground">
                 L’URL doit être publique et en HTTPS. Le secret de signature ne s’affiche qu’une
                 fois.
               </DialogDescription>
@@ -469,7 +469,7 @@ export function WebhookEndpoints() {
 
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label className="text-xs font-medium text-[#0a0b0d]">URL de réception *</Label>
+                <Label className="text-xs font-medium text-foreground">URL de réception *</Label>
                 <Input
                   type="url"
                   placeholder="https://n8n.mon-domaine.com/webhook/contravo"
@@ -482,7 +482,7 @@ export function WebhookEndpoints() {
 
               <div className="grid gap-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-medium text-[#0a0b0d]">
+                  <Label className="text-xs font-medium text-foreground">
                     Événements écoutés ({selectedEvents.length})
                   </Label>
                   <Button
@@ -490,15 +490,15 @@ export function WebhookEndpoints() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setSelectedEvents([WEBHOOK_EVENT_WILDCARD])}
-                    className="h-7 rounded-full text-[11px] text-[#0052ff] hover:bg-[#0052ff]/10"
+                    className="h-7 rounded-full text-[11px] text-primary hover:bg-primary/10"
                   >
                     Tout écouter
                   </Button>
                 </div>
 
                 {selectedEvents.includes(WEBHOOK_EVENT_WILDCARD) ? (
-                  <div className="rounded-xl border border-gray-200 p-4 space-y-2">
-                    <p className="text-xs text-[#0a0b0d]">
+                  <div className="rounded-xl border border-border p-4 space-y-2">
+                    <p className="text-xs text-foreground">
                       Cet endpoint recevra <span className="font-medium">tous</span> les événements,
                       y compris ceux ajoutés plus tard.
                     </p>
@@ -507,23 +507,23 @@ export function WebhookEndpoints() {
                       variant="outline"
                       size="sm"
                       onClick={() => setSelectedEvents([])}
-                      className="h-8 rounded-full text-[11px] border-gray-200"
+                      className="h-8 rounded-full text-[11px] border-border"
                     >
                       Choisir précisément
                     </Button>
                   </div>
                 ) : (
-                  <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 max-h-64 overflow-y-auto">
+                  <div className="rounded-xl border border-border divide-y divide-border max-h-64 overflow-y-auto">
                     {WEBHOOK_EVENT_GROUPS.map((group) => (
                       <div key={group.label} className="p-3">
-                        <p className="text-[11px] font-semibold text-[#0a0b0d] mb-2">
+                        <p className="text-[11px] font-semibold text-foreground mb-2">
                           {group.label}
                         </p>
                         <div className="grid sm:grid-cols-2 gap-1.5">
                           {group.events.map((event) => (
                             <label
                               key={event.name}
-                              className="flex items-start gap-2 text-[11px] text-[#5b616e] cursor-pointer"
+                              className="flex items-start gap-2 text-[11px] text-muted-foreground cursor-pointer"
                             >
                               <Checkbox
                                 checked={selectedEvents.includes(event.name)}
@@ -531,7 +531,7 @@ export function WebhookEndpoints() {
                                 className="mt-0.5"
                               />
                               <span>
-                                <span className="font-mono text-[10px] text-[#0a0b0d]">
+                                <span className="font-mono text-[10px] text-foreground">
                                   {event.name}
                                 </span>
                                 <br />
@@ -551,7 +551,7 @@ export function WebhookEndpoints() {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold h-11"
+                className="w-full rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-11"
               >
                 {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enregistrer l’endpoint'}
               </Button>
@@ -561,36 +561,37 @@ export function WebhookEndpoints() {
       </Dialog>
 
       <Dialog open={Boolean(revealedSecret)} onOpenChange={() => setRevealedSecret(null)}>
-        <DialogContent className="sm:max-w-[480px] rounded-2xl">
+        <DialogContent className="sm:max-w-[480px] rounded-xl">
           <DialogHeader>
-            <DialogTitle className="text-lg font-normal text-[#0a0b0d]">
+            <DialogTitle className="text-lg font-normal text-foreground">
               Secret de signature
             </DialogTitle>
-            <DialogDescription className="text-xs text-[#5b616e]">
+            <DialogDescription className="text-xs text-muted-foreground">
               Copiez-le maintenant : il ne sera plus affiché. Il sert à vérifier l’en-tête
               <code className="font-mono"> X-Webhook-Signature</code> de chaque appel reçu.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3">
-            <code className="flex-1 break-all text-[11px] font-mono text-[#0a0b0d]">
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-muted p-3">
+            <code className="flex-1 break-all text-[11px] font-mono text-foreground">
               {revealedSecret}
             </code>
             <Button
               type="button"
               variant="ghost"
               size="icon"
+              aria-label="Copier le secret de signature"
               onClick={() => revealedSecret && copy(revealedSecret)}
               className="h-8 w-8 shrink-0"
             >
-              {copied ? <Check className="h-4 w-4 text-[#05b169]" /> : <Copy className="h-4 w-4" />}
+              {copied ? <Check className="h-4 w-4 text-accent" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
 
           <DialogFooter>
             <Button
               onClick={() => setRevealedSecret(null)}
-              className="w-full rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold h-11"
+              className="w-full rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-11"
             >
               J’ai copié le secret
             </Button>

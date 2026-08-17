@@ -1,234 +1,118 @@
-import type { ReactNode } from 'react';
-
 /**
- * Landing page copy, kept apart from the components (structure adapted from the
- * Finwise template, MIT).
+ * Landing page copy (direction « Le cachet » — v1.0).
  *
  * Everything shown publicly lives here so wording can change without touching
- * layout. Sections that would need real customers or shipped features are
- * marked `placeholder` and rendered as such — never as invented proof.
+ * layout. Chiffres de la bande « Preuve » : à valider avec le fondateur avant
+ * mise en production.
  */
 
 export const siteDetails = {
   name: 'Contravo',
-  tagline: 'Gérez. Signez. Encaissez.',
+  tagline: 'Faites signer vos devis. Encaissé plus vite.',
   description:
-    'Devis, contrats, signature électronique et factures : tout votre business au même endroit.',
+    'Créez un devis en 5 minutes, envoyez le lien, votre client signe depuis son téléphone et paie par mobile money. Devis, contrats, factures et paiements pour prestataires francophones.',
 };
 
 export const heroDetails = {
-  heading: 'Gérez. Signez. Encaissez.',
+  heading: 'Faites signer vos devis. Encaissé plus vite.',
   subheading:
-    'Contravo réunit devis, contrats, signature électronique et facturation dans un seul outil pensé pour les prestataires et agences.',
-  primaryCta: { label: 'Créer un compte', href: '/sign-up' },
-  secondaryCta: { label: 'Se connecter', href: '/sign-in' },
+    'Créez un devis en 5 minutes, envoyez le lien, votre client signe depuis son téléphone et paie par mobile money.',
+  primaryCta: { label: 'Créer mon premier devis', href: '/sign-up' },
+  secondaryCta: { label: 'Voir un exemple', href: '#etapes' },
+  trustLine: 'Sans carte bancaire · Sans inscription pour vos clients',
 };
-
-export type Benefit = {
-  title: string;
-  description: string;
-  /** Lucide icon name resolved by the component. */
-  icon: 'FileText' | 'PenLine' | 'Receipt' | 'Workflow' | 'ShieldCheck' | 'Wallet';
-  bullets: string[];
-};
-
-export const benefits: Benefit[] = [
-  {
-    title: 'Devis qui se transforment en contrats',
-    description:
-      "Composez un devis, envoyez-le, et suivez son parcours jusqu'à l'acceptation. Le contrat se crée automatiquement.",
-    icon: 'FileText',
-    bullets: [
-      'Lignes, remises et TVA calculées pour vous',
-      'Numérotation continue et conforme',
-      'PDF généré à chaque envoi',
-    ],
-  },
-  {
-    title: 'Signature électronique intégrée',
-    description:
-      'Votre client signe depuis son navigateur, sans compte ni logiciel. Chaque signature est horodatée et scellée.',
-    icon: 'PenLine',
-    bullets: [
-      'Signature manuscrite au doigt ou à la souris',
-      'Certificat de signature joint au document',
-      'Empreinte SHA-256 vérifiable par un tiers',
-    ],
-  },
-  {
-    title: 'Factures et encaissement',
-    description:
-      'Facturez en un clic depuis un contrat signé, puis encaissez par mobile money ou carte via GeniusPay.',
-    icon: 'Receipt',
-    bullets: [
-      'Relances automatiques des impayés',
-      'Suivi des règlements partiels',
-      'Rapprochement automatique des paiements',
-    ],
-  },
-  {
-    title: 'Portail client sans friction',
-    description:
-      "Un lien par email suffit : votre client consulte, valide et paie sans créer de compte.",
-    icon: 'Workflow',
-    bullets: [
-      'Liens personnels à durée limitée',
-      'Validation des livrables en ligne',
-      'Collecte des avis en fin de projet',
-    ],
-  },
-  {
-    title: 'Vos données isolées',
-    description:
-      'Chaque organisation est cloisonnée au niveau de la base. Les accès sont tracés et révocables.',
-    icon: 'ShieldCheck',
-    bullets: [
-      'Isolation stricte par organisation',
-      'Journal d’audit de chaque action',
-      'Clés API à portée limitée',
-    ],
-  },
-  {
-    title: 'Rentabilité par projet',
-    description:
-      'Suivez dépenses et marges projet par projet, pour savoir ce qui vous rapporte vraiment.',
-    icon: 'Wallet',
-    bullets: [
-      'Dépenses avec justificatifs',
-      'Marge calculée en temps réel',
-      'Vue consolidée par client',
-    ],
-  },
-];
-
-export type Step = { number: string; title: string; description: string };
-
-export const steps: Step[] = [
-  {
-    number: '01',
-    title: 'Créez votre devis',
-    description:
-      'Ajoutez vos lignes, vos conditions et vos coordonnées. Contravo calcule les totaux et génère le PDF.',
-  },
-  {
-    number: '02',
-    title: 'Votre client signe',
-    description:
-      "Il reçoit un lien, consulte le document et signe en ligne. Vous êtes notifié à chaque étape.",
-  },
-  {
-    number: '03',
-    title: 'Vous encaissez',
-    description:
-      'La facture part automatiquement, le paiement est suivi, et les relances se déclenchent seules.',
-  },
-];
 
 /**
- * Plans from MVP6 §3. Billing is not implemented yet, so every button leads to
- * signup rather than a checkout that does not exist.
+ * Chiffres à valider avec le fondateur avant mise en production.
  */
-export const pricing = {
-  placeholder: true,
-  note: "Tarifs indicatifs — la facturation des abonnements arrive prochainement.",
-  plans: [
+export const proofStats: Array<{ value: string; label: string }> = [
+  { value: '3', label: 'documents créés par jour' },
+  { value: '4×', label: 'plus vite encaissé' },
+  { value: '100 %', label: 'de signatures en ligne' },
+];
+
+export const problemDetails = {
+  heading: 'Encore en train de relancer votre client pour une signature ?',
+  subheading:
+    'Devis envoyé sur WhatsApp, jamais signé, paiement à la traîne. La vente reste bloquée par l’administratif.',
+  pains: [
+    'Votre devis se perd dans les conversations',
+    'Le client ne sait pas comment signer',
+    'Vous relancez, le paiement traîne',
+  ],
+};
+
+export const solutionDetails = {
+  heading: 'Tout ce qu’il faut pour être payé, sans friction.',
+  benefits: [
     {
-      name: 'Free',
-      price: '0',
-      currency: 'XOF',
-      period: '/mois',
-      description: 'Pour démarrer et tester la plateforme.',
-      features: [
-        '1 membre',
-        '3 projets actifs',
-        '10 documents par mois',
-        'Portail client inclus',
-      ],
-      cta: 'Commencer gratuitement',
-      highlighted: false,
+      stamp: 'MODÈLE',
+      title: 'Devis en 5 minutes',
+      description:
+        'Des modèles prêts à l’emploi, les montants se calculent tout seuls. Numérotation et PDF généré automatiquement.',
+      icon: 'FileText' as const,
     },
     {
-      name: 'Pro',
-      price: '15 000',
-      currency: 'XOF',
-      period: '/mois',
-      description: 'Pour les indépendants et petites équipes.',
-      features: [
-        '5 membres',
-        'Projets illimités',
-        'Documents illimités',
-        'Relances automatiques',
-        'Clés API',
-      ],
-      cta: 'Choisir Pro',
-      highlighted: true,
+      stamp: 'SIGNÉ',
+      title: 'Signature en ligne',
+      description:
+        'Un lien sécurisé, aucune inscription pour votre client : il signe en 30 secondes depuis son téléphone.',
+      icon: 'PenLine' as const,
     },
     {
-      name: 'Business',
-      price: '45 000',
-      currency: 'XOF',
-      period: '/mois',
-      description: 'Pour les agences et structures établies.',
-      features: [
-        'Membres illimités',
-        'Webhooks et intégrations',
-        'Stockage étendu',
-        'Support prioritaire',
-      ],
-      cta: 'Choisir Business',
-      highlighted: false,
+      stamp: 'PAYÉ',
+      title: 'Paiement direct',
+      description:
+        'Mobile money (Orange, MTN, Moov…) et carte via GeniusPay, en XOF. Le suivi est automatique.',
+      icon: 'Receipt' as const,
     },
   ],
 };
 
-/**
- * Customer quotes. Empty on purpose: Contravo has no public references yet, and
- * inventing them would misrepresent the product.
- */
-export const testimonials: Array<{
-  name: string;
-  role: string;
-  quote: string;
-}> = [];
-
-/**
- * Usage figures, also empty until there is something real to count.
- */
-export const stats: Array<{ value: string; label: string }> = [];
+export const stepsDetails = {
+  heading: 'Comment ça marche',
+  steps: [
+    {
+      stamp: 'MODÈLE',
+      title: 'Choisir un modèle',
+      description: 'Sélectionnez un modèle, ajoutez vos prestations. Les totaux se calculent seuls.',
+    },
+    {
+      stamp: 'LIEN',
+      title: 'Envoyer le lien',
+      description: 'Votre client le reçoit par email ou WhatsApp, consulte et signe sans compte.',
+    },
+    {
+      stamp: 'PAYÉ',
+      title: 'Être payé',
+      description: 'La facture part, le règlement arrive par mobile money, les relances s’arrêtent.',
+    },
+  ],
+};
 
 export const faqs = [
   {
-    question: 'La signature électronique a-t-elle une valeur légale ?',
+    question: 'Le client doit-il créer un compte ?',
     answer:
-      "Contravo produit une signature électronique simple au sens du règlement eIDAS. Chaque signature est horodatée, associée à l'adresse IP du signataire et scellée par une empreinte SHA-256 vérifiable publiquement. C'est suffisant pour la majorité des contrats commerciaux ; pour une signature qualifiée, un tiers certificateur reste nécessaire.",
+      'Non. Il reçoit un lien personnel, signe en 30 secondes depuis son téléphone, sans compte ni mot de passe.',
   },
   {
-    question: 'Mon client doit-il créer un compte pour signer ?',
+    question: 'Quels moyens de paiement ?',
     answer:
-      "Non. Il reçoit un lien personnel par email qui lui donne accès au seul document concerné, pour une durée limitée. Aucun compte, aucun mot de passe.",
+      'Mobile money (Orange Money, MTN MoMo, Moov…) et carte bancaire, via GeniusPay, en XOF. Chaque paiement reçu clôture automatiquement la facture.',
   },
   {
-    question: 'Comment sont encaissés les paiements ?',
+    question: 'Mes documents sont-ils protégés ?',
     answer:
-      'Les factures sont réglées via GeniusPay, qui prend en charge le mobile money et la carte bancaire. Les règlements sont rapprochés automatiquement de la facture concernée.',
-  },
-  {
-    question: 'Mes données sont-elles isolées des autres organisations ?',
-    answer:
-      "Oui. Chaque requête est filtrée par organisation au niveau de la base de données, et non seulement dans l'application. Chaque action est enregistrée dans un journal d'audit.",
-  },
-  {
-    question: 'Puis-je connecter Contravo à mes autres outils ?',
-    answer:
-      "Oui, via des clés API à portée limitée et des webhooks déclenchés à chaque événement métier : devis envoyé, contrat signé, facture payée, etc.",
+      'Oui. Chaque signature est horodatée, scellée par une empreinte SHA-256 vérifiable, et les copies sont conservées. Chaque organisation est isolée au niveau de la base de données.',
   },
 ];
 
 export const ctaDetails = {
-  heading: 'Prêt à simplifier votre administratif ?',
+  heading: 'Prêt à vendre plus vite ?',
   subheading:
-    'Créez votre compte et envoyez votre premier devis en quelques minutes.',
-  primaryCta: { label: 'Créer un compte', href: '/sign-up' },
+    'Créez votre premier devis gratuitement, envoyez-le, et regardez votre client signer.',
+  primaryCta: { label: 'Créer mon premier devis gratuit', href: '/sign-up' },
 };
 
 export const footerDetails = {
@@ -237,7 +121,7 @@ export const footerDetails = {
       title: 'Produit',
       links: [
         { label: 'Fonctionnalités', href: '#fonctionnalites' },
-        { label: 'Tarifs', href: '#tarifs' },
+        { label: 'Comment ça marche', href: '#etapes' },
         { label: 'FAQ', href: '#faq' },
       ],
     },
@@ -258,6 +142,5 @@ export const footerDetails = {
 export const menuItems = [
   { label: 'Fonctionnalités', href: '#fonctionnalites' },
   { label: 'Comment ça marche', href: '#etapes' },
-  { label: 'Tarifs', href: '#tarifs' },
   { label: 'FAQ', href: '#faq' },
 ];

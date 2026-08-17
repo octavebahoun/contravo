@@ -88,8 +88,8 @@ export default async function InvitePage({
 }
 
 const TONE_CLASSES = {
-  success: 'bg-emerald-50 text-emerald-600',
-  warning: 'bg-amber-50 text-amber-600',
+  success: 'bg-accent/10 text-accent',
+  warning: 'bg-warning/10 text-warning',
   danger: 'bg-destructive/10 text-destructive',
 } as const;
 

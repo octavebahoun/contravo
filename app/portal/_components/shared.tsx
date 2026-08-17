@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { formatMoney } from '@/lib/money';
+import { Stamp, type StampTone } from '@/components/stamp';
 
 /**
  * Presentation helpers shared by the portal screens.
@@ -36,39 +37,33 @@ export function formatQuantity(quantity: string): string {
   return normalized.replace('.', ',');
 }
 
-/** Business statuses mapped to the charte's feedback colours — never decorative. */
-const STATUS_STYLES: Record<string, { label: string; className: string }> = {
-  draft: { label: 'Brouillon', className: 'bg-muted text-muted-foreground' },
-  sent: { label: 'En attente', className: 'bg-info/10 text-info' },
-  viewed: { label: 'Consulté', className: 'bg-info/10 text-info' },
-  accepted: { label: 'Accepté', className: 'bg-success/10 text-success' },
-  signed: { label: 'Signé', className: 'bg-success/10 text-success' },
-  approved: { label: 'Approuvé', className: 'bg-success/10 text-success' },
-  paid: { label: 'Payée', className: 'bg-success/10 text-success' },
-  partial: { label: 'Partiellement payée', className: 'bg-warning/10 text-warning' },
-  submitted: { label: 'À valider', className: 'bg-warning/10 text-warning' },
-  overdue: { label: 'En retard', className: 'bg-destructive/10 text-destructive' },
-  rejected: { label: 'Refusé', className: 'bg-destructive/10 text-destructive' },
-  cancelled: { label: 'Annulé', className: 'bg-muted text-muted-foreground' },
-  expired: { label: 'Expiré', className: 'bg-muted text-muted-foreground' },
-  revision_requested: { label: 'Révision demandée', className: 'bg-warning/10 text-warning' },
-  refunded: { label: 'Remboursée', className: 'bg-muted text-muted-foreground' },
-  pending: { label: 'En attente', className: 'bg-info/10 text-info' },
+/**
+ * Le client voit le même cachet que le prestataire : c'est ce tampon qui dit
+ * si le document est signé, payé ou encore en attente. Le libellé porte
+ * l'information — la couleur ne fait que la souligner.
+ */
+const STATUS_STAMPS: Record<string, { label: string; tone: StampTone }> = {
+  draft: { label: 'Brouillon', tone: 'ink' },
+  sent: { label: 'En attente', tone: 'warning' },
+  viewed: { label: 'Consulté', tone: 'warning' },
+  accepted: { label: 'Accepté', tone: 'success' },
+  signed: { label: 'Signé', tone: 'success' },
+  approved: { label: 'Approuvé', tone: 'success' },
+  paid: { label: 'Payée', tone: 'success' },
+  partial: { label: 'Partiellement payée', tone: 'warning' },
+  submitted: { label: 'À valider', tone: 'warning' },
+  overdue: { label: 'En retard', tone: 'destructive' },
+  rejected: { label: 'Refusé', tone: 'destructive' },
+  cancelled: { label: 'Annulé', tone: 'ink' },
+  expired: { label: 'Expiré', tone: 'ink' },
+  revision_requested: { label: 'Révision demandée', tone: 'warning' },
+  refunded: { label: 'Remboursée', tone: 'ink' },
+  pending: { label: 'En attente', tone: 'warning' },
 };
 
 export function StatusBadge({ status }: { status: string }) {
-  const style = STATUS_STYLES[status] ?? {
-    label: status,
-    className: 'bg-muted text-muted-foreground',
-  };
-
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${style.className}`}
-    >
-      {style.label}
-    </span>
-  );
+  const stamp = STATUS_STAMPS[status] ?? { label: status, tone: 'ink' as const };
+  return <Stamp label={stamp.label} tone={stamp.tone} />;
 }
 
 /** Full-page message for an expired link, a wrong token or a missing document. */

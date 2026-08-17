@@ -182,24 +182,24 @@ export default function ExpensesPage() {
         action={
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-              <Button className="rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold px-5 h-11 shadow-sm">
+              <Button className="rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold px-5 h-11 shadow-sm">
                 <Plus className="mr-2 h-4 w-4" /> Nouvelle dépense
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[480px] rounded-2xl">
+            <DialogContent className="sm:max-w-[480px] rounded-xl">
               <form onSubmit={handleCreateExpense}>
                 <DialogHeader>
-                  <DialogTitle className="text-lg font-normal text-[#0a0b0d]">
+                  <DialogTitle className="text-lg font-normal text-foreground">
                     Enregistrer une dépense
                   </DialogTitle>
-                  <DialogDescription className="text-xs text-[#5b616e]">
+                  <DialogDescription className="text-xs text-muted-foreground">
                     Elle sera imputée au projet et prise en compte dans sa rentabilité.
                   </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label className="text-xs font-medium text-[#0a0b0d]">Projet *</Label>
+                    <Label className="text-xs font-medium text-foreground">Projet *</Label>
                     <Select
                       value={formData.projectId}
                       onValueChange={(val) => setFormData({ ...formData, projectId: val })}
@@ -218,7 +218,7 @@ export default function ExpensesPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label className="text-xs font-medium text-[#0a0b0d]">Catégorie</Label>
+                    <Label className="text-xs font-medium text-foreground">Catégorie</Label>
                     <Select
                       value={formData.category}
                       onValueChange={(val) => setFormData({ ...formData, category: val })}
@@ -237,7 +237,7 @@ export default function ExpensesPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label className="text-xs font-medium text-[#0a0b0d]">Description *</Label>
+                    <Label className="text-xs font-medium text-foreground">Description *</Label>
                     <Input
                       placeholder="Ex : Licence Figma — équipe design"
                       value={formData.description}
@@ -249,7 +249,7 @@ export default function ExpensesPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label className="text-xs font-medium text-[#0a0b0d]">Montant ({currency}) *</Label>
+                      <Label className="text-xs font-medium text-foreground">Montant ({currency}) *</Label>
                       <Input
                         type="number"
                         min="0"
@@ -263,7 +263,7 @@ export default function ExpensesPage() {
                     </div>
 
                     <div className="grid gap-2">
-                      <Label className="text-xs font-medium text-[#0a0b0d]">Date *</Label>
+                      <Label className="text-xs font-medium text-foreground">Date *</Label>
                       <Input
                         type="date"
                         value={formData.incurredOn}
@@ -275,7 +275,7 @@ export default function ExpensesPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label className="text-xs font-medium text-[#0a0b0d]">Fournisseur</Label>
+                    <Label className="text-xs font-medium text-foreground">Fournisseur</Label>
                     <Input
                       placeholder="Ex : Figma Inc."
                       value={formData.vendor}
@@ -292,7 +292,7 @@ export default function ExpensesPage() {
                         setFormData({ ...formData, billable: checked === true })
                       }
                     />
-                    <Label htmlFor="billable" className="text-xs font-medium text-[#0a0b0d]">
+                    <Label htmlFor="billable" className="text-xs font-medium text-foreground">
                       Refacturable au client
                     </Label>
                   </div>
@@ -302,7 +302,7 @@ export default function ExpensesPage() {
                   <Button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold h-11"
+                    className="w-full rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-11"
                   >
                     {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enregistrer la dépense'}
                   </Button>
@@ -318,31 +318,31 @@ export default function ExpensesPage() {
           label="Total dépensé"
           value={formatAmount(totalAmount, currency)}
           hint="Toutes catégories confondues"
-          icon={<Wallet className="h-4 w-4 text-[#0052ff]" />}
+          icon={<Wallet className="h-4 w-4 text-primary" />}
         />
         <MetricCard
           label="Refacturable"
           value={formatAmount(billableAmount, currency)}
           hint="À répercuter sur les factures"
-          icon={<HandCoins className="h-4 w-4 text-[#05b169]" />}
+          icon={<HandCoins className="h-4 w-4 text-accent" />}
         />
         <MetricCard
           label="Nombre de dépenses"
           value={expenses.length}
           hint="Lignes enregistrées"
-          icon={<Receipt className="h-4 w-4 text-[#7c828a]" />}
+          icon={<Receipt className="h-4 w-4 text-muted-foreground" />}
         />
       </div>
 
-      <Card className="rounded-2xl border border-gray-200 bg-white">
-        <CardHeader className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <Card className="rounded-xl border border-border bg-card">
+        <CardHeader className="p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#7c828a]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Rechercher une dépense ou un fournisseur..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 rounded-xl border-gray-200 text-xs"
+              className="pl-9 rounded-xl border-border text-xs"
             />
           </div>
 
@@ -364,39 +364,39 @@ export default function ExpensesPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-[#0052ff]" />
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : filteredExpenses.length === 0 ? (
-            <div className="text-center py-12 text-[#7c828a] text-xs">Aucune dépense trouvée.</div>
+            <div className="text-center py-12 text-muted-foreground text-xs">Aucune dépense trouvée.</div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-100 bg-[#f7f7f7]/50 hover:bg-[#f7f7f7]/50">
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Description</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Projet</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Catégorie</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Date</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Montant</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Refacturable</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d] text-right">Actions</TableHead>
+                <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="text-xs font-semibold text-foreground">Description</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Projet</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Catégorie</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Date</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Montant</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Refacturable</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredExpenses.map((expense) => (
-                  <TableRow key={expense.id} className="border-gray-100 hover:bg-gray-50/50">
-                    <TableCell className="text-xs text-[#0a0b0d]">
+                  <TableRow key={expense.id} className="border-border hover:bg-muted/50">
+                    <TableCell className="text-xs text-foreground">
                       <div className="flex items-center gap-2 font-medium">
-                        <Receipt className="h-4 w-4 text-[#7c828a]" />
+                        <Receipt className="h-4 w-4 text-muted-foreground" />
                         <span>{expense.description}</span>
                       </div>
                       {expense.vendor && (
-                        <div className="text-[11px] text-[#7c828a] font-normal pl-6">{expense.vendor}</div>
+                        <div className="text-[11px] text-muted-foreground font-normal pl-6">{expense.vendor}</div>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs text-[#5b616e]">{getProjectName(expense.projectId)}</TableCell>
-                    <TableCell className="text-xs text-[#5b616e]">{categoryLabel(expense.category)}</TableCell>
-                    <TableCell className="text-xs text-[#5b616e]">{formatDate(expense.incurredOn)}</TableCell>
-                    <TableCell className="text-xs font-medium text-[#0a0b0d]">
+                    <TableCell className="text-xs text-muted-foreground">{getProjectName(expense.projectId)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{categoryLabel(expense.category)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{formatDate(expense.incurredOn)}</TableCell>
+                    <TableCell className="tabular-mono text-xs font-medium text-foreground">
                       {formatAmount(expense.amountCents, expense.currency)}
                     </TableCell>
                     <TableCell>
@@ -412,7 +412,7 @@ export default function ExpensesPage() {
                         size="sm"
                         disabled={pendingId === expense.id}
                         onClick={() => handleDelete(expense.id)}
-                        className="h-8 rounded-full text-[11px] text-[#cf202f] hover:bg-[#cf202f]/10"
+                        className="h-8 rounded-full text-[11px] text-destructive hover:bg-destructive/10"
                       >
                         {pendingId === expense.id ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />

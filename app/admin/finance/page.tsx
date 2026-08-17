@@ -42,7 +42,7 @@ export default function AdminFinancePage() {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600 dark:border-red-900/30 dark:bg-red-950/20 dark:text-red-400">
+      <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
         Erreur de chargement des transactions financières.
       </div>
     )
@@ -63,14 +63,14 @@ export default function AdminFinancePage() {
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Revenu Total Généré</CardTitle>
-            <CircleDollarSign className="h-4 w-4 text-emerald-500" />
+            <CircleDollarSign className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-8 w-28" />
             ) : (
               <>
-                <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                <div className="tabular-mono text-2xl font-bold text-accent">
                   {formatMoney(Math.round(parseFloat(data.aggregates.totalRevenueXof)), "XOF")}
                 </div>
                 <p className="text-xs text-muted-foreground">Volume de paiements validés</p>
@@ -82,7 +82,7 @@ export default function AdminFinancePage() {
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Transactions Réussies</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            <CheckCircle2 className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -118,14 +118,14 @@ export default function AdminFinancePage() {
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Factures En Attente</CardTitle>
-            <Clock className="h-4 w-4 text-amber-500" />
+            <Clock className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-8 w-16" />
             ) : (
               <>
-                <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                <div className="text-2xl font-bold text-warning">
                   {data.aggregates.pendingCount}
                 </div>
                 <p className="text-xs text-muted-foreground">En cours de traitement</p>
@@ -174,14 +174,14 @@ export default function AdminFinancePage() {
                 </TableRow>
               ) : (
                 data.transactions.map((tx: Transaction) => (
-                  <TableRow key={tx.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/20">
+                  <TableRow key={tx.id} className="hover:bg-muted">
                     <TableCell className="font-mono text-xs font-semibold">
                       {tx.invoiceNumber || "N/A"}
                     </TableCell>
                     <TableCell className="font-medium">{tx.organizationName}</TableCell>
                     <TableCell>
                       {tx.planId === "free" ? (
-                        <Badge variant="outline" className="bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900/40 dark:text-slate-400 uppercase font-mono text-[10px]">
+                        <Badge variant="outline" className="bg-muted text-foreground border-border uppercase font-mono text-[10px]">
                           {tx.planId}
                         </Badge>
                       ) : tx.planId === "pro" ? (
@@ -206,7 +206,7 @@ export default function AdminFinancePage() {
                     </TableCell>
                     <TableCell>
                       {tx.status === "paid" ? (
-                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400">
+                        <Badge className="bg-accent/10 text-accent border-accent/20">
                           Payé
                         </Badge>
                       ) : tx.status === "failed" ? (
@@ -214,14 +214,14 @@ export default function AdminFinancePage() {
                           <AlertCircle className="h-3 w-3" /> Échoué
                         </Badge>
                       ) : (
-                        <Badge className="bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400">
+                        <Badge className="bg-warning/10 text-warning border-warning/20">
                           En attente
                         </Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-xs text-rose-500 font-mono max-w-[250px] truncate">
                       {tx.failedReason || (
-                        <span className="text-gray-400 italic font-sans">—</span>
+                        <span className="text-muted-foreground italic font-sans">—</span>
                       )}
                     </TableCell>
                   </TableRow>

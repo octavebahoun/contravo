@@ -34,29 +34,25 @@ export function formatDateTime(value?: string | null) {
   });
 }
 
-type Tone = 'blue' | 'green' | 'red' | 'amber' | 'gray';
+type Tone = 'info' | 'success' | 'destructive' | 'warning' | 'neutral';
 
-const TONE_CLASS: Record<Tone, string> = {
-  blue: 'bg-[#0052ff]/10 text-[#0052ff] border-[#0052ff]/20',
-  green: 'bg-[#05b169]/10 text-[#05b169] border-[#05b169]/20',
-  red: 'bg-[#cf202f]/10 text-[#cf202f] border-[#cf202f]/20',
-  amber: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-  gray: 'bg-gray-100 text-gray-500 border-gray-200',
+const TONE_VARIANT: Record<Tone, 'outline' | 'success' | 'destructive' | 'warning' | 'secondary'> = {
+  info: 'outline',
+  success: 'success',
+  destructive: 'destructive',
+  warning: 'warning',
+  neutral: 'secondary',
 };
 
 export function StatusPill({ label, tone }: { label: string; tone: Tone }) {
-  return (
-    <Badge className={`${TONE_CLASS[tone]} rounded-full text-[10px] font-medium shadow-none`}>
-      {label}
-    </Badge>
-  );
+  return <Badge variant={TONE_VARIANT[tone]}>{label}</Badge>;
 }
 
 export function BackLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1.5 text-xs text-[#5b616e] hover:text-[#0052ff]"
+      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary"
     >
       <ArrowLeft className="h-3.5 w-3.5" />
       {label}
@@ -74,8 +70,8 @@ export function InfoRow({
 }) {
   return (
     <div className="space-y-0.5">
-      <div className="text-[11px] text-[#7c828a]">{label}</div>
-      <div className="text-xs text-[#0a0b0d] break-words">{children ?? '—'}</div>
+      <div className="text-[11px] text-muted-foreground">{label}</div>
+      <div className="text-xs text-foreground break-words">{children ?? '—'}</div>
     </div>
   );
 }
@@ -87,6 +83,6 @@ export function InfoGrid({ children }: { children: React.ReactNode }) {
 /** Full-width message shown while loading or when the entity does not exist. */
 export function DetailFallback({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-center py-24 text-xs text-[#7c828a]">{children}</div>
+    <div className="flex items-center justify-center py-24 text-xs text-muted-foreground">{children}</div>
   );
 }

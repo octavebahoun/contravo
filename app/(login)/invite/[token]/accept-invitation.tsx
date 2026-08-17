@@ -68,7 +68,7 @@ export function AcceptInvitation({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col items-center gap-3 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#0052ff]/10 text-[#0052ff]">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
           <Users className="h-6 w-6" />
         </div>
         <div className="space-y-2">
@@ -107,7 +107,7 @@ export function AcceptInvitation({
         </Button>
       ) : signedInEmail ? (
         <div className="space-y-3">
-          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
+          <p className="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
             Vous êtes connecté avec {signedInEmail}. Cette invitation ne vaut que pour {email}.
           </p>
           <Button asChild variant="outline" className="w-full">

@@ -1,16 +1,11 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { Stamp, type StampTone } from '@/components/stamp';
 
 /**
  * Pieces shared by the business-module screens (contracts, deliverables,
  * expenses, reviews).
- *
- * The older screens (clients, projects, quotes, invoices) each carry their own
- * copy of these helpers; the palette below is theirs, kept identical so the new
- * modules do not read as a different product. Reconciling all of them with the
- * design tokens is a separate piece of work.
  */
 
 export const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -39,24 +34,23 @@ export function formatDate(value?: string | null) {
   });
 }
 
-export type StatusTone = 'success' | 'info' | 'danger' | 'warning' | 'neutral';
+export type StatusTone = 'success' | 'warning' | 'danger' | 'neutral' | 'info';
 
-const TONE_CLASSES: Record<StatusTone, string> = {
-  success: 'bg-[#05b169]/10 text-[#05b169] border-[#05b169]/20',
-  info: 'bg-[#0052ff]/10 text-[#0052ff] border-[#0052ff]/20',
-  danger: 'bg-[#cf202f]/10 text-[#cf202f] border-[#cf202f]/20',
-  warning: 'bg-[#f4b000]/10 text-[#b98600] border-[#f4b000]/20',
-  neutral: 'bg-gray-100 text-gray-500 border-gray-200',
+/**
+ * Les tons hérités des écrans métier retombent sur les quatre tons du cachet :
+ * vert pour l'argent et le succès, soleil pour l'attente, rouge pour le refus,
+ * encre pour tout le reste.
+ */
+const TONE_STAMP: Record<StatusTone, StampTone> = {
+  success: 'success',
+  warning: 'warning',
+  danger: 'destructive',
+  neutral: 'ink',
+  info: 'ink',
 };
 
 export function StatusBadge({ tone, children }: { tone: StatusTone; children: ReactNode }) {
-  return (
-    <Badge
-      className={`${TONE_CLASSES[tone]} rounded-full text-[10px] font-medium shadow-none`}
-    >
-      {children}
-    </Badge>
-  );
+  return <Stamp label={String(children)} tone={TONE_STAMP[tone]} />;
 }
 
 /** Page title block reused by every module screen. */
@@ -70,12 +64,12 @@ export function ModuleHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-6">
+    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
       <div>
-        <h1 className="text-2xl lg:text-3xl font-normal text-[#0a0b0d] tracking-tight font-sans">
+        <h1 className="font-heading text-2xl lg:text-3xl font-bold tracking-tight text-foreground">
           {title}
         </h1>
-        <p className="text-[#5b616e] text-sm mt-1">{description}</p>
+        <p className="text-muted-foreground text-sm mt-1">{description}</p>
       </div>
       {action}
     </div>
@@ -95,13 +89,13 @@ export function MetricCard({
   icon?: ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5">
+    <div className="rounded-xl border border-border bg-card p-5">
       <div className="flex flex-row items-center justify-between pb-2">
-        <span className="text-xs font-medium text-[#5b616e]">{label}</span>
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
         {icon}
       </div>
-      <div className="text-2xl font-medium text-[#0a0b0d]">{value}</div>
-      {hint && <p className="text-[11px] text-[#7c828a] mt-1">{hint}</p>}
+      <div className="tabular-mono text-2xl font-semibold text-foreground">{value}</div>
+      {hint && <p className="text-[11px] text-muted-foreground mt-1">{hint}</p>}
     </div>
   );
 }

@@ -27,7 +27,7 @@ export default function AdminDashboardPage() {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600 dark:border-red-900/30 dark:bg-red-950/20 dark:text-red-400">
+      <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
         Erreur de chargement des données. Veuillez vérifier vos autorisations.
       </div>
     )
@@ -52,17 +52,17 @@ export default function AdminDashboardPage() {
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Revenu Mensuel Récurent (MRR)</CardTitle>
-            <TrendingUp className="h-4 w-4 text-emerald-500" />
+            <TrendingUp className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-8 w-28" />
             ) : (
               <>
-                <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                <div className="tabular-mono text-2xl font-bold text-accent">
                   {formatPrice(data.mrr)}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="tabular-mono text-xs text-muted-foreground">
                   ARR estimé : {formatPrice(data.arr)}
                 </p>
               </>
@@ -73,7 +73,7 @@ export default function AdminDashboardPage() {
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Organisations Actives</CardTitle>
-            <Users className="h-4 w-4 text-blue-500" />
+            <Users className="h-4 w-4 text-info" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -92,7 +92,7 @@ export default function AdminDashboardPage() {
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Distribution des Plans</CardTitle>
-            <Activity className="h-4 w-4 text-purple-500" />
+            <Activity className="h-4 w-4 text-info" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -105,7 +105,7 @@ export default function AdminDashboardPage() {
                 <Badge className="bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200 dark:bg-fuchsia-900/30 dark:text-fuchsia-400">
                   Biz: {data.plansDistribution.business}
                 </Badge>
-                <Badge className="bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900/40 dark:text-slate-400">
+                <Badge className="bg-muted text-foreground border-border">
                   Gratuit: {data.plansDistribution.free}
                 </Badge>
               </div>
@@ -124,11 +124,11 @@ export default function AdminDashboardPage() {
             ) : (
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 text-sm">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <span className="h-2 w-2 rounded-full bg-accent/10" />
                   <span>API : {data.systemHealth.apiStatus}</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-sm">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <span className="h-2 w-2 rounded-full bg-accent/10" />
                   <span>GeniusPay : {data.systemHealth.geniusPayStatus}</span>
                 </div>
               </div>
