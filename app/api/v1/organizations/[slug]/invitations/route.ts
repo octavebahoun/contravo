@@ -5,7 +5,7 @@ import { eq, and, isNull, gt } from 'drizzle-orm';
 import { requireOrg, requirePermission } from '@/lib/rbac';
 import { inviteMemberSchema } from '@/lib/validation';
 import { formatErrorResponse } from '@/lib/errors';
-import crypto from 'crypto';
+import { createOrganizationInvitation } from '@/lib/invitations';
 
 export async function GET(
   request: NextRequest,
@@ -59,26 +59,14 @@ export async function POST(
     const body = await request.json();
     const validated = inviteMemberSchema.parse(body);
 
-    const token = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-
-    const [invitation] = await db
-      .insert(invitations)
-      .values({
-        organizationId: context.organization.id,
-        email: validated.email.toLowerCase().trim(),
-        role: validated.role,
-        tokenHash,
-        expiresAt,
-        invitedBy: context.user.id,
-      })
-      .returning();
-
-    // Log the token in development/test environments
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`[INVITATION_TOKEN] invite-${token}`);
-    }
+    // Duplicate checks, quota, token and the email event all live in the
+    // service, shared with the dashboard's own invite form.
+    const { invitation, token } = await createOrganizationInvitation({
+      organizationId: context.organization.id,
+      email: validated.email,
+      role: validated.role,
+      invitedByUserId: context.user.id,
+    });
 
     await context.audit('member.invite', {
       email: validated.email,

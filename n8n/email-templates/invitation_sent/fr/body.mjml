@@ -1,0 +1,8 @@
+<mjml><mj-body><mj-section><mj-column>
+      <mj-text>Bonjour,</mj-text>
+      <mj-text><strong>{{invitedByName}}</strong> vous invite à rejoindre l'espace <strong>{{organizationName}}</strong> sur Contravo en tant que {{roleLabel}}.</mj-text>
+      <mj-button href="{{inviteUrl}}">Rejoindre l'équipe</mj-button>
+      <mj-text>Ce lien est valable 7 jours et ne fonctionne qu'avec l'adresse {{email}}.</mj-text>
+      <mj-text>Si vous ne connaissez pas cette organisation, ignorez cet email.</mj-text>
+      <mj-text>Contravo</mj-text>
+    </mj-column></mj-section></mj-body></mjml>
