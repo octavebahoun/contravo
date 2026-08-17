@@ -2,6 +2,7 @@ import { db } from '@/lib/db/drizzle';
 import { clients, memberships, organizations, users } from '@/lib/db/schema';
 import { and, eq, inArray } from 'drizzle-orm';
 import { generatePublicToken } from '@/lib/public-tokens';
+import { getAppUrl } from '@/lib/config/app-url';
 
 /**
  * Builds the `data` payload carried by outbound webhook events (MVP3 §6).
@@ -35,7 +36,7 @@ const PORTAL_PATH: Record<EntityKind, string> = {
 };
 
 function baseUrl(): string {
-  return process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL || 'http://localhost:3000';
+  return getAppUrl();
 }
 
 /**
