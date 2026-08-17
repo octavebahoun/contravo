@@ -158,6 +158,13 @@ export async function middleware(request: NextRequest) {
   // Accepting an invitation runs its own getSession() check: the invitee has no
   // membership in the target organization yet, so no org context can be resolved.
   const isInvitationAcceptRoute = pathname === '/api/v1/invitations/accept';
+  // The organization logo is embedded in transactional emails and fetched by mail
+  // clients, which carry neither a session nor an API key. The handler restricts
+  // itself to the declared `logo_file_id` and rate limits by IP.
+  // Reading only: POST and DELETE on the same path set and clear the logo, and
+  // they need the auth context this block injects.
+  const isPublicLogoRoute =
+    request.method === 'GET' && /^\/api\/v1\/organizations\/[^/]+\/logo$/.test(pathname);
 
   if (
     isApiRoute &&
@@ -165,7 +172,8 @@ export async function middleware(request: NextRequest) {
     !isWebhookRoute &&
     !isPublicVerifyRoute &&
     !isAuthRoute &&
-    !isInvitationAcceptRoute
+    !isInvitationAcceptRoute &&
+    !isPublicLogoRoute
   ) {
     try {
       // Resolve client IP

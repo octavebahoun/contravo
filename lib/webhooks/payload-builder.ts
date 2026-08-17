@@ -166,7 +166,17 @@ export async function buildEventPayload(
       .limit(1);
 
     if (org) {
-      payload.org = { name: org.name, brandColor: org.brandColor ?? '#2B6CE5' };
+      payload.org = {
+        name: org.name,
+        brandColor: org.brandColor ?? '#2B6CE5',
+        // The MJML templates have always read `{{org.logoUrl}}`, but the payload
+        // never carried it, so no email ever showed a logo. Public and stable
+        // rather than presigned: a mail client opening the message days later
+        // must still resolve the image.
+        logoUrl: org.logoFileId
+          ? `${baseUrl()}/api/v1/organizations/${organizationId}/logo`
+          : '',
+      };
     }
 
     payload.teamEmails = await loadTeamEmails(organizationId);
