@@ -1,5 +1,5 @@
 import { db } from '@/lib/db/drizzle';
-import { clients, files, memberships, organizations, users } from '@/lib/db/schema';
+import { clients, files, memberships, organizations, projects, users } from '@/lib/db/schema';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { generatePublicToken } from '@/lib/public-tokens';
 import { getPresignedGetUrl } from '@/lib/storage/presign';
@@ -184,14 +184,30 @@ export async function buildEventPayload(
 
     let recipientEmail: string | null = null;
 
-    if (entity.clientId) {
+    // Deliverables hang off a project and carry no `client_id` of their own, so
+    // the client has to be resolved one hop further. Without this, every
+    // deliverable event went out with no `client`, the n8n template threw
+    // "aucun destinataire résolu", and no portal link was ever minted either.
+    let clientId: string | null = entity.clientId ?? null;
+
+    if (!clientId && entity.projectId) {
+      const [project] = await db
+        .select({ clientId: projects.clientId })
+        .from(projects)
+        .where(and(eq(projects.id, entity.projectId), eq(projects.organizationId, organizationId)))
+        .limit(1);
+
+      clientId = project?.clientId ?? null;
+    }
+
+    if (clientId) {
       const [client] = await db
         .select({
           displayName: clients.displayName,
           email: clients.email,
         })
         .from(clients)
-        .where(and(eq(clients.id, entity.clientId), eq(clients.organizationId, organizationId)))
+        .where(and(eq(clients.id, clientId), eq(clients.organizationId, organizationId)))
         .limit(1);
 
       if (client) {
