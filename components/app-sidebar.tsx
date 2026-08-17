@@ -17,11 +17,16 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import {
+  LayoutDashboard,
   Users,
   Building2,
   FolderKanban,
   FileText,
   FileSpreadsheet,
+  FileSignature,
+  Package,
+  Receipt,
+  MessageSquareQuote,
   CreditCard,
   Settings,
   Activity,
@@ -34,14 +39,19 @@ import { TeamSwitcher } from "@/components/team-switcher"
 
 const data = {
   mainNav: [
-    { title: "Team", url: "/dashboard", icon: Users },
+    { title: "Vue d'ensemble", url: "/dashboard", icon: LayoutDashboard },
     { title: "Clients (CRM)", url: "/dashboard/clients", icon: Building2 },
     { title: "Projets", url: "/dashboard/projects", icon: FolderKanban },
-    { title: "Factures", url: "/dashboard/invoices", icon: FileText },
     { title: "Devis", url: "/dashboard/quotes", icon: FileSpreadsheet },
+    { title: "Contrats", url: "/dashboard/contracts", icon: FileSignature },
+    { title: "Factures", url: "/dashboard/invoices", icon: FileText },
+    { title: "Livrables", url: "/dashboard/deliverables", icon: Package },
+    { title: "Dépenses", url: "/dashboard/expenses", icon: Receipt },
+    { title: "Avis clients", url: "/dashboard/reviews", icon: MessageSquareQuote },
     { title: "Abonnement", url: "/dashboard/billing", icon: CreditCard },
   ],
   settingsNav: [
+    { title: "Équipe", url: "/dashboard/team", icon: Users },
     { title: "Développeurs", url: "/dashboard/developer", icon: Code2 },
     { title: "Général", url: "/dashboard/general", icon: Settings },
     { title: "Activité", url: "/dashboard/activity", icon: Activity },
