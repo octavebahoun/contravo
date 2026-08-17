@@ -28,12 +28,12 @@ import {
   Star,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Stamp, type StampTone } from '@/components/stamp';
 import {
   BackLink,
   DetailFallback,
   InfoGrid,
   InfoRow,
-  StatusPill,
   formatDate,
   formatDateTime,
   formatMoney,
@@ -54,7 +54,6 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 const readError = (data: any, fallback: string) =>
   data?.error?.message || data?.message || (typeof data?.error === 'string' ? data.error : null) || fallback;
 
-type Tone = 'blue' | 'green' | 'red' | 'amber' | 'gray';
 
 interface Project {
   id: string;
@@ -120,41 +119,41 @@ interface Invoice {
   dueDate: string;
 }
 
-const PROJECT_STATUS: Record<string, { label: string; tone: Tone }> = {
-  draft: { label: 'Brouillon', tone: 'gray' },
-  active: { label: 'En cours', tone: 'blue' },
-  on_hold: { label: 'En pause', tone: 'amber' },
-  delivered: { label: 'Livré', tone: 'green' },
-  cancelled: { label: 'Annulé', tone: 'red' },
-  archived: { label: 'Archivé', tone: 'gray' },
+const PROJECT_STATUS: Record<string, { label: string; tone: StampTone }> = {
+  draft: { label: 'Brouillon', tone: 'ink' },
+  active: { label: 'En cours', tone: 'warning' },
+  on_hold: { label: 'En pause', tone: 'warning' },
+  delivered: { label: 'Livré', tone: 'success' },
+  cancelled: { label: 'Annulé', tone: 'destructive' },
+  archived: { label: 'Archivé', tone: 'ink' },
 };
 
-const DELIVERABLE_STATUS: Record<string, { label: string; tone: Tone }> = {
-  draft: { label: 'Brouillon', tone: 'gray' },
-  submitted: { label: 'Soumis', tone: 'blue' },
-  approved: { label: 'Approuvé', tone: 'green' },
-  rejected: { label: 'Refusé', tone: 'red' },
-  revision_requested: { label: 'Révision demandée', tone: 'amber' },
+const DELIVERABLE_STATUS: Record<string, { label: string; tone: StampTone }> = {
+  draft: { label: 'Brouillon', tone: 'ink' },
+  submitted: { label: 'Soumis', tone: 'warning' },
+  approved: { label: 'Approuvé', tone: 'success' },
+  rejected: { label: 'Refusé', tone: 'destructive' },
+  revision_requested: { label: 'Révision demandée', tone: 'warning' },
 };
 
-const QUOTE_STATUS: Record<string, { label: string; tone: Tone }> = {
-  draft: { label: 'Brouillon', tone: 'gray' },
-  sent: { label: 'Envoyé', tone: 'blue' },
-  viewed: { label: 'Vu', tone: 'blue' },
-  accepted: { label: 'Accepté', tone: 'green' },
-  rejected: { label: 'Refusé', tone: 'red' },
-  expired: { label: 'Expiré', tone: 'amber' },
-  cancelled: { label: 'Annulé', tone: 'gray' },
+const QUOTE_STATUS: Record<string, { label: string; tone: StampTone }> = {
+  draft: { label: 'Brouillon', tone: 'ink' },
+  sent: { label: 'Envoyé', tone: 'warning' },
+  viewed: { label: 'Vu', tone: 'warning' },
+  accepted: { label: 'Accepté', tone: 'success' },
+  rejected: { label: 'Refusé', tone: 'destructive' },
+  expired: { label: 'Expiré', tone: 'warning' },
+  cancelled: { label: 'Annulé', tone: 'ink' },
 };
 
-const INVOICE_STATUS: Record<string, { label: string; tone: Tone }> = {
-  draft: { label: 'Brouillon', tone: 'gray' },
-  sent: { label: 'Envoyée', tone: 'blue' },
-  partial: { label: 'Partielle', tone: 'amber' },
-  paid: { label: 'Payée', tone: 'green' },
-  overdue: { label: 'En retard', tone: 'red' },
-  cancelled: { label: 'Annulée', tone: 'gray' },
-  refunded: { label: 'Remboursée', tone: 'amber' },
+const INVOICE_STATUS: Record<string, { label: string; tone: StampTone }> = {
+  draft: { label: 'Brouillon', tone: 'ink' },
+  sent: { label: 'Envoyée', tone: 'warning' },
+  partial: { label: 'Partielle', tone: 'warning' },
+  paid: { label: 'Payée', tone: 'success' },
+  overdue: { label: 'En retard', tone: 'destructive' },
+  cancelled: { label: 'Annulée', tone: 'ink' },
+  refunded: { label: 'Remboursée', tone: 'warning' },
 };
 
 const EXPENSE_CATEGORY: Record<string, string> = {
@@ -278,7 +277,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     return (
       <section className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto">
         <DetailFallback>
-          <Loader2 className="h-5 w-5 animate-spin text-[#0052ff]" />
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
         </DetailFallback>
       </section>
     );
@@ -293,30 +292,30 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
-  const status = PROJECT_STATUS[project.status] ?? { label: project.status, tone: 'gray' as const };
+  const status = PROJECT_STATUS[project.status] ?? { label: project.status, tone: 'ink' as const };
   const transitions = NEXT_STATES[project.status] ?? [];
 
   return (
     <section className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto space-y-8">
-      <div className="space-y-4 border-b border-gray-100 pb-6">
+      <div className="space-y-4 border-b border-border pb-6">
         <BackLink href="/dashboard/projects" label="Retour aux projets" />
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl lg:text-3xl font-normal text-[#0a0b0d] tracking-tight">
+              <h1 className="text-2xl lg:text-3xl font-normal text-foreground tracking-tight">
                 {project.name}
               </h1>
-              <StatusPill label={status.label} tone={status.tone} />
+              <Stamp label={status.label} tone={status.tone} />
             </div>
-            <p className="text-[#5b616e] text-sm mt-1">
+            <p className="text-muted-foreground text-sm mt-1">
               {project.code}
               {clientData?.displayName && (
                 <>
                   {' · '}
                   <Link
                     href={`/dashboard/clients/${project.clientId}`}
-                    className="text-[#0052ff] hover:underline"
+                    className="text-primary hover:underline"
                   >
                     {clientData.displayName}
                   </Link>
@@ -332,8 +331,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 variant="outline"
                 onClick={() => handleTransition(to)}
                 disabled={pendingTo !== null}
-                className={`rounded-full text-xs font-semibold h-11 px-5 border-gray-200 ${
-                  danger ? 'text-[#cf202f] hover:bg-[#cf202f]/10' : ''
+                className={`rounded-full text-xs font-semibold h-11 px-5 border-border ${
+                  danger ? 'text-destructive hover:bg-destructive/10' : ''
                 }`}
               >
                 {pendingTo === to ? (
@@ -348,7 +347,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             {(project.status === 'delivered' || project.status === 'active') && (
               <Button
                 onClick={() => setConfirmReview(true)}
-                className="rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold h-11 px-5"
+                className="rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-11 px-5"
               >
                 <Star className="mr-2 h-4 w-4" /> Demander un avis
               </Button>
@@ -358,60 +357,60 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="rounded-2xl border border-gray-200 bg-white">
+        <Card className="rounded-xl border border-border bg-card">
           <CardHeader className="p-5 pb-2">
-            <CardTitle className="text-xs font-medium text-[#5b616e]">Budget</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground">Budget</CardTitle>
           </CardHeader>
           <CardContent className="p-5 pt-0">
-            <div className="text-xl font-medium text-[#0a0b0d]">
+            <div className="tabular-mono text-xl font-medium text-foreground">
               {formatMoney(project.budgetCents, project.currency)}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border border-gray-200 bg-white">
+        <Card className="rounded-xl border border-border bg-card">
           <CardHeader className="p-5 pb-2">
-            <CardTitle className="text-xs font-medium text-[#5b616e]">Facturé</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground">Facturé</CardTitle>
           </CardHeader>
           <CardContent className="p-5 pt-0">
-            <div className="text-xl font-medium text-[#0a0b0d]">
+            <div className="tabular-mono text-xl font-medium text-foreground">
               {formatMoney(profit?.revenue, project.currency)}
             </div>
-            <p className="text-[11px] text-[#7c828a] mt-1">
+            <p className="tabular-mono text-[11px] text-muted-foreground mt-1">
               Encaissé : {formatMoney(profit?.collected, project.currency)}
             </p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border border-gray-200 bg-white">
+        <Card className="rounded-xl border border-border bg-card">
           <CardHeader className="p-5 pb-2">
-            <CardTitle className="text-xs font-medium text-[#5b616e]">Dépenses</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground">Dépenses</CardTitle>
           </CardHeader>
           <CardContent className="p-5 pt-0">
-            <div className="text-xl font-medium text-[#0a0b0d]">
+            <div className="tabular-mono text-xl font-medium text-foreground">
               {formatMoney(profit?.expenses, project.currency)}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border border-gray-200 bg-white">
+        <Card className="rounded-xl border border-border bg-card">
           <CardHeader className="p-5 pb-2">
-            <CardTitle className="text-xs font-medium text-[#5b616e]">Marge brute</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground">Marge brute</CardTitle>
           </CardHeader>
           <CardContent className="p-5 pt-0">
-            <div className="text-xl font-medium text-[#0a0b0d]">
+            <div className="tabular-mono text-xl font-medium text-foreground">
               {formatMoney(profit?.grossMargin, project.currency)}
             </div>
-            <p className="text-[11px] text-[#7c828a] mt-1">
+            <p className="text-[11px] text-muted-foreground mt-1">
               {profit ? `${(profit.marginPctBps / 100).toFixed(1)} %` : '—'}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="rounded-2xl border border-gray-200 bg-white">
+      <Card className="rounded-xl border border-border bg-card">
         <CardHeader className="p-5 pb-3">
-          <CardTitle className="text-sm font-medium text-[#0a0b0d]">Informations</CardTitle>
+          <CardTitle className="text-sm font-medium text-foreground">Informations</CardTitle>
         </CardHeader>
         <CardContent className="p-5 pt-0 space-y-5">
           <InfoGrid>
@@ -424,48 +423,48 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           </InfoGrid>
 
           {project.description && (
-            <div className="space-y-1 pt-2 border-t border-gray-100">
-              <div className="text-[11px] text-[#7c828a] pt-3">Description</div>
-              <p className="text-xs text-[#0a0b0d] whitespace-pre-wrap">{project.description}</p>
+            <div className="space-y-1 pt-2 border-t border-border">
+              <div className="text-[11px] text-muted-foreground pt-3">Description</div>
+              <p className="text-xs text-foreground whitespace-pre-wrap">{project.description}</p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl border border-gray-200 bg-white">
-        <CardHeader className="p-5 border-b border-gray-100">
-          <CardTitle className="text-sm font-medium text-[#0a0b0d] flex items-center gap-2">
-            <Package className="h-4 w-4 text-[#7c828a]" /> Livrables
+      <Card className="rounded-xl border border-border bg-card">
+        <CardHeader className="p-5 border-b border-border">
+          <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
+            <Package className="h-4 w-4 text-muted-foreground" /> Livrables
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {deliverables.length === 0 ? (
-            <div className="text-center py-10 text-[#7c828a] text-xs">Aucun livrable.</div>
+            <div className="text-center py-10 text-muted-foreground text-xs">Aucun livrable.</div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-100 bg-[#f7f7f7]/50 hover:bg-[#f7f7f7]/50">
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Titre</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Version</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Fichier</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Soumis le</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d] text-right">Statut</TableHead>
+                <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="text-xs font-semibold text-foreground">Titre</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Version</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Fichier</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Soumis le</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground text-right">Statut</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {deliverables.map((deliverable) => {
                   const dStatus =
-                    DELIVERABLE_STATUS[deliverable.status] ?? { label: deliverable.status, tone: 'gray' as const };
+                    DELIVERABLE_STATUS[deliverable.status] ?? { label: deliverable.status, tone: 'ink' as const };
                   return (
-                    <TableRow key={deliverable.id} className="border-gray-100 hover:bg-gray-50/50">
-                      <TableCell className="text-xs font-medium text-[#0a0b0d]">{deliverable.title}</TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">v{deliverable.version}</TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">{deliverable.fileName || '—'}</TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">
+                    <TableRow key={deliverable.id} className="border-border hover:bg-muted/50">
+                      <TableCell className="text-xs font-medium text-foreground">{deliverable.title}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">v{deliverable.version}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{deliverable.fileName || '—'}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
                         {formatDateTime(deliverable.submittedAt)}
                       </TableCell>
                       <TableCell className="text-right">
-                        <StatusPill label={dStatus.label} tone={dStatus.tone} />
+                        <Stamp label={dStatus.label} tone={dStatus.tone} />
                       </TableCell>
                     </TableRow>
                   );
@@ -477,39 +476,39 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="rounded-2xl border border-gray-200 bg-white">
-          <CardHeader className="p-5 border-b border-gray-100">
-            <CardTitle className="text-sm font-medium text-[#0a0b0d] flex items-center gap-2">
-              <FileSpreadsheet className="h-4 w-4 text-[#7c828a]" /> Devis
+        <Card className="rounded-xl border border-border bg-card">
+          <CardHeader className="p-5 border-b border-border">
+            <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
+              <FileSpreadsheet className="h-4 w-4 text-muted-foreground" /> Devis
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {quotes.length === 0 ? (
-              <div className="text-center py-10 text-[#7c828a] text-xs">Aucun devis.</div>
+              <div className="text-center py-10 text-muted-foreground text-xs">Aucun devis.</div>
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow className="border-gray-100 bg-[#f7f7f7]/50 hover:bg-[#f7f7f7]/50">
-                    <TableHead className="text-xs font-semibold text-[#0a0b0d]">N°</TableHead>
-                    <TableHead className="text-xs font-semibold text-[#0a0b0d]">Total</TableHead>
-                    <TableHead className="text-xs font-semibold text-[#0a0b0d] text-right">Statut</TableHead>
+                  <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="text-xs font-semibold text-foreground">N°</TableHead>
+                    <TableHead className="text-xs font-semibold text-foreground">Total</TableHead>
+                    <TableHead className="text-xs font-semibold text-foreground text-right">Statut</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {quotes.map((quote) => {
-                    const qStatus = QUOTE_STATUS[quote.status] ?? { label: quote.status, tone: 'gray' as const };
+                    const qStatus = QUOTE_STATUS[quote.status] ?? { label: quote.status, tone: 'ink' as const };
                     return (
                       <TableRow
                         key={quote.id}
                         onClick={() => router.push(`/dashboard/quotes/${quote.id}`)}
-                        className="border-gray-100 hover:bg-gray-50/50 cursor-pointer"
+                        className="border-border hover:bg-muted/50 cursor-pointer"
                       >
-                        <TableCell className="text-xs font-medium text-[#0a0b0d]">{quote.number}</TableCell>
-                        <TableCell className="text-xs text-[#5b616e]">
+                        <TableCell className="text-xs font-medium text-foreground">{quote.number}</TableCell>
+                        <TableCell className="tabular-mono text-xs text-muted-foreground">
                           {formatMoney(quote.totalCents, quote.currency)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <StatusPill label={qStatus.label} tone={qStatus.tone} />
+                          <Stamp label={qStatus.label} tone={qStatus.tone} />
                         </TableCell>
                       </TableRow>
                     );
@@ -520,40 +519,40 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border border-gray-200 bg-white">
-          <CardHeader className="p-5 border-b border-gray-100">
-            <CardTitle className="text-sm font-medium text-[#0a0b0d] flex items-center gap-2">
-              <FileText className="h-4 w-4 text-[#7c828a]" /> Factures
+        <Card className="rounded-xl border border-border bg-card">
+          <CardHeader className="p-5 border-b border-border">
+            <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" /> Factures
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {invoices.length === 0 ? (
-              <div className="text-center py-10 text-[#7c828a] text-xs">Aucune facture.</div>
+              <div className="text-center py-10 text-muted-foreground text-xs">Aucune facture.</div>
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow className="border-gray-100 bg-[#f7f7f7]/50 hover:bg-[#f7f7f7]/50">
-                    <TableHead className="text-xs font-semibold text-[#0a0b0d]">N°</TableHead>
-                    <TableHead className="text-xs font-semibold text-[#0a0b0d]">Total</TableHead>
-                    <TableHead className="text-xs font-semibold text-[#0a0b0d] text-right">Statut</TableHead>
+                  <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="text-xs font-semibold text-foreground">N°</TableHead>
+                    <TableHead className="text-xs font-semibold text-foreground">Total</TableHead>
+                    <TableHead className="text-xs font-semibold text-foreground text-right">Statut</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {invoices.map((invoice) => {
                     const iStatus =
-                      INVOICE_STATUS[invoice.status] ?? { label: invoice.status, tone: 'gray' as const };
+                      INVOICE_STATUS[invoice.status] ?? { label: invoice.status, tone: 'ink' as const };
                     return (
                       <TableRow
                         key={invoice.id}
                         onClick={() => router.push(`/dashboard/invoices/${invoice.id}`)}
-                        className="border-gray-100 hover:bg-gray-50/50 cursor-pointer"
+                        className="border-border hover:bg-muted/50 cursor-pointer"
                       >
-                        <TableCell className="text-xs font-medium text-[#0a0b0d]">{invoice.number}</TableCell>
-                        <TableCell className="text-xs text-[#5b616e]">
+                        <TableCell className="text-xs font-medium text-foreground">{invoice.number}</TableCell>
+                        <TableCell className="tabular-mono text-xs text-muted-foreground">
                           {formatMoney(invoice.totalCents, invoice.currency)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <StatusPill label={iStatus.label} tone={iStatus.tone} />
+                          <Stamp label={iStatus.label} tone={iStatus.tone} />
                         </TableCell>
                       </TableRow>
                     );
@@ -565,39 +564,39 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </Card>
       </div>
 
-      <Card className="rounded-2xl border border-gray-200 bg-white">
-        <CardHeader className="p-5 border-b border-gray-100">
-          <CardTitle className="text-sm font-medium text-[#0a0b0d] flex items-center gap-2">
-            <Receipt className="h-4 w-4 text-[#7c828a]" /> Dépenses
+      <Card className="rounded-xl border border-border bg-card">
+        <CardHeader className="p-5 border-b border-border">
+          <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
+            <Receipt className="h-4 w-4 text-muted-foreground" /> Dépenses
           </CardTitle>
-          <CardDescription className="text-xs text-[#5b616e]">
+          <CardDescription className="text-xs text-muted-foreground">
             Déduites de la marge brute affichée plus haut.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {expenses.length === 0 ? (
-            <div className="text-center py-10 text-[#7c828a] text-xs">Aucune dépense enregistrée.</div>
+            <div className="text-center py-10 text-muted-foreground text-xs">Aucune dépense enregistrée.</div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-100 bg-[#f7f7f7]/50 hover:bg-[#f7f7f7]/50">
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Date</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Catégorie</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Description</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Fournisseur</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d] text-right">Montant</TableHead>
+                <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="text-xs font-semibold text-foreground">Date</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Catégorie</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Description</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Fournisseur</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground text-right">Montant</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {expenses.map((expense) => (
-                  <TableRow key={expense.id} className="border-gray-100 hover:bg-gray-50/50">
-                    <TableCell className="text-xs text-[#5b616e]">{formatDate(expense.incurredOn)}</TableCell>
-                    <TableCell className="text-xs text-[#5b616e]">
+                  <TableRow key={expense.id} className="border-border hover:bg-muted/50">
+                    <TableCell className="text-xs text-muted-foreground">{formatDate(expense.incurredOn)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
                       {EXPENSE_CATEGORY[expense.category] || expense.category}
                     </TableCell>
-                    <TableCell className="text-xs text-[#0a0b0d]">{expense.description}</TableCell>
-                    <TableCell className="text-xs text-[#5b616e]">{expense.vendor || '—'}</TableCell>
-                    <TableCell className="text-xs font-medium text-[#0a0b0d] text-right">
+                    <TableCell className="text-xs text-foreground">{expense.description}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{expense.vendor || '—'}</TableCell>
+                    <TableCell className="tabular-mono text-xs font-medium text-foreground text-right">
                       {formatMoney(expense.amountCents, expense.currency)}
                     </TableCell>
                   </TableRow>
@@ -609,10 +608,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       </Card>
 
       <Dialog open={confirmReview} onOpenChange={setConfirmReview}>
-        <DialogContent className="sm:max-w-[425px] rounded-2xl">
+        <DialogContent className="sm:max-w-[425px] rounded-xl">
           <DialogHeader>
-            <DialogTitle className="text-lg font-normal text-[#0a0b0d]">Demander un avis</DialogTitle>
-            <DialogDescription className="text-xs text-[#5b616e]">
+            <DialogTitle className="text-lg font-normal text-foreground">Demander un avis</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
               {clientData?.email
                 ? `Un email sera envoyé à ${clientData.email} avec un lien sécurisé pour déposer son avis sur ce projet.`
                 : 'Un email sera envoyé au client avec un lien sécurisé pour déposer son avis sur ce projet.'}
@@ -623,14 +622,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <Button
               variant="outline"
               onClick={() => setConfirmReview(false)}
-              className="rounded-full text-xs font-semibold border-gray-200 h-11"
+              className="rounded-lg text-xs font-semibold border-border h-11"
             >
               Annuler
             </Button>
             <Button
               onClick={handleReviewRequest}
               disabled={isRequestingReview}
-              className="rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold h-11"
+              className="rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-11"
             >
               {isRequestingReview ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Envoyer la demande'}
             </Button>

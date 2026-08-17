@@ -37,10 +37,17 @@ function GooeyFilter({
   );
 }
 
-function SearchIcon({ layoutId }: { layoutId: string }) {
+/**
+ * Deux loupes coexistent — celle du bouton et celle de la bulle détachée. Elles
+ * partageaient un même `layoutId` tout en étant démontées conditionnellement :
+ * framer-motion tentait alors de retirer un nœud déjà parti (`removeChild`).
+ * L'effet visuel tient au filtre gooey et aux variantes de scale, pas à une
+ * transition de layout partagée : l'identité partagée disparaît donc.
+ */
+function SearchIcon({ className }: { className?: string }) {
   return (
-    <motion.svg
-      layoutId={layoutId}
+    <svg
+      aria-hidden
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
       fill="none"
@@ -48,11 +55,11 @@ function SearchIcon({ layoutId }: { layoutId: string }) {
       strokeLinecap="round"
       strokeLinejoin="round"
       strokeWidth={2}
-      className="size-4 shrink-0"
+      className={cn("size-4 shrink-0", className)}
     >
       <circle cx="11" cy="11" r="8" />
       <path d="m21 21-4.3-4.3" />
-    </motion.svg>
+    </svg>
   );
 }
 
@@ -113,7 +120,6 @@ export function GooeyInput({
   const reactId = useId();
   const safeId = reactId.replace(/:/g, "");
   const filterId = `gooey-filter-${safeId}`;
-  const iconLayoutId = `gooey-input-icon-${safeId}`;
   const inputLayoutId = `gooey-input-field-${safeId}`;
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -211,9 +217,9 @@ export function GooeyInput({
               classNames?.trigger,
             )}
           >
-            {!isExpanded ? (
-              <SearchIcon layoutId={iconLayoutId} />
-            ) : null}
+            <SearchIcon
+              className={isExpanded ? "hidden" : undefined}
+            />
             <motion.input
               layoutId={inputLayoutId}
               ref={inputRef}
@@ -253,7 +259,7 @@ export function GooeyInput({
               classNames?.bubbleSurface,
             )}
           >
-            <SearchIcon layoutId={iconLayoutId} />
+            <SearchIcon />
           </div>
         </motion.div>
       </div>

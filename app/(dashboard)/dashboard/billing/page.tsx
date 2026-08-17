@@ -134,24 +134,24 @@ export default function BillingPage() {
   return (
     <section className="flex-1 p-4 lg:p-8 max-w-6xl mx-auto space-y-8">
       {/* En-tête de page style Coinbase */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-normal text-[#0a0b0d] tracking-tight font-sans">
+          <h1 className="font-heading text-2xl lg:text-3xl font-bold tracking-tight text-foreground">
             Abonnement & Quotas
           </h1>
-          <p className="text-[#5b616e] text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-1">
             Gérez le forfait de votre organisation et suivez l'utilisation de vos limites SaaS.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-xs uppercase tracking-wider text-[#7c828a] font-semibold">Statut :</span>
+          <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Statut :</span>
           <Badge
             variant={status === 'active' ? 'default' : 'destructive'}
             className={
               status === 'active'
-                ? 'bg-[#05b169]/10 text-[#05b169] border-[#05b169]/20 rounded-full px-3 py-1 text-xs font-medium shadow-none'
-                : 'bg-[#cf202f]/10 text-[#cf202f] border-[#cf202f]/20 rounded-full px-3 py-1 text-xs font-medium shadow-none'
+                ? 'bg-accent/10 text-accent border-accent/20 rounded-full px-3 py-1 text-xs font-medium shadow-none'
+                : 'bg-destructive/10 text-destructive border-destructive/20 rounded-full px-3 py-1 text-xs font-medium shadow-none'
             }
           >
             {status === 'active' ? 'Actif' : status === 'past_due' ? 'Paiement en retard' : status}
@@ -161,7 +161,7 @@ export default function BillingPage() {
 
       {/* Alerte Dunning en cas d'échec de paiement */}
       {status === 'past_due' && (
-        <div className="flex items-start gap-4 p-4 rounded-2xl bg-[#cf202f]/5 border border-[#cf202f]/20 text-[#cf202f]">
+        <div className="flex items-start gap-4 p-4 rounded-xl bg-destructive/5 border border-destructive/20 text-destructive">
           <ShieldAlert className="h-5 w-5 shrink-0 mt-0.5" />
           <div className="text-sm">
             <p className="font-semibold">Votre dernier paiement a échoué.</p>
@@ -174,12 +174,12 @@ export default function BillingPage() {
 
       {/* Rétrogradation programmée : encore réversible tant que la période court */}
       {cancelAtPeriodEnd && currentPlan !== 'free' && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[#f4b000]/5 border border-[#f4b000]/25">
-          <div className="flex items-start gap-4 text-[#0a0b0d]">
-            <CalendarClock className="h-5 w-5 shrink-0 mt-0.5 text-[#f4b000]" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-warning/5 border border-warning/25">
+          <div className="flex items-start gap-4 text-foreground">
+            <CalendarClock className="h-5 w-5 shrink-0 mt-0.5 text-warning" />
             <div className="text-sm">
               <p className="font-semibold">Rétrogradation vers Gratuit programmée.</p>
-              <p className="mt-1 text-xs text-[#5b616e]">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Votre forfait {currentPlan === 'pro' ? 'Pro' : 'Business'} reste actif jusqu’au{' '}
                 {formatPeriodEnd(usageData?.currentPeriodEnd)}.
               </p>
@@ -189,7 +189,7 @@ export default function BillingPage() {
             onClick={handleResume}
             disabled={isResuming}
             variant="outline"
-            className="rounded-full border-gray-300 text-[#0a0b0d] hover:bg-white text-xs font-semibold h-10 shrink-0"
+            className="rounded-lg border-border text-foreground hover:bg-card text-xs font-semibold h-10 shrink-0"
           >
             {isResuming ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Reprendre l’abonnement
@@ -198,11 +198,11 @@ export default function BillingPage() {
       )}
 
       <Tabs defaultValue="plans" className="w-full space-y-6">
-        <TabsList className="bg-[#f7f7f7] p-1 rounded-full border border-gray-200/80">
-          <TabsTrigger value="plans" className="rounded-full text-xs font-medium px-5 data-[state=active]:bg-white data-[state=active]:text-[#0a0b0d] data-[state=active]:shadow-sm">
+        <TabsList className="bg-muted p-1 rounded-full border border-border/80">
+          <TabsTrigger value="plans" className="rounded-full text-xs font-medium px-5 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">
             Forfaits & Tarifs
           </TabsTrigger>
-          <TabsTrigger value="quotas" className="rounded-full text-xs font-medium px-5 data-[state=active]:bg-white data-[state=active]:text-[#0a0b0d] data-[state=active]:shadow-sm">
+          <TabsTrigger value="quotas" className="rounded-full text-xs font-medium px-5 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">
             Utilisation des Quotas
           </TabsTrigger>
         </TabsList>
@@ -211,44 +211,44 @@ export default function BillingPage() {
         <TabsContent value="plans" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Card Free */}
-            <Card className={`rounded-2xl border transition-all duration-200 ${currentPlan === 'free' ? 'border-[#0052ff] shadow-sm bg-white' : 'border-gray-200 bg-white'}`}>
+            <Card className={`rounded-xl border transition-all duration-200 ${currentPlan === 'free' ? 'border-primary shadow-sm bg-card' : 'border-border bg-card'}`}>
               <CardHeader className="p-6">
                 <div className="flex items-center justify-between">
-                  <span className="p-2 rounded-xl bg-gray-100 text-gray-700">
+                  <span className="p-2 rounded-xl bg-muted text-foreground">
                     <User className="h-5 w-5" />
                   </span>
                   {currentPlan === 'free' && (
-                    <Badge variant="outline" className="border-[#0052ff] text-[#0052ff] rounded-full text-xs">
+                    <Badge variant="outline" className="border-primary text-primary rounded-full text-xs">
                       Plan Actuel
                     </Badge>
                   )}
                 </div>
-                <CardTitle className="text-xl font-normal text-[#0a0b0d] mt-4">Free</CardTitle>
-                <CardDescription className="text-xs text-[#5b616e]">
+                <CardTitle className="text-xl font-normal text-foreground mt-4">Free</CardTitle>
+                <CardDescription className="text-xs text-muted-foreground">
                   Pour indépendants démarrant sur Contravo.
                 </CardDescription>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-3xl font-medium tracking-tight text-[#0a0b0d]">0 XOF</span>
-                  <span className="text-xs text-[#7c828a] ml-1">/ mois</span>
+                  <span className="text-3xl font-medium tracking-tight text-foreground">0 XOF</span>
+                  <span className="text-xs text-muted-foreground ml-1">/ mois</span>
                 </div>
               </CardHeader>
 
               <CardContent className="p-6 pt-0 space-y-4">
-                <div className="border-t border-gray-100 pt-4 space-y-2 text-xs text-[#5b616e]">
+                <div className="border-t border-border pt-4 space-y-2 text-xs text-muted-foreground">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-[#05b169]" />
+                    <CheckCircle2 className="h-4 w-4 text-accent" />
                     <span>Jusqu'à 3 membres d'équipe</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-[#05b169]" />
+                    <CheckCircle2 className="h-4 w-4 text-accent" />
                     <span>10 clients & 5 projets</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-[#05b169]" />
+                    <CheckCircle2 className="h-4 w-4 text-accent" />
                     <span>500 MB de stockage</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-[#05b169]" />
+                    <CheckCircle2 className="h-4 w-4 text-accent" />
                     <span>1 Clé API & 1 Webhook</span>
                   </div>
                 </div>
@@ -257,7 +257,7 @@ export default function BillingPage() {
                   disabled={currentPlan === 'free' || cancelAtPeriodEnd || isCancelling}
                   onClick={() => setConfirmDowngrade(true)}
                   variant="outline"
-                  className="w-full rounded-full border-gray-300 text-[#0a0b0d] hover:bg-gray-50 text-xs font-semibold h-11 mt-4"
+                  className="w-full rounded-lg border-border text-foreground hover:bg-muted text-xs font-semibold h-11 mt-4"
                 >
                   {currentPlan === 'free'
                     ? 'Plan Actif'
@@ -269,55 +269,55 @@ export default function BillingPage() {
             </Card>
 
             {/* Card Pro (En avant Coinbase Dark style) */}
-            <Card className={`rounded-2xl border transition-all duration-200 relative ${currentPlan === 'pro' ? 'border-[#0052ff] ring-2 ring-[#0052ff]' : 'border-[#0a0b0d] bg-[#0a0b0d] text-white'}`}>
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#0052ff] text-white text-[10px] font-semibold tracking-wider uppercase px-3 py-0.5 rounded-full">
+            <Card className={`rounded-xl border transition-all duration-200 relative ${currentPlan === 'pro' ? 'border-primary ring-2 ring-primary' : 'border-foreground bg-foreground text-background'}`}>
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-semibold tracking-wider uppercase px-3 py-0.5 rounded-full">
                 Populaire
               </div>
               <CardHeader className="p-6">
                 <div className="flex items-center justify-between">
-                  <span className="p-2 rounded-xl bg-white/10 text-[#0052ff]">
-                    <Zap className="h-5 w-5 text-[#0052ff]" />
+                  <span className="p-2 rounded-xl bg-card/10 text-primary">
+                    <Zap className="h-5 w-5 text-primary" />
                   </span>
                   {currentPlan === 'pro' && (
-                    <Badge className="bg-[#0052ff] text-white rounded-full text-xs">
+                    <Badge className="bg-primary text-primary-foreground rounded-full text-xs">
                       Plan Actuel
                     </Badge>
                   )}
                 </div>
-                <CardTitle className="text-xl font-normal text-white mt-4">Pro</CardTitle>
-                <CardDescription className="text-xs text-[#a8acb3]">
+                <CardTitle className="font-heading text-xl font-semibold text-background mt-4">Pro</CardTitle>
+                <CardDescription className="text-xs text-muted-foreground">
                   Pour agences et équipes professionnelles.
                 </CardDescription>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-3xl font-medium tracking-tight text-white">15 000 XOF</span>
-                  <span className="text-xs text-[#a8acb3] ml-1">/ mois</span>
+                  <span className="tabular-mono text-3xl font-semibold tracking-tight text-background">15 000 XOF</span>
+                  <span className="text-xs text-muted-foreground ml-1">/ mois</span>
                 </div>
               </CardHeader>
 
               <CardContent className="p-6 pt-0 space-y-4">
-                <div className="border-t border-white/10 pt-4 space-y-2 text-xs text-[#a8acb3]">
+                <div className="border-t border-white/10 pt-4 space-y-2 text-xs text-muted-foreground">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-[#0052ff]" />
-                    <span className="text-white">Jusqu'à 15 membres d'équipe</span>
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    <span className="text-background">Jusqu'à 15 membres d'équipe</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-[#0052ff]" />
-                    <span className="text-white">200 clients & 100 projets</span>
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    <span className="text-background">200 clients & 100 projets</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-[#0052ff]" />
-                    <span className="text-white">10 GB de stockage</span>
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    <span className="text-background">10 GB de stockage</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-[#0052ff]" />
-                    <span className="text-white">10 Clés API & Webhooks</span>
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    <span className="text-background">10 Clés API & Webhooks</span>
                   </div>
                 </div>
 
                 <Button
                   disabled={currentPlan === 'pro' || upgradingPlan === 'pro'}
                   onClick={() => handleSubscribe('pro')}
-                  className="w-full rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold h-11 mt-4 shadow-sm"
+                  className="w-full rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-11 mt-4 shadow-sm"
                 >
                   {upgradingPlan === 'pro' ? (
                     <>
@@ -336,44 +336,44 @@ export default function BillingPage() {
             </Card>
 
             {/* Card Business */}
-            <Card className={`rounded-2xl border transition-all duration-200 ${currentPlan === 'business' ? 'border-[#0052ff] shadow-sm bg-white' : 'border-gray-200 bg-white'}`}>
+            <Card className={`rounded-xl border transition-all duration-200 ${currentPlan === 'business' ? 'border-primary shadow-sm bg-card' : 'border-border bg-card'}`}>
               <CardHeader className="p-6">
                 <div className="flex items-center justify-between">
-                  <span className="p-2 rounded-xl bg-gray-100 text-gray-700">
+                  <span className="p-2 rounded-xl bg-muted text-foreground">
                     <Building2 className="h-5 w-5" />
                   </span>
                   {currentPlan === 'business' && (
-                    <Badge variant="outline" className="border-[#0052ff] text-[#0052ff] rounded-full text-xs">
+                    <Badge variant="outline" className="border-primary text-primary rounded-full text-xs">
                       Plan Actuel
                     </Badge>
                   )}
                 </div>
-                <CardTitle className="text-xl font-normal text-[#0a0b0d] mt-4">Business</CardTitle>
-                <CardDescription className="text-xs text-[#5b616e]">
+                <CardTitle className="text-xl font-normal text-foreground mt-4">Business</CardTitle>
+                <CardDescription className="text-xs text-muted-foreground">
                   Pour grandes entreprises à fort volume.
                 </CardDescription>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-3xl font-medium tracking-tight text-[#0a0b0d]">50 000 XOF</span>
-                  <span className="text-xs text-[#7c828a] ml-1">/ mois</span>
+                  <span className="text-3xl font-medium tracking-tight text-foreground">50 000 XOF</span>
+                  <span className="text-xs text-muted-foreground ml-1">/ mois</span>
                 </div>
               </CardHeader>
 
               <CardContent className="p-6 pt-0 space-y-4">
-                <div className="border-t border-gray-100 pt-4 space-y-2 text-xs text-[#5b616e]">
+                <div className="border-t border-border pt-4 space-y-2 text-xs text-muted-foreground">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-[#05b169]" />
+                    <CheckCircle2 className="h-4 w-4 text-accent" />
                     <span>Membres & Clients <strong>Illimités</strong></span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-[#05b169]" />
+                    <CheckCircle2 className="h-4 w-4 text-accent" />
                     <span>Projets <strong>Illimités</strong></span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-[#05b169]" />
+                    <CheckCircle2 className="h-4 w-4 text-accent" />
                     <span>100 GB de stockage</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-[#05b169]" />
+                    <CheckCircle2 className="h-4 w-4 text-accent" />
                     <span>Support prioritaire 24/7</span>
                   </div>
                 </div>
@@ -382,7 +382,7 @@ export default function BillingPage() {
                   disabled={currentPlan === 'business' || upgradingPlan === 'business'}
                   onClick={() => handleSubscribe('business')}
                   variant="outline"
-                  className="w-full rounded-full border-gray-300 text-[#0a0b0d] hover:bg-gray-50 text-xs font-semibold h-11 mt-4"
+                  className="w-full rounded-lg border-border text-foreground hover:bg-muted text-xs font-semibold h-11 mt-4"
                 >
                   {upgradingPlan === 'business' ? (
                     <>
@@ -404,25 +404,25 @@ export default function BillingPage() {
 
         {/* Tab 2: Quotas de l'organisation */}
         <TabsContent value="quotas" className="space-y-6">
-          <Card className="rounded-2xl border border-gray-200 bg-white">
-            <CardHeader className="p-6 border-b border-gray-100">
-              <CardTitle className="text-lg font-normal text-[#0a0b0d]">Jauges d'utilisation du Forfait</CardTitle>
-              <CardDescription className="text-xs text-[#5b616e]">
+          <Card className="rounded-xl border border-border bg-card">
+            <CardHeader className="p-6 border-b border-border">
+              <CardTitle className="text-lg font-normal text-foreground">Jauges d'utilisation du Forfait</CardTitle>
+              <CardDescription className="text-xs text-muted-foreground">
                 Aperçu en temps réel de votre consommation par rapport aux plafonds autorisés.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-[#0052ff]" />
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Quota 1: Membres */}
-                  <div className="space-y-2 p-4 rounded-xl bg-[#f7f7f7] border border-gray-100">
+                  <div className="space-y-2 p-4 rounded-xl bg-muted border border-border">
                     <div className="flex justify-between text-xs">
-                      <span className="font-medium text-[#0a0b0d]">Membres d'équipe</span>
-                      <span className="text-[#5b616e]">
+                      <span className="font-medium text-foreground">Membres d'équipe</span>
+                      <span className="text-muted-foreground">
                         {usageData?.usage?.membersCount ?? 1} / {usageData?.quotas?.maxMembers ? usageData.quotas.maxMembers : 'Illimité'}
                       </span>
                     </div>
@@ -432,15 +432,15 @@ export default function BillingPage() {
                           ? Math.min(100, ((usageData?.usage?.membersCount || 1) / usageData.quotas.maxMembers) * 100)
                           : 15
                       }
-                      className="h-2 bg-gray-200"
+                      className="h-2 bg-muted"
                     />
                   </div>
 
                   {/* Quota 2: Clients */}
-                  <div className="space-y-2 p-4 rounded-xl bg-[#f7f7f7] border border-gray-100">
+                  <div className="space-y-2 p-4 rounded-xl bg-muted border border-border">
                     <div className="flex justify-between text-xs">
-                      <span className="font-medium text-[#0a0b0d]">Fiches Clients</span>
-                      <span className="text-[#5b616e]">
+                      <span className="font-medium text-foreground">Fiches Clients</span>
+                      <span className="text-muted-foreground">
                         {usageData?.usage?.clientsCount ?? 0} / {usageData?.quotas?.maxClients ? usageData.quotas.maxClients : 'Illimité'}
                       </span>
                     </div>
@@ -450,15 +450,15 @@ export default function BillingPage() {
                           ? Math.min(100, ((usageData?.usage?.clientsCount || 0) / usageData.quotas.maxClients) * 100)
                           : 5
                       }
-                      className="h-2 bg-gray-200"
+                      className="h-2 bg-muted"
                     />
                   </div>
 
                   {/* Quota 3: Stockage */}
-                  <div className="space-y-2 p-4 rounded-xl bg-[#f7f7f7] border border-gray-100">
+                  <div className="space-y-2 p-4 rounded-xl bg-muted border border-border">
                     <div className="flex justify-between text-xs">
-                      <span className="font-medium text-[#0a0b0d]">Stockage de Fichiers</span>
-                      <span className="text-[#5b616e]">
+                      <span className="font-medium text-foreground">Stockage de Fichiers</span>
+                      <span className="text-muted-foreground">
                         {formatStorage(usageData?.usage?.storageBytesUsed || 0)} / {formatStorage(usageData?.quotas?.maxStorageBytes || 524288000)}
                       </span>
                     </div>
@@ -467,15 +467,15 @@ export default function BillingPage() {
                         100,
                         ((usageData?.usage?.storageBytesUsed || 0) / (usageData?.quotas?.maxStorageBytes || 524288000)) * 100
                       )}
-                      className="h-2 bg-gray-200"
+                      className="h-2 bg-muted"
                     />
                   </div>
 
                   {/* Quota 4: Appels API */}
-                  <div className="space-y-2 p-4 rounded-xl bg-[#f7f7f7] border border-gray-100">
+                  <div className="space-y-2 p-4 rounded-xl bg-muted border border-border">
                     <div className="flex justify-between text-xs">
-                      <span className="font-medium text-[#0a0b0d]">Appels API ce mois</span>
-                      <span className="text-[#5b616e]">
+                      <span className="font-medium text-foreground">Appels API ce mois</span>
+                      <span className="text-muted-foreground">
                         {usageData?.usage?.apiCallsCount ?? 0} / {usageData?.quotas?.maxApiCallsPerMonth?.toLocaleString() || 1000}
                       </span>
                     </div>
@@ -484,7 +484,7 @@ export default function BillingPage() {
                         100,
                         ((usageData?.usage?.apiCallsCount || 0) / (usageData?.quotas?.maxApiCallsPerMonth || 1000)) * 100
                       )}
-                      className="h-2 bg-gray-200"
+                      className="h-2 bg-muted"
                     />
                   </div>
                 </div>
@@ -495,12 +495,12 @@ export default function BillingPage() {
       </Tabs>
 
       <Dialog open={confirmDowngrade} onOpenChange={setConfirmDowngrade}>
-        <DialogContent className="rounded-2xl sm:max-w-md">
+        <DialogContent className="rounded-xl sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg font-normal text-[#0a0b0d]">
+            <DialogTitle className="text-lg font-normal text-foreground">
               Rétrograder vers le plan Gratuit ?
             </DialogTitle>
-            <DialogDescription className="text-xs text-[#5b616e] pt-2">
+            <DialogDescription className="text-xs text-muted-foreground pt-2">
               Votre forfait actuel reste actif jusqu’au {formatPeriodEnd(usageData?.currentPeriodEnd)}. À cette
               date vous repasserez aux limites du plan Gratuit : 3 membres, 10 clients, 5 projets, 500 MB de
               stockage. Aucun remboursement n’est effectué pour la période en cours, et vous pouvez annuler
@@ -512,14 +512,14 @@ export default function BillingPage() {
               variant="outline"
               onClick={() => setConfirmDowngrade(false)}
               disabled={isCancelling}
-              className="rounded-full border-gray-300 text-xs font-semibold h-10"
+              className="rounded-lg border-border text-xs font-semibold h-10"
             >
               Garder mon forfait
             </Button>
             <Button
               onClick={handleDowngrade}
               disabled={isCancelling}
-              className="rounded-full bg-[#cf202f] hover:bg-[#b01b28] text-white text-xs font-semibold h-10"
+              className="rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground text-xs font-semibold h-10"
             >
               {isCancelling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Confirmer la rétrogradation

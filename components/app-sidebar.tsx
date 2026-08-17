@@ -40,8 +40,8 @@ import { TeamSwitcher } from "@/components/team-switcher"
 
 const data = {
   mainNav: [
-    { title: "Vue d'ensemble", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Clients (CRM)", url: "/dashboard/clients", icon: Building2 },
+    { title: "Tableau de bord", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Clients", url: "/dashboard/clients", icon: Building2 },
     { title: "Projets", url: "/dashboard/projects", icon: FolderKanban },
     { title: "Devis", url: "/dashboard/quotes", icon: FileSpreadsheet },
     { title: "Contrats", url: "/dashboard/contracts", icon: FileSignature },
@@ -50,7 +50,7 @@ const data = {
     { title: "Dépenses", url: "/dashboard/expenses", icon: Receipt },
     { title: "Avis clients", url: "/dashboard/reviews", icon: MessageSquareQuote },
     { title: "Fichiers", url: "/dashboard/files", icon: FolderOpen },
-    { title: "Abonnement", url: "/dashboard/billing", icon: CreditCard },
+    { title: "Facturation", url: "/dashboard/billing", icon: CreditCard },
   ],
   settingsNav: [
     { title: "Équipe", url: "/dashboard/team", icon: Users },
@@ -112,7 +112,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Plateforme</SidebarGroupLabel>
+          <SidebarGroupLabel>Gestion</SidebarGroupLabel>
           <SidebarMenu>
             {data.mainNav.map((item) => {
               const isActive = pathname === item.url

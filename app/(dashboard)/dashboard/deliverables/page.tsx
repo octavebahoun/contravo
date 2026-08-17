@@ -167,22 +167,22 @@ export default function DeliverablesPage() {
         action={
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-              <Button className="rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold px-5 h-11 shadow-sm">
+              <Button className="rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold px-5 h-11 shadow-sm">
                 <Plus className="mr-2 h-4 w-4" /> Nouveau livrable
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[480px] rounded-2xl">
+            <DialogContent className="sm:max-w-[480px] rounded-xl">
               <form onSubmit={handleCreateDeliverable}>
                 <DialogHeader>
-                  <DialogTitle className="text-lg font-normal text-[#0a0b0d]">Créer un livrable</DialogTitle>
-                  <DialogDescription className="text-xs text-[#5b616e]">
+                  <DialogTitle className="text-lg font-normal text-foreground">Créer un livrable</DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground">
                     Le livrable reste en brouillon tant qu&apos;il n&apos;est pas soumis au client.
                   </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label className="text-xs font-medium text-[#0a0b0d]">Projet *</Label>
+                    <Label className="text-xs font-medium text-foreground">Projet *</Label>
                     <Select
                       value={formData.projectId}
                       onValueChange={(val) => setFormData({ ...formData, projectId: val })}
@@ -201,7 +201,7 @@ export default function DeliverablesPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label className="text-xs font-medium text-[#0a0b0d]">Titre *</Label>
+                    <Label className="text-xs font-medium text-foreground">Titre *</Label>
                     <Input
                       placeholder="Ex : Maquettes v2 — page d'accueil"
                       value={formData.title}
@@ -212,7 +212,7 @@ export default function DeliverablesPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label className="text-xs font-medium text-[#0a0b0d]">Description</Label>
+                    <Label className="text-xs font-medium text-foreground">Description</Label>
                     <Textarea
                       placeholder="Ce que le client doit examiner…"
                       value={formData.description}
@@ -226,7 +226,7 @@ export default function DeliverablesPage() {
                   <Button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold h-11"
+                    className="w-full rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-11"
                   >
                     {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Créer le brouillon'}
                   </Button>
@@ -242,31 +242,31 @@ export default function DeliverablesPage() {
           label="Livrables approuvés"
           value={approvedCount}
           hint="Validés par le client"
-          icon={<CheckCircle2 className="h-4 w-4 text-[#05b169]" />}
+          icon={<CheckCircle2 className="h-4 w-4 text-accent" />}
         />
         <MetricCard
           label="En attente de validation"
           value={awaitingCount}
           hint="Soumis, pas encore examinés"
-          icon={<Clock className="h-4 w-4 text-[#0052ff]" />}
+          icon={<Clock className="h-4 w-4 text-primary" />}
         />
         <MetricCard
           label="Total livrables"
           value={deliverables.length}
           hint="Toutes versions confondues"
-          icon={<Package className="h-4 w-4 text-[#7c828a]" />}
+          icon={<Package className="h-4 w-4 text-muted-foreground" />}
         />
       </div>
 
-      <Card className="rounded-2xl border border-gray-200 bg-white">
-        <CardHeader className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <Card className="rounded-xl border border-border bg-card">
+        <CardHeader className="p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#7c828a]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Rechercher un livrable..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 rounded-xl border-gray-200 text-xs"
+              className="pl-9 rounded-xl border-border text-xs"
             />
           </div>
 
@@ -288,20 +288,20 @@ export default function DeliverablesPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-[#0052ff]" />
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : filteredDeliverables.length === 0 ? (
-            <div className="text-center py-12 text-[#7c828a] text-xs">Aucun livrable trouvé.</div>
+            <div className="text-center py-12 text-muted-foreground text-xs">Aucun livrable trouvé.</div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-100 bg-[#f7f7f7]/50 hover:bg-[#f7f7f7]/50">
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Livrable</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Projet</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Version</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Soumis le</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Statut</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d] text-right">Actions</TableHead>
+                <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="text-xs font-semibold text-foreground">Livrable</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Projet</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Version</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Soumis le</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Statut</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -313,23 +313,23 @@ export default function DeliverablesPage() {
                     deliverable.status === 'rejected' || deliverable.status === 'revision_requested';
 
                   return (
-                    <TableRow key={deliverable.id} className="border-gray-100 hover:bg-gray-50/50">
-                      <TableCell className="text-xs text-[#0a0b0d]">
+                    <TableRow key={deliverable.id} className="border-border hover:bg-muted/50">
+                      <TableCell className="text-xs text-foreground">
                         <div className="flex items-center gap-2 font-medium">
-                          <Package className="h-4 w-4 text-[#7c828a]" />
+                          <Package className="h-4 w-4 text-muted-foreground" />
                           <span>{deliverable.title}</span>
                         </div>
                         {deliverable.rejectionReason && (
-                          <div className="text-[11px] text-[#cf202f] font-normal pl-6">
+                          <div className="text-[11px] text-destructive font-normal pl-6">
                             Motif : {deliverable.rejectionReason}
                           </div>
                         )}
                       </TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">
+                      <TableCell className="text-xs text-muted-foreground">
                         {getProjectName(deliverable.projectId)}
                       </TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">v{deliverable.version}</TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">{formatDate(deliverable.submittedAt)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">v{deliverable.version}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatDate(deliverable.submittedAt)}</TableCell>
                       <TableCell>
                         <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
                       </TableCell>
@@ -340,7 +340,7 @@ export default function DeliverablesPage() {
                             size="sm"
                             disabled={isPending}
                             onClick={() => handleSubmitToClient(deliverable)}
-                            className="h-8 rounded-full text-[11px] text-[#0052ff] hover:bg-[#0052ff]/10"
+                            className="h-8 rounded-full text-[11px] text-primary hover:bg-primary/10"
                           >
                             {isPending ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -352,7 +352,7 @@ export default function DeliverablesPage() {
                             {needsResubmit ? 'Resoumettre' : 'Soumettre'}
                           </Button>
                         ) : (
-                          <span className="text-[11px] text-[#a8acb3]">
+                          <span className="text-[11px] text-muted-foreground">
                             {deliverable.reviewedByName
                               ? `Examiné par ${deliverable.reviewedByName}`
                               : 'Chez le client'}

@@ -78,7 +78,7 @@ function ResetPasswordForm() {
   if (done) {
     return (
       <div className="flex flex-col gap-6 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent">
           <ShieldCheck className="h-6 w-6" />
         </div>
         <div className="space-y-2">

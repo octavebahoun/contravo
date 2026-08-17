@@ -1,15 +1,10 @@
 import type { Metadata } from 'next';
 import {
   Hero,
-  LogosBand,
-  BeforeAfter,
-  Features,
-  ProductPreview,
+  ProofBand,
+  Problem,
+  Solution,
   Steps,
-  PortailSplit,
-  PaymentSplit,
-  Testimonials,
-  Pricing,
   FAQ,
   CTA,
 } from './_components/sections';
@@ -18,22 +13,22 @@ import { siteDetails } from './_data/content';
 export const metadata: Metadata = {
   title: `${siteDetails.name} — ${siteDetails.tagline}`,
   description: siteDetails.description,
+  openGraph: {
+    title: `${siteDetails.name} — ${siteDetails.tagline}`,
+    description: siteDetails.description,
+    type: 'website',
+    locale: 'fr_FR',
+  },
 };
 
-/** Public landing page matching the brutalist wireframe layout. */
 export default function LandingPage() {
   return (
     <>
       <Hero />
-      <LogosBand />
-      <BeforeAfter />
-      <Features />
-      <ProductPreview />
+      <ProofBand />
+      <Problem />
+      <Solution />
       <Steps />
-      <PortailSplit />
-      <PaymentSplit />
-      <Testimonials />
-      <Pricing />
       <FAQ />
       <CTA />
     </>

@@ -161,22 +161,22 @@ export default function ContractsPage() {
         action={
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-              <Button className="rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold px-5 h-11 shadow-sm">
+              <Button className="rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold px-5 h-11 shadow-sm">
                 <Plus className="mr-2 h-4 w-4" /> Nouveau contrat
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[520px] rounded-2xl">
+            <DialogContent className="sm:max-w-[520px] rounded-xl">
               <form onSubmit={handleCreateContract}>
                 <DialogHeader>
-                  <DialogTitle className="text-lg font-normal text-[#0a0b0d]">Créer un contrat</DialogTitle>
-                  <DialogDescription className="text-xs text-[#5b616e]">
+                  <DialogTitle className="text-lg font-normal text-foreground">Créer un contrat</DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground">
                     Le contrat est créé en brouillon. Il ne part au client qu&apos;une fois envoyé.
                   </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label className="text-xs font-medium text-[#0a0b0d]">Projet *</Label>
+                    <Label className="text-xs font-medium text-foreground">Projet *</Label>
                     <Select
                       value={formData.projectId}
                       onValueChange={(val) => setFormData({ ...formData, projectId: val })}
@@ -195,7 +195,7 @@ export default function ContractsPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label className="text-xs font-medium text-[#0a0b0d]">Client *</Label>
+                    <Label className="text-xs font-medium text-foreground">Client *</Label>
                     <Select
                       value={formData.clientId}
                       onValueChange={(val) => setFormData({ ...formData, clientId: val })}
@@ -214,7 +214,7 @@ export default function ContractsPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label className="text-xs font-medium text-[#0a0b0d]">Titre du contrat *</Label>
+                    <Label className="text-xs font-medium text-foreground">Titre du contrat *</Label>
                     <Input
                       placeholder="Ex : Contrat de prestation — refonte du site"
                       value={formData.title}
@@ -225,7 +225,7 @@ export default function ContractsPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label className="text-xs font-medium text-[#0a0b0d]">Corps du contrat (Markdown)</Label>
+                    <Label className="text-xs font-medium text-foreground">Corps du contrat (Markdown)</Label>
                     <Textarea
                       placeholder={'## Objet\nLa présente convention a pour objet…'}
                       value={formData.bodyMarkdown}
@@ -239,7 +239,7 @@ export default function ContractsPage() {
                   <Button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold h-11"
+                    className="w-full rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-11"
                   >
                     {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Créer le brouillon'}
                   </Button>
@@ -255,31 +255,31 @@ export default function ContractsPage() {
           label="Contrats signés"
           value={signedCount}
           hint="Signés via le portail client"
-          icon={<CheckCircle2 className="h-4 w-4 text-[#05b169]" />}
+          icon={<CheckCircle2 className="h-4 w-4 text-accent" />}
         />
         <MetricCard
           label="En attente de signature"
           value={awaitingCount}
           hint="Envoyés, pas encore signés"
-          icon={<Clock className="h-4 w-4 text-[#0052ff]" />}
+          icon={<Clock className="h-4 w-4 text-primary" />}
         />
         <MetricCard
           label="Total contrats"
           value={contracts.length}
           hint="Toutes périodes confondues"
-          icon={<FileSignature className="h-4 w-4 text-[#7c828a]" />}
+          icon={<FileSignature className="h-4 w-4 text-muted-foreground" />}
         />
       </div>
 
-      <Card className="rounded-2xl border border-gray-200 bg-white">
-        <CardHeader className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <Card className="rounded-xl border border-border bg-card">
+        <CardHeader className="p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#7c828a]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Rechercher un numéro ou un titre..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 rounded-xl border-gray-200 text-xs"
+              className="pl-9 rounded-xl border-border text-xs"
             />
           </div>
 
@@ -301,20 +301,20 @@ export default function ContractsPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-[#0052ff]" />
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : filteredContracts.length === 0 ? (
-            <div className="text-center py-12 text-[#7c828a] text-xs">Aucun contrat trouvé.</div>
+            <div className="text-center py-12 text-muted-foreground text-xs">Aucun contrat trouvé.</div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-100 bg-[#f7f7f7]/50 hover:bg-[#f7f7f7]/50">
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">N° / Titre</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Client</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Envoyé le</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Signé par</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Statut</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d] text-right">Actions</TableHead>
+                <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="text-xs font-semibold text-foreground">N° / Titre</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Client</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Envoyé le</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Signé par</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Statut</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -323,18 +323,18 @@ export default function ContractsPage() {
                   const isPending = pendingId === contract.id;
 
                   return (
-                    <TableRow key={contract.id} className="border-gray-100 hover:bg-gray-50/50">
-                      <TableCell className="text-xs text-[#0a0b0d]">
+                    <TableRow key={contract.id} className="border-border hover:bg-muted/50">
+                      <TableCell className="text-xs text-foreground">
                         <div className="flex items-center gap-2 font-medium">
-                          <FileSignature className="h-4 w-4 text-[#7c828a]" />
+                          <FileSignature className="h-4 w-4 text-muted-foreground" />
                           <span>{contract.number}</span>
                         </div>
-                        <div className="text-[11px] text-[#7c828a] font-normal pl-6">{contract.title}</div>
+                        <div className="text-[11px] text-muted-foreground font-normal pl-6">{contract.title}</div>
                       </TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">{getClientName(contract.clientId)}</TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">{formatDate(contract.sentAt)}</TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">
-                        {contract.signedByName || <span className="text-[#a8acb3]">—</span>}
+                      <TableCell className="text-xs text-muted-foreground">{getClientName(contract.clientId)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatDate(contract.sentAt)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {contract.signedByName || <span className="text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell>
                         <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
@@ -347,7 +347,7 @@ export default function ContractsPage() {
                               size="sm"
                               disabled={isPending}
                               onClick={() => handleTransition(contract.id, 'send')}
-                              className="h-8 rounded-full text-[11px] text-[#0052ff] hover:bg-[#0052ff]/10"
+                              className="h-8 rounded-full text-[11px] text-primary hover:bg-primary/10"
                             >
                               {isPending ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -364,7 +364,7 @@ export default function ContractsPage() {
                               size="sm"
                               disabled={isPending}
                               onClick={() => handleTransition(contract.id, 'cancel')}
-                              className="h-8 rounded-full text-[11px] text-[#cf202f] hover:bg-[#cf202f]/10"
+                              className="h-8 rounded-full text-[11px] text-destructive hover:bg-destructive/10"
                             >
                               <Ban className="h-3.5 w-3.5" />
                               Annuler
@@ -375,7 +375,7 @@ export default function ContractsPage() {
                             asChild
                             variant="ghost"
                             size="sm"
-                            className="h-8 rounded-full text-[11px] text-[#5b616e] hover:bg-gray-100"
+                            className="h-8 rounded-full text-[11px] text-muted-foreground hover:bg-muted"
                           >
                             <a
                               href={

@@ -119,45 +119,45 @@ export default function DashboardPage() {
           label="Encaissé"
           value={formatAmount(paid)}
           hint="Factures payées"
-          icon={<Wallet className="h-4 w-4 text-[#05b169]" />}
+          icon={<Wallet className="h-4 w-4 text-accent" />}
         />
         <MetricCard
           label="En attente de paiement"
           value={formatAmount(outstanding)}
           hint={`${overdue.length} facture(s) en retard`}
-          icon={<Clock className="h-4 w-4 text-[#0052ff]" />}
+          icon={<Clock className="h-4 w-4 text-primary" />}
         />
         <MetricCard
           label="Devis en attente"
           value={awaitingQuotes.length}
           hint="Envoyés, sans réponse"
-          icon={<FileSpreadsheet className="h-4 w-4 text-[#0052ff]" />}
+          icon={<FileSpreadsheet className="h-4 w-4 text-primary" />}
         />
         <MetricCard
           label="Projets actifs"
           value={activeProjects.length}
           hint={`${clients.length} client(s) au total`}
-          icon={<FolderKanban className="h-4 w-4 text-[#7c828a]" />}
+          icon={<FolderKanban className="h-4 w-4 text-muted-foreground" />}
         />
       </div>
 
       {overdue.length > 0 && (
-        <Card className="rounded-2xl border border-[#cf202f]/20 bg-[#cf202f]/5">
+        <Card className="rounded-xl border border-destructive/20 bg-destructive/5">
           <CardHeader className="p-5 pb-2 flex flex-row items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-[#cf202f]" />
-            <CardTitle className="text-sm font-medium text-[#0a0b0d]">
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+            <CardTitle className="text-sm font-medium text-foreground">
               {overdue.length} facture(s) en retard de paiement
             </CardTitle>
           </CardHeader>
           <CardContent className="p-5 pt-0">
-            <p className="text-xs text-[#5b616e] mb-3">
+            <p className="tabular-mono text-xs text-muted-foreground mb-3">
               Total dû : {formatAmount(sum(overdue, 'amountDueCents'))}
             </p>
             <Button
               asChild
               variant="ghost"
               size="sm"
-              className="h-8 rounded-full text-[11px] text-[#cf202f] hover:bg-[#cf202f]/10 px-0"
+              className="h-8 rounded-full text-[11px] text-destructive hover:bg-destructive/10 px-0"
             >
               <Link href="/dashboard/invoices">
                 Voir les factures <ArrowRight className="h-3.5 w-3.5" />
@@ -167,14 +167,14 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      <Card className="rounded-2xl border border-gray-200 bg-white">
-        <CardHeader className="p-5 border-b border-gray-100 flex flex-row items-center justify-between">
-          <CardTitle className="text-sm font-medium text-[#0a0b0d]">Derniers devis envoyés</CardTitle>
+      <Card className="rounded-xl border border-border bg-card">
+        <CardHeader className="p-5 border-b border-border flex flex-row items-center justify-between">
+          <CardTitle className="text-sm font-medium text-foreground">Derniers devis envoyés</CardTitle>
           <Button
             asChild
             variant="ghost"
             size="sm"
-            className="h-8 rounded-full text-[11px] text-[#0052ff] hover:bg-[#0052ff]/10"
+            className="h-8 rounded-full text-[11px] text-primary hover:bg-primary/10"
           >
             <Link href="/dashboard/quotes">
               Tout voir <ArrowRight className="h-3.5 w-3.5" />
@@ -185,32 +185,32 @@ export default function DashboardPage() {
         <CardContent className="p-0">
           {loadingInvoices ? (
             <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-[#0052ff]" />
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : recentQuotes.length === 0 ? (
-            <div className="text-center py-12 text-[#7c828a] text-xs">
+            <div className="text-center py-12 text-muted-foreground text-xs">
               Aucun devis envoyé pour l’instant.
             </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-100 bg-[#f7f7f7]/50 hover:bg-[#f7f7f7]/50">
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">N° Devis</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Client</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Valide jusqu’au</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Montant</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d] text-right">Statut</TableHead>
+                <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="text-xs font-semibold text-foreground">N° Devis</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Client</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Valide jusqu’au</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Montant</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground text-right">Statut</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {recentQuotes.map((quote) => {
                   const badge = QUOTE_TONES[quote.status] || { label: 'Brouillon', tone: 'neutral' as StatusTone };
                   return (
-                    <TableRow key={quote.id} className="border-gray-100 hover:bg-gray-50/50">
-                      <TableCell className="text-xs font-medium text-[#0a0b0d]">{quote.number}</TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">{clientName(quote.clientId)}</TableCell>
-                      <TableCell className="text-xs text-[#5b616e]">{formatDate(quote.validUntil)}</TableCell>
-                      <TableCell className="text-xs font-medium text-[#0a0b0d]">
+                    <TableRow key={quote.id} className="border-border hover:bg-muted/50">
+                      <TableCell className="text-xs font-medium text-foreground">{quote.number}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{clientName(quote.clientId)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatDate(quote.validUntil)}</TableCell>
+                      <TableCell className="tabular-mono text-xs font-medium text-foreground">
                         {formatAmount(quote.totalCents)}
                       </TableCell>
                       <TableCell className="text-right">

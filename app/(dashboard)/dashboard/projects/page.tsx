@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Plus, Search, FolderKanban, Clock, CheckCircle2, AlertCircle, Loader2, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
+import { Stamp, type StampTone } from '@/components/stamp';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -112,66 +113,50 @@ export default function ProjectsPage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return (
-          <Badge className="bg-[#0052ff]/10 text-[#0052ff] border-[#0052ff]/20 rounded-full text-[10px] font-medium shadow-none">
-            En cours
-          </Badge>
-        );
-      case 'delivered':
-        return (
-          <Badge className="bg-[#05b169]/10 text-[#05b169] border-[#05b169]/20 rounded-full text-[10px] font-medium shadow-none">
-            Livré
-          </Badge>
-        );
-      case 'on_hold':
-        return (
-          <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 rounded-full text-[10px] font-medium shadow-none">
-            En pause
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="rounded-full text-[10px] text-gray-500 border-gray-200">
-            Brouillon
-          </Badge>
-        );
-    }
+  const PROJECT_STAMP: Record<string, { label: string; tone: StampTone }> = {
+    active: { label: 'En cours', tone: 'warning' },
+    delivered: { label: 'Livré', tone: 'success' },
+    on_hold: { label: 'En pause', tone: 'warning' },
+    cancelled: { label: 'Annulé', tone: 'destructive' },
+    archived: { label: 'Archivé', tone: 'ink' },
+  };
+
+  const getStatusStamp = (status: string) => {
+    const s = PROJECT_STAMP[status] ?? { label: 'Brouillon', tone: 'ink' as const };
+    return <Stamp label={s.label} tone={s.tone} />;
   };
 
   return (
     <section className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto space-y-8">
       {/* Header Style Coinbase Blue */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-normal text-[#0a0b0d] tracking-tight font-sans">
+          <h1 className="font-heading text-2xl lg:text-3xl font-bold tracking-tight text-foreground">
             Gestion de Projets
           </h1>
-          <p className="text-[#5b616e] text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-1">
             Suivez le déroulement de vos livrables, l'avancement et la rentabilité financière.
           </p>
         </div>
 
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button className="rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold px-5 h-11 shadow-sm">
+            <Button className="rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold px-5 h-11 shadow-sm">
               <Plus className="mr-2 h-4 w-4" /> Nouveau Projet
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] rounded-2xl">
+          <DialogContent className="sm:max-w-[425px] rounded-xl">
             <form onSubmit={handleCreateProject}>
               <DialogHeader>
-                <DialogTitle className="text-lg font-normal text-[#0a0b0d]">Créer un projet</DialogTitle>
-                <DialogDescription className="text-xs text-[#5b616e]">
+                <DialogTitle className="text-lg font-normal text-foreground">Créer un projet</DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
                   Associez un projet à un client et définissez son budget initial.
                 </DialogDescription>
               </DialogHeader>
 
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label className="text-xs font-medium text-[#0a0b0d]">Nom du Projet *</Label>
+                  <Label className="text-xs font-medium text-foreground">Nom du Projet *</Label>
                   <Input
                     placeholder="Ex: Refonte Site E-commerce"
                     value={formData.name}
@@ -182,7 +167,7 @@ export default function ProjectsPage() {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label className="text-xs font-medium text-[#0a0b0d]">Client *</Label>
+                  <Label className="text-xs font-medium text-foreground">Client *</Label>
                   <Select
                     value={formData.clientId}
                     onValueChange={(val) => setFormData({ ...formData, clientId: val })}
@@ -201,7 +186,7 @@ export default function ProjectsPage() {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label className="text-xs font-medium text-[#0a0b0d]">Budget (XOF)</Label>
+                  <Label className="text-xs font-medium text-foreground">Budget (XOF)</Label>
                   <Input
                     type="number"
                     placeholder="Ex: 500000"
@@ -212,7 +197,7 @@ export default function ProjectsPage() {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label className="text-xs font-medium text-[#0a0b0d]">Description / Objectifs</Label>
+                  <Label className="text-xs font-medium text-foreground">Description / Objectifs</Label>
                   <Input
                     placeholder="Objectifs principaux du projet..."
                     value={formData.description}
@@ -226,7 +211,7 @@ export default function ProjectsPage() {
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold h-11"
+                  className="w-full rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-11"
                 >
                   {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Créer le projet'}
                 </Button>
@@ -238,50 +223,50 @@ export default function ProjectsPage() {
 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <Card className="rounded-2xl border border-gray-200 bg-white">
+        <Card className="rounded-xl border border-border bg-card">
           <CardHeader className="p-5 flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-[#5b616e]">Projets En Cours</CardTitle>
-            <FolderKanban className="h-4 w-4 text-[#0052ff]" />
+            <CardTitle className="text-xs font-medium text-muted-foreground">Projets En Cours</CardTitle>
+            <FolderKanban className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent className="p-5 pt-0">
-            <div className="text-2xl font-medium text-[#0a0b0d]">{activeCount}</div>
-            <p className="text-[11px] text-[#7c828a] mt-1">Actuellement actifs</p>
+            <div className="text-2xl font-medium text-foreground">{activeCount}</div>
+            <p className="text-[11px] text-muted-foreground mt-1">Actuellement actifs</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border border-gray-200 bg-white">
+        <Card className="rounded-xl border border-border bg-card">
           <CardHeader className="p-5 flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-[#5b616e]">Projets Livrés</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-[#05b169]" />
+            <CardTitle className="text-xs font-medium text-muted-foreground">Projets Livrés</CardTitle>
+            <CheckCircle2 className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent className="p-5 pt-0">
-            <div className="text-2xl font-medium text-[#0a0b0d]">{deliveredCount}</div>
-            <p className="text-[11px] text-[#7c828a] mt-1">Terminés et livrés au client</p>
+            <div className="text-2xl font-medium text-foreground">{deliveredCount}</div>
+            <p className="text-[11px] text-muted-foreground mt-1">Terminés et livrés au client</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border border-gray-200 bg-white">
+        <Card className="rounded-xl border border-border bg-card">
           <CardHeader className="p-5 flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-[#5b616e]">En attente / Pause</CardTitle>
-            <Clock className="h-4 w-4 text-amber-500" />
+            <CardTitle className="text-xs font-medium text-muted-foreground">En attente / Pause</CardTitle>
+            <Clock className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent className="p-5 pt-0">
-            <div className="text-2xl font-medium text-[#0a0b0d]">{draftCount}</div>
-            <p className="text-[11px] text-[#7c828a] mt-1">Brouillons ou en pause</p>
+            <div className="text-2xl font-medium text-foreground">{draftCount}</div>
+            <p className="text-[11px] text-muted-foreground mt-1">Brouillons ou en pause</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Filtres & Table Shadcn */}
-      <Card className="rounded-2xl border border-gray-200 bg-white">
-        <CardHeader className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <Card className="rounded-xl border border-border bg-card">
+        <CardHeader className="p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#7c828a]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Rechercher un projet..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 rounded-xl border-gray-200 text-xs"
+              className="pl-9 rounded-xl border-border text-xs"
             />
           </div>
 
@@ -302,21 +287,21 @@ export default function ProjectsPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-[#0052ff]" />
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : filteredProjects.length === 0 ? (
-            <div className="text-center py-12 text-[#7c828a] text-xs">
+            <div className="text-center py-12 text-muted-foreground text-xs">
               Aucun projet trouvé.
             </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-100 bg-[#f7f7f7]/50 hover:bg-[#f7f7f7]/50">
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Projet</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Client</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Budget</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Avancement</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d] text-right">Statut</TableHead>
+                <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="text-xs font-semibold text-foreground">Projet</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Client</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Budget</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Avancement</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground text-right">Statut</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -324,35 +309,35 @@ export default function ProjectsPage() {
                   <TableRow
                     key={project.id}
                     onClick={() => router.push(`/dashboard/projects/${project.id}`)}
-                    className="border-gray-100 hover:bg-gray-50/50 cursor-pointer"
+                    className="border-border hover:bg-muted/50 cursor-pointer"
                   >
-                    <TableCell className="font-medium text-xs text-[#0a0b0d]">
+                    <TableCell className="font-medium text-xs text-foreground">
                       <div>{project.name}</div>
                       {project.description && (
-                        <div className="text-[11px] text-[#7c828a] font-normal truncate max-w-xs">
+                        <div className="text-[11px] text-muted-foreground font-normal truncate max-w-xs">
                           {project.description}
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs text-[#5b616e]">
+                    <TableCell className="text-xs text-muted-foreground">
                       {getClientName(project.clientId)}
                     </TableCell>
-                    <TableCell className="text-xs font-medium text-[#0a0b0d]">
+                    <TableCell className="tabular-mono text-xs font-medium text-foreground">
                       {formatBudget(project.budgetCents)}
                     </TableCell>
-                    <TableCell className="text-xs text-[#5b616e] w-48">
+                    <TableCell className="text-xs text-muted-foreground w-48">
                       <div className="space-y-1">
                         <div className="flex justify-between text-[10px]">
                           <span>{project.status === 'delivered' ? '100%' : project.status === 'active' ? '45%' : '0%'}</span>
                         </div>
                         <Progress
                           value={project.status === 'delivered' ? 100 : project.status === 'active' ? 45 : 5}
-                          className="h-1.5 bg-gray-100"
+                          className="h-1.5 bg-muted"
                         />
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      {getStatusBadge(project.status)}
+                      {getStatusStamp(project.status)}
                     </TableCell>
                   </TableRow>
                 ))}

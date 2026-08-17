@@ -1,47 +1,45 @@
 'use client';
 
-import { motion, type Variants } from 'framer-motion';
+import { motion, useReducedMotion, type Variants } from 'motion/react';
 import type { ReactNode } from 'react';
 
 /**
- * Scroll-reveal primitives (animation values taken from the Finwise template, MIT).
- *
- * The container fades and rises while staggering its children, which slide in
- * from the left. `viewport.once` keeps a section from replaying every time it
- * scrolls back into view, which reads as noise on a long page.
+ * Primitives d'entrée — fondu + 12px max, 150-300ms, easing doux.
+ * `prefers-reduced-motion` : rendu statique, pas d'animation.
  */
 
+const ease = [0.2, 0, 0, 1] as const;
+
 export const containerVariants: Variants = {
-  offscreen: { opacity: 0, y: 100 },
+  offscreen: { opacity: 0, y: 12 },
   onscreen: {
     opacity: 1,
     y: 0,
     transition: {
-      type: 'spring',
-      bounce: 0.2,
-      duration: 0.9,
-      delayChildren: 0.2,
-      staggerChildren: 0.1,
+      duration: 0.25,
+      ease,
+      delayChildren: 0.1,
+      staggerChildren: 0.08,
     },
   },
 };
 
 export const childVariants: Variants = {
-  offscreen: { opacity: 0, x: -50 },
-  onscreen: {
-    opacity: 1,
-    x: 0,
-    transition: { type: 'spring', bounce: 0.2, duration: 1 },
-  },
-};
-
-/** Fade-and-rise used by sections that have no staggered children. */
-export const fadeUpVariants: Variants = {
-  offscreen: { opacity: 0, y: 40 },
+  offscreen: { opacity: 0, y: 12 },
   onscreen: {
     opacity: 1,
     y: 0,
-    transition: { type: 'spring', bounce: 0.2, duration: 0.8 },
+    transition: { duration: 0.2, ease },
+  },
+};
+
+/** Fondu-and-rise used by sections that have no staggered children. */
+export const fadeUpVariants: Variants = {
+  offscreen: { opacity: 0, y: 12 },
+  onscreen: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.25, ease },
   },
 };
 
@@ -56,6 +54,10 @@ export function Reveal({
   variants?: Variants;
   amount?: number;
 }) {
+  const reducedMotion = useReducedMotion();
+  if (reducedMotion) {
+    return <div className={className}>{children}</div>;
+  }
   return (
     <motion.div
       className={className}
@@ -96,12 +98,16 @@ export function HeroReveal({
   className?: string;
   delay?: number;
 }) {
+  const reducedMotion = useReducedMotion();
+  if (reducedMotion) {
+    return <div className={className}>{children}</div>;
+  }
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ type: 'spring', bounce: 0.2, duration: 0.9, delay }}
+      transition={{ duration: 0.3, ease, delay }}
     >
       {children}
     </motion.div>
