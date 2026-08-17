@@ -42,11 +42,15 @@ export const problemDetails = {
   ],
 };
 
+/** Ton du cachet porté par la donnée — la page ne le redevine pas. */
+export type StampLabel = { stamp: string; stampTone: 'success' | 'warning' | 'ink' };
+
 export const solutionDetails = {
   heading: 'Tout ce qu’il faut pour être payé, sans friction.',
   benefits: [
     {
       stamp: 'MODÈLE',
+      stampTone: 'ink' as const,
       title: 'Devis en 5 minutes',
       description:
         'Des modèles prêts à l’emploi, les montants se calculent tout seuls. Numérotation et PDF généré automatiquement.',
@@ -54,6 +58,7 @@ export const solutionDetails = {
     },
     {
       stamp: 'SIGNÉ',
+      stampTone: 'success' as const,
       title: 'Signature en ligne',
       description:
         'Un lien sécurisé, aucune inscription pour votre client : il signe en 30 secondes depuis son téléphone.',
@@ -61,6 +66,7 @@ export const solutionDetails = {
     },
     {
       stamp: 'PAYÉ',
+      stampTone: 'success' as const,
       title: 'Paiement direct',
       description:
         'Mobile money (Orange, MTN, Moov…) et carte via GeniusPay, en XOF. Le suivi est automatique.',
@@ -74,16 +80,19 @@ export const stepsDetails = {
   steps: [
     {
       stamp: 'MODÈLE',
+      stampTone: 'ink' as const,
       title: 'Choisir un modèle',
       description: 'Sélectionnez un modèle, ajoutez vos prestations. Les totaux se calculent seuls.',
     },
     {
       stamp: 'LIEN',
+      stampTone: 'warning' as const,
       title: 'Envoyer le lien',
       description: 'Votre client le reçoit par email ou WhatsApp, consulte et signe sans compte.',
     },
     {
       stamp: 'PAYÉ',
+      stampTone: 'success' as const,
       title: 'Être payé',
       description: 'La facture part, le règlement arrive par mobile money, les relances s’arrêtent.',
     },

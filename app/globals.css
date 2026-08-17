@@ -193,3 +193,37 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
+
+/*
+ * Les ancres de la landing (#fonctionnalites, #etapes, #faq) atterrissaient
+ * sous l'en-tête collant, qui masquait le titre visé. Le défilement est lissé
+ * et la cible réserve la hauteur de l'en-tête.
+ */
+html {
+  scroll-behavior: smooth;
+}
+
+[id] {
+  scroll-margin-top: 6rem;
+}
+
+/*
+ * Garde-fou global : ce que les composants ne désactivent pas eux-mêmes est
+ * neutralisé ici — y compris les transitions purement CSS (survols de cartes,
+ * traits de navigation, mises à l'échelle des boutons), qu'aucun test de
+ * `prefers-reduced-motion` côté React ne peut atteindre.
+ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
