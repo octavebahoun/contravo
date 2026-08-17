@@ -35,7 +35,8 @@ import {
 
 interface Invoice {
   id: string;
-  invoiceNumber: string;
+  /** The API serializes the column as `number`; `invoiceNumber` never existed. */
+  number: string;
   clientId: string;
   totalCents: string;
   amountDueCents: string;
@@ -45,7 +46,8 @@ interface Invoice {
 
 interface Quote {
   id: string;
-  quoteNumber: string;
+  /** Same as invoices: the column is `number`. */
+  number: string;
   clientId: string;
   totalCents: string;
   status: 'draft' | 'sent' | 'viewed' | 'accepted' | 'rejected' | 'cancelled' | 'expired';
@@ -205,7 +207,7 @@ export default function DashboardPage() {
                   const badge = QUOTE_TONES[quote.status] || { label: 'Brouillon', tone: 'neutral' as StatusTone };
                   return (
                     <TableRow key={quote.id} className="border-gray-100 hover:bg-gray-50/50">
-                      <TableCell className="text-xs font-medium text-[#0a0b0d]">{quote.quoteNumber}</TableCell>
+                      <TableCell className="text-xs font-medium text-[#0a0b0d]">{quote.number}</TableCell>
                       <TableCell className="text-xs text-[#5b616e]">{clientName(quote.clientId)}</TableCell>
                       <TableCell className="text-xs text-[#5b616e]">{formatDate(quote.validUntil)}</TableCell>
                       <TableCell className="text-xs font-medium text-[#0a0b0d]">

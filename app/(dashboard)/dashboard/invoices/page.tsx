@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,8 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Invoice {
   id: string;
-  invoiceNumber: string;
+  /** The API serializes the column as `number`; `invoiceNumber` never existed. */
+  number: string;
   clientId: string;
   totalCents: string | number;
   amountDueCents: string | number;
@@ -33,6 +35,7 @@ interface Client {
 }
 
 export default function InvoicesPage() {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isOpen, setIsOpen] = useState(false);
@@ -60,10 +63,8 @@ export default function InvoicesPage() {
   const invoices = invoicesData?.invoices || [];
   const clients = clientsData?.clients || [];
 
-  const filteredInvoices = invoices.filter(
-    (inv) =>
-      (inv.invoiceNumber || '').toLowerCase().includes(search.toLowerCase()) ||
-      (inv.clientId || '').toLowerCase().includes(search.toLowerCase())
+  const filteredInvoices = invoices.filter((inv) =>
+    (inv.number || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const totalPaidCents = invoices
@@ -414,10 +415,14 @@ export default function InvoicesPage() {
               </TableHeader>
               <TableBody>
                 {filteredInvoices.map((inv) => (
-                  <TableRow key={inv.id} className="border-gray-100 hover:bg-gray-50/50">
+                  <TableRow
+                    key={inv.id}
+                    onClick={() => router.push(`/dashboard/invoices/${inv.id}`)}
+                    className="border-gray-100 hover:bg-gray-50/50 cursor-pointer"
+                  >
                     <TableCell className="font-medium text-xs text-[#0a0b0d] flex items-center gap-2">
                       <FileText className="h-4 w-4 text-[#7c828a]" />
-                      <span>{inv.invoiceNumber}</span>
+                      <span>{inv.number}</span>
                     </TableCell>
                     <TableCell className="text-xs text-[#5b616e]">
                       {getClientName(inv.clientId)}
@@ -429,7 +434,11 @@ export default function InvoicesPage() {
                     </TableCell>
                     <TableCell>{getStatusBadge(inv.status)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
+                      {/* The row navigates to the detail page; the actions must not. */}
+                      <div
+                        className="flex items-center justify-end gap-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {inv.status === 'draft' && (
                           <Button
                             variant="ghost"

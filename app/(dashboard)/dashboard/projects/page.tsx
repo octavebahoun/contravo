@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ interface Client {
 }
 
 export default function ProjectsPage() {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isOpen, setIsOpen] = useState(false);
@@ -319,7 +321,11 @@ export default function ProjectsPage() {
               </TableHeader>
               <TableBody>
                 {filteredProjects.map((project) => (
-                  <TableRow key={project.id} className="border-gray-100 hover:bg-gray-50/50">
+                  <TableRow
+                    key={project.id}
+                    onClick={() => router.push(`/dashboard/projects/${project.id}`)}
+                    className="border-gray-100 hover:bg-gray-50/50 cursor-pointer"
+                  >
                     <TableCell className="font-medium text-xs text-[#0a0b0d]">
                       <div>{project.name}</div>
                       {project.description && (
