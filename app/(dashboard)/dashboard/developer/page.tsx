@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Key, Code2, Copy, Check, Plus, ShieldCheck, Webhook, Loader2, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { WebhookEndpoints } from './_components/webhook-endpoints';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -332,44 +333,8 @@ export default function DeveloperPage() {
 
         {/* Tab 2: Webhooks & Code Viewer */}
         <TabsContent value="webhooks">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="rounded-2xl border border-gray-200 bg-white">
-              <CardHeader className="p-5">
-                <CardTitle className="text-sm font-medium text-[#0a0b0d] flex items-center gap-2">
-                  <Webhook className="h-4 w-4 text-[#0052ff]" /> Endpoint Webhook n8n / Make
-                </CardTitle>
-                <CardDescription className="text-xs text-[#5b616e]">
-                  Configurez l'URL qui recevra automatiquement les événements en temps réel.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-5 pt-0 space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-[#0a0b0d]">URL Webhook de Réception</Label>
-                  <Input
-                    defaultValue="https://n8n.votre-domaine.com/webhook/contravo-events"
-                    className="rounded-xl text-xs font-mono"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-[#0a0b0d]">Événements Écoutés</Label>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">invoice.paid</Badge>
-                      <span>Déclenché dès qu'un paiement GeniusPay est encaissé</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-700 mt-2">
-                      <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[10px]">quote.accepted</Badge>
-                      <span>Déclenché lorsqu'un client valide un devis</span>
-                    </div>
-                  </div>
-                </div>
-
-                <Button className="w-full rounded-full bg-[#0052ff] hover:bg-[#003ecc] text-white text-xs font-semibold h-10">
-                  Enregistrer l'Endpoint
-                </Button>
-              </CardContent>
-            </Card>
+          <div className="space-y-6">
+            <WebhookEndpoints />
 
             {/* Zone de Code (JSON Code View) */}
             <Card className="rounded-2xl border border-gray-200 bg-gray-950 text-gray-100">

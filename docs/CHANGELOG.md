@@ -5,6 +5,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — Gestion des endpoints webhook
+- La carte « Endpoint Webhook n8n / Make » de l'écran Développeur **ne faisait rien** : URL de démonstration dans un champ non contrôlé, deux événements codés en dur sur les quarante-six réellement émis, et un bouton « Enregistrer l'Endpoint » **sans `onClick`**. `createWebhookEndpoint()` existait dans la librairie sans aucun appelant, et aucune route ne permettait d'enregistrer une destination : le seul endpoint existant était le `n8n_primary` global, inséré à la main.
+- Écran fonctionnel : création, liste, activation/désactivation, suppression, rotation du secret, envoi d'un événement de test, et historique des livraisons avec renvoi manuel.
+- `lib/webhooks/events.ts` : catalogue des 46 événements, groupés et libellés. Rien ne validait le tableau `events` — un endpoint enregistré avec une faute de frappe était accepté puis **ne se déclenchait jamais**.
+- Le secret de signature n'est affiché qu'à la création et après rotation, comme une clé API : il n'est jamais relisté. Un secret perdu se remplace, il ne se récupère pas.
+- URL refusée si elle n'est pas en HTTPS, ou si l'hôte n'est joignable que depuis notre réseau (`localhost`, `127.*`, `10.*`, `192.168.*`, `172.16-31.*`, `169.254.*`, `.internal`, `.local`) : le dispatcher tourne côté serveur, une telle URL en ferait un forgeur de requêtes contre notre propre infrastructure.
+- Le quota `maxWebhookEndpoints` du plan est enfin appliqué sur ce chemin (1 en Free, 10 en Pro, 50 en Business).
+- `redeliverWebhook()` était écrit et injoignable, faute de route : une livraison abandonnée après ses six tentatives automatiques ne pouvait plus être rejouée.
+- L'endpoint global de la plateforme reste invisible et intouchable depuis une organisation (vérifié : `404` sur suppression comme sur rotation).
+
 ### Fixed — Tous les montants en XOF étaient divisés par 100
 - Le XOF n'a pas de subdivision (exposant ISO 4217 à 0) : une colonne `*_cents` d'un document métier contient des francs entiers, et `25000` vaut 25 000 XOF. Quatre surfaces divisaient malgré tout par 100, dont **les trois que le client voit** :
   - **le PDF joint à chaque email** imprimait « 250,00 XOF » sur une facture de 25 000 XOF ;
