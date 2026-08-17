@@ -4,7 +4,25 @@ Changes to the public HTTP API (`/api/v1/*`) are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- `POST /api/v1/quotes` et `POST /api/v1/invoices` renvoyaient `500` : `emit()` insérait un payload contenant des `bigint` dans `webhook_deliveries.payload` (jsonb), `JSON.stringify` jetait, et comme `emit()` est appelé dans le `db.transaction()` de `createQuote`/`createInvoice`, toute la transaction était annulée. Généralisé par `ec5b9c5`, qui fait matcher l'endpoint global `n8n_primary` pour toutes les organisations. Les payloads sont désormais normalisés en profondeur (`toJsonSafe`).
+- Payload webhook — les champs monétaires (`subtotalCents`, `discountCents`, `taxCents`, `totalCents`, `unitPriceCents`, `amountCents`) sont transmis en **chaînes décimales**, comme le fait déjà l'API pour ces mêmes colonnes. `buildEventPayload` émettait `totalCents` en `number` : le type dépendait du chemin de code ayant construit l'événement. Les `Date` sont sérialisées en ISO 8601.
+- `POST /api/v1/auth/*` et `POST /api/v1/invitations/accept` répondaient `401` avant d'atteindre leur handler : le middleware exigeait un contexte d'auth sur toute route `/api/v1`. Ces routes sont désormais exemptées — elles valident elles-mêmes leurs identifiants.
+- `POST /api/v1/webhooks/excellence-events` et `POST /api/v1/webhooks/geniuspay-excellence` répondaient `401` pour la même raison. Ils sont authentifiés par HMAC et sont maintenant exemptés, au même titre que `/api/v1/webhooks/geniuspay`. `POST /api/v1/webhooks/verify` reste protégé par API key (sinon il devient un oracle de signature ouvert).
+- Les en-têtes internes (`x-auth-type`, `x-user-id`, `x-organization-id`, `x-is-super-admin`, …) fournis par le client sont désormais purgés à l'entrée du middleware ; seules les valeurs qu'il calcule atteignent les handlers.
+- `GET|POST /api/v1/expenses` et `GET|PATCH /api/v1/expenses/:id` renvoyaient `500` (`amountCents` bigint non sérialisable). Les montants sont désormais transmis en chaînes décimales, comme sur les devis et factures. Idem `fileSizeBytes` sur les livrables.
+
 ### Added
+- `GET /api/v1/deliverables`
+  - Liste les livrables de toute l'organisation (filtres `projectId`, `status`, `page`, `limit`).
+  - Scope requis : `deliverables:read`.
+  - La création reste sur `POST /api/v1/projects/:id/deliverables`.
+
+### Changed
+- Enforcement des quotas MVP6 à la création : `POST /api/v1/clients`, `POST /api/v1/projects`, `POST /api/v1/api-keys` et `POST /api/v1/organizations/:slug/invitations` renvoient `403 QUOTA_EXCEEDED` avec `details: { quotaKey, current, limit, planId }` lorsque le plan est saturé. Le siège est réellement consommé par `POST /api/v1/invitations/accept`, qui vérifie aussi le quota.
+- Les appels `/api/v1/*` authentifiés sont comptabilisés dans `quota_period_usage.api_calls_count` (métrage mensuel MVP6). Un échec de comptage n'interrompt jamais la requête.
+- Le palier de rate limiting `business` existe désormais (5 000 req/min) : une org Business retombait silencieusement sur la limite Free. `enterprise` est conservé comme alias.
+
 - `POST /api/v1/webhooks/excellence-events`
   - Reçoit les events poussés par n8n vers Excellence (flux inverse du webhook GeniusPay).
   - Headers : `X-Webhook-Signature: t=<unix>,v1=<hex>`, `X-Webhook-Event: <event>`.
