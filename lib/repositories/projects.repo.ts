@@ -4,7 +4,7 @@ import { tenantDb } from '@/lib/db/tenant-db';
 import { projects, projectMembers, invoices } from '@/lib/db/schema';
 import { ApiError } from '@/lib/rbac';
 import { createAuditLog } from '@/lib/audit';
-import { emit } from '@/lib/webhooks';
+import { emit, withOutbox } from '@/lib/webhooks';
 import { getNextSequenceNumber } from './sequences.repo';
 
 export type CreateProjectInput = Omit<
@@ -20,7 +20,7 @@ export async function createProject(
   actorUserId?: string | null,
   ipAddress?: string | null
 ) {
-  return await db.transaction(async (tx) => {
+  return await withOutbox(async (tx, outbox) => {
     const currentYear = new Date().getFullYear();
     const code = await getNextSequenceNumber(tx, organizationId, 'project', currentYear);
 
@@ -44,7 +44,7 @@ export async function createProject(
       metadata: { code, name: project.name },
     });
 
-    await emit('project.created', organizationId, { project });
+    await outbox.emit('project.created', organizationId, { project });
 
     return project;
   });

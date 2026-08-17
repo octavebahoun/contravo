@@ -1,8 +1,10 @@
 import crypto from 'crypto';
 import { db } from '@/lib/db/drizzle';
 import { webhookEndpoints, webhookDeliveries } from '@/lib/db/schema';
-import { eq, and, or, sql } from 'drizzle-orm';
+import { desc, eq, and, or, sql } from 'drizzle-orm';
 import { ApiError } from '@/lib/rbac';
+import { assertQuota } from '@/lib/billing/quotas.service';
+import { WEBHOOK_TEST_EVENT, isKnownWebhookEvent } from './events';
 
 export type CreateWebhookEndpointParams = {
   organizationId: string;
@@ -10,28 +12,274 @@ export type CreateWebhookEndpointParams = {
   events: string[];
 };
 
+function generateWebhookSecret(): string {
+  return 'whsec_' + crypto.randomBytes(24).toString('base64url');
+}
+
+/**
+ * Validates a destination URL an organization asked us to POST to.
+ *
+ * HTTPS is required, and hosts that only resolve inside our own network are
+ * refused: the dispatcher runs server-side, so an endpoint pointed at
+ * `https://127.0.0.1/...` or a link-local address would turn the webhook feature
+ * into a request forger against our own infrastructure.
+ */
+function assertDispatchableUrl(rawUrl: string): void {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new ApiError('VALIDATION_ERROR', 'URL du webhook invalide.', 400);
+  }
+
+  if (url.protocol !== 'https:') {
+    throw new ApiError('VALIDATION_ERROR', 'L’URL du webhook doit utiliser HTTPS.', 400);
+  }
+
+  const host = url.hostname.toLowerCase();
+  const isPrivate =
+    host === 'localhost' ||
+    host.endsWith('.localhost') ||
+    host === '::1' ||
+    host === '0.0.0.0' ||
+    /^127\./.test(host) ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^169\.254\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+    host.endsWith('.internal') ||
+    host.endsWith('.local');
+
+  if (isPrivate) {
+    throw new ApiError(
+      'VALIDATION_ERROR',
+      'L’URL doit être joignable publiquement : une adresse locale ou privée est refusée.',
+      400
+    );
+  }
+}
+
+/**
+ * Validates the requested subscription list against the event catalogue.
+ *
+ * Nothing used to check these names, so an endpoint saved with a typo was
+ * accepted and then silently never fired.
+ */
+function assertKnownEvents(events: string[]): void {
+  if (events.length === 0) {
+    throw new ApiError('VALIDATION_ERROR', 'Sélectionnez au moins un événement.', 400);
+  }
+
+  const unknown = events.filter((event) => !isKnownWebhookEvent(event));
+  if (unknown.length > 0) {
+    throw new ApiError(
+      'VALIDATION_ERROR',
+      `Événements inconnus : ${unknown.join(', ')}.`,
+      400
+    );
+  }
+}
+
+/**
+ * Fields safe to return: everything but the signing secret.
+ *
+ * The secret is shown once, at creation and after a rotation, like an API key.
+ */
+export function serializeWebhookEndpoint<T extends { secret?: string }>(endpoint: T) {
+  const { secret: _secret, ...rest } = endpoint;
+  return rest;
+}
+
 export async function createWebhookEndpoint(
   params: CreateWebhookEndpointParams
 ): Promise<any> {
-  if (!params.url.startsWith('https://')) {
-    throw new ApiError('VALIDATION_ERROR', 'Webhook URL must use HTTPS', 400);
-  }
+  assertDispatchableUrl(params.url);
+  assertKnownEvents(params.events);
 
-  // Generate 32 bytes secret
-  const secret = 'whsec_' + crypto.randomBytes(24).toString('base64url');
+  // MVP6 quotas: the plan caps how many endpoints an organization may register,
+  // and nothing enforced it on this path.
+  await assertQuota(params.organizationId, 'maxWebhookEndpoints');
 
   const [endpoint] = await db
     .insert(webhookEndpoints)
     .values({
       organizationId: params.organizationId,
       url: params.url,
-      secret,
+      secret: generateWebhookSecret(),
       events: params.events,
       active: true,
+      kind: 'generic',
     })
     .returning();
 
   return endpoint;
+}
+
+/**
+ * Endpoints belonging to one organization.
+ *
+ * `n8n_primary` is excluded: it is the platform's own global endpoint, carries
+ * no `organization_id`, and is not an organization's to read or change.
+ */
+export async function listWebhookEndpoints(organizationId: string) {
+  return db
+    .select()
+    .from(webhookEndpoints)
+    .where(
+      and(
+        eq(webhookEndpoints.organizationId, organizationId),
+        eq(webhookEndpoints.kind, 'generic')
+      )
+    )
+    .orderBy(webhookEndpoints.createdAt);
+}
+
+async function loadOwnedEndpoint(endpointId: string, organizationId: string) {
+  const [endpoint] = await db
+    .select()
+    .from(webhookEndpoints)
+    .where(
+      and(
+        eq(webhookEndpoints.id, endpointId),
+        eq(webhookEndpoints.organizationId, organizationId),
+        eq(webhookEndpoints.kind, 'generic')
+      )
+    )
+    .limit(1);
+
+  if (!endpoint) {
+    throw new ApiError('NOT_FOUND', 'Endpoint webhook introuvable.', 404);
+  }
+
+  return endpoint;
+}
+
+export async function updateWebhookEndpoint(
+  endpointId: string,
+  organizationId: string,
+  input: { url?: string; events?: string[]; active?: boolean }
+) {
+  await loadOwnedEndpoint(endpointId, organizationId);
+
+  if (input.url !== undefined) assertDispatchableUrl(input.url);
+  if (input.events !== undefined) assertKnownEvents(input.events);
+
+  const [updated] = await db
+    .update(webhookEndpoints)
+    .set({
+      ...(input.url !== undefined ? { url: input.url } : {}),
+      ...(input.events !== undefined ? { events: input.events } : {}),
+      ...(input.active !== undefined ? { active: input.active } : {}),
+      updatedAt: new Date(),
+    })
+    .where(eq(webhookEndpoints.id, endpointId))
+    .returning();
+
+  return updated;
+}
+
+export async function deleteWebhookEndpoint(endpointId: string, organizationId: string) {
+  await loadOwnedEndpoint(endpointId, organizationId);
+
+  // `webhook_deliveries.endpoint_id` cascades, so the delivery history goes with
+  // it. That is deliberate: a deleted endpoint's history is not addressable.
+  const [deleted] = await db
+    .delete(webhookEndpoints)
+    .where(eq(webhookEndpoints.id, endpointId))
+    .returning();
+
+  return deleted;
+}
+
+/** Issues a new signing secret, returned once. Old signatures stop verifying. */
+export async function rotateWebhookSecret(endpointId: string, organizationId: string) {
+  await loadOwnedEndpoint(endpointId, organizationId);
+
+  const [updated] = await db
+    .update(webhookEndpoints)
+    .set({ secret: generateWebhookSecret(), updatedAt: new Date() })
+    .where(eq(webhookEndpoints.id, endpointId))
+    .returning();
+
+  return updated;
+}
+
+/**
+ * Sends a signed test event to one endpoint and waits for the result.
+ *
+ * Unlike `emit()`, this awaits the dispatch: the point is to tell the user
+ * immediately whether their consumer answered, and with what status.
+ */
+export async function sendWebhookTest(endpointId: string, organizationId: string) {
+  const endpoint = await loadOwnedEndpoint(endpointId, organizationId);
+
+  const payload = toJsonSafe({
+    id: `evt_${crypto.randomBytes(16).toString('hex')}`,
+    type: WEBHOOK_TEST_EVENT,
+    created: new Date().toISOString(),
+    organizationId,
+    data: { message: 'Événement de test envoyé depuis Contravo.' },
+    apiVersion: 'v1',
+  });
+
+  const [delivery] = await db
+    .insert(webhookDeliveries)
+    .values({
+      endpointId: endpoint.id,
+      event: WEBHOOK_TEST_EVENT,
+      payload,
+      status: 'pending',
+      attempts: 0,
+    })
+    .returning();
+
+  await dispatchDelivery(delivery.id, endpoint.url, endpoint.secret, payload);
+
+  const [result] = await db
+    .select()
+    .from(webhookDeliveries)
+    .where(eq(webhookDeliveries.id, delivery.id))
+    .limit(1);
+
+  return result;
+}
+
+/** Recent delivery attempts for the organization's own endpoints. */
+export async function listWebhookDeliveries(
+  organizationId: string,
+  options?: { endpointId?: string; status?: string; limit?: number }
+) {
+  const conditions = [
+    eq(webhookEndpoints.organizationId, organizationId),
+    eq(webhookEndpoints.kind, 'generic'),
+  ];
+
+  if (options?.endpointId) {
+    conditions.push(eq(webhookDeliveries.endpointId, options.endpointId));
+  }
+  if (options?.status) {
+    conditions.push(eq(webhookDeliveries.status, options.status));
+  }
+
+  return db
+    .select({
+      id: webhookDeliveries.id,
+      endpointId: webhookDeliveries.endpointId,
+      event: webhookDeliveries.event,
+      status: webhookDeliveries.status,
+      attempts: webhookDeliveries.attempts,
+      lastResponseCode: webhookDeliveries.lastResponseCode,
+      lastResponseBody: webhookDeliveries.lastResponseBody,
+      nextRetryAt: webhookDeliveries.nextRetryAt,
+      deliveredAt: webhookDeliveries.deliveredAt,
+      createdAt: webhookDeliveries.createdAt,
+      endpointUrl: webhookEndpoints.url,
+    })
+    .from(webhookDeliveries)
+    .innerJoin(webhookEndpoints, eq(webhookDeliveries.endpointId, webhookEndpoints.id))
+    .where(and(...conditions))
+    .orderBy(desc(webhookDeliveries.createdAt))
+    .limit(Math.min(options?.limit ?? 50, 200));
 }
 
 /** Value that both `JSON.stringify` and a jsonb column accept. */
@@ -94,11 +342,35 @@ export function signPayload(payload: string, secret: string, timestamp: number):
   return `t=${timestamp},v1=${hmac.digest('hex')}`;
 }
 
-export async function emit(
+/**
+ * The transaction object drizzle hands to a `db.transaction` callback.
+ *
+ * Derived from `db` rather than written out: typing it as `any` would silently
+ * strip the inference from every `tx.select()` in the repositories.
+ */
+export type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** A queued delivery, ready to be sent once its transaction has committed. */
+export type PendingDispatch = {
+  deliveryId: string;
+  url: string;
+  secret: string;
+  payload: any;
+};
+
+/**
+ * Writes the outbox rows for one event and returns what still has to be sent.
+ *
+ * Takes the connection to write through, so it can run inside a caller's
+ * transaction: the rows then commit — or roll back — atomically with the
+ * business write that produced them.
+ */
+async function queueDeliveries(
+  conn: typeof db | DbTransaction,
   event: string,
   organizationId: string | null,
   data: any
-): Promise<void> {
+): Promise<PendingDispatch[]> {
   // Account-level events (password reset, for one) belong to no organization.
   // They only reach the global n8n_primary endpoint; feeding `null` into the
   // uuid comparison below would make Postgres reject the whole query.
@@ -110,14 +382,17 @@ export async function emit(
     : eq(webhookEndpoints.kind, 'n8n_primary');
 
   // Find matching active endpoints (specific organization OR global n8n_primary)
-  const endpoints = await db
+  const endpoints = await conn
     .select()
     .from(webhookEndpoints)
     .where(and(eq(webhookEndpoints.active, true), scope));
 
   const matchedEndpoints = endpoints.filter(
-    (ep) => ep.events.includes(event) || ep.events.includes('*')
+    (ep: typeof webhookEndpoints.$inferSelect) =>
+      ep.events.includes(event) || ep.events.includes('*')
   );
+
+  const pending: PendingDispatch[] = [];
 
   for (const ep of matchedEndpoints) {
     const eventId = `evt_${crypto.randomBytes(16).toString('hex')}`;
@@ -134,7 +409,7 @@ export async function emit(
       apiVersion: 'v1',
     });
 
-    const [delivery] = await db
+    const [delivery] = await conn
       .insert(webhookDeliveries)
       .values({
         endpointId: ep.id,
@@ -145,11 +420,83 @@ export async function emit(
       })
       .returning();
 
-    // Trigger delivery in background (does not block application execution)
-    dispatchDelivery(delivery.id, ep.url, ep.secret, payload).catch((err) => {
-      console.error(`Error dispatching webhook delivery ${delivery.id}:`, err);
+    pending.push({ deliveryId: delivery.id, url: ep.url, secret: ep.secret, payload });
+  }
+
+  return pending;
+}
+
+/** Fires queued deliveries in the background, never throwing at the caller. */
+export function dispatchPending(pending: PendingDispatch[]): void {
+  for (const item of pending) {
+    dispatchDelivery(item.deliveryId, item.url, item.secret, item.payload).catch((err) => {
+      console.error(`Error dispatching webhook delivery ${item.deliveryId}:`, err);
     });
   }
+}
+
+/**
+ * Queues an event and sends it immediately.
+ *
+ * Correct for call sites that are *not* inside a transaction. Inside one, use
+ * {@link withOutbox} instead — see the note there for what goes wrong otherwise.
+ */
+export async function emit(
+  event: string,
+  organizationId: string | null,
+  data: any
+): Promise<void> {
+  const pending = await queueDeliveries(db, event, organizationId, data);
+  dispatchPending(pending);
+}
+
+/** Collects events raised inside a transaction. */
+export type Outbox = {
+  emit(event: string, organizationId: string | null, data: any): Promise<void>;
+};
+
+/**
+ * Runs a transaction whose events are queued with it and sent after it commits.
+ *
+ * `emit()` used to be called from inside `db.transaction()` while writing
+ * through the *global* connection, which produced three distinct faults:
+ *
+ * 1. The delivery row landed outside the transaction. A business write that
+ *    rolled back afterwards still left a queued — and already sent — webhook for
+ *    an entity that never existed.
+ * 2. `dispatchDelivery` fired before the commit, so a consumer could call back
+ *    and read the entity before it was visible. n8n fetching a quote it had just
+ *    been told about, and getting a 404, is that race.
+ * 3. Anything thrown while building or inserting the event aborted the business
+ *    transaction. A `bigint` in a payload once rolled back the invoice that
+ *    caused it.
+ *
+ * @example
+ * return withOutbox(async (tx, outbox) => {
+ *   const [row] = await tx.insert(quotes).values(...).returning();
+ *   await outbox.emit('quote.created', organizationId, { quote: row });
+ *   return row;
+ * });
+ */
+export async function withOutbox<T>(
+  fn: (tx: DbTransaction, outbox: Outbox) => Promise<T>
+): Promise<T> {
+  const pending: PendingDispatch[] = [];
+
+  const result = await db.transaction(async (tx) => {
+    const outbox: Outbox = {
+      async emit(event, organizationId, data) {
+        pending.push(...(await queueDeliveries(tx, event, organizationId, data)));
+      },
+    };
+
+    return fn(tx, outbox);
+  });
+
+  // Only now is what the consumer will come back to read actually visible.
+  dispatchPending(pending);
+
+  return result;
 }
 
 /** Maximum attempts before a delivery is considered exhausted (see backoff below). */

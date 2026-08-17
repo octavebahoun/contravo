@@ -9,6 +9,7 @@ import {
   generateQuotePdf,
 } from '@/lib/pdf/generate.service';
 import { getAppUrl } from '@/lib/config/app-url';
+import { formatMoney } from '@/lib/money';
 
 /**
  * Builds the `data` payload carried by outbound webhook events (MVP3 §6).
@@ -177,12 +178,25 @@ export async function buildEventPayload(
     status: entity.status ?? null,
   };
 
+  const currency: string = entity.currency ?? 'XOF';
+
   if (entity.totalCents !== undefined && entity.totalCents !== null) {
     // Decimal string, like the API returns for the same column and like
     // `toJsonSafe` produces for the raw rows other call sites emit. `Number()`
     // here made the field's type depend on which code path built the event.
     payload.totalCents = String(entity.totalCents);
-    payload.currency = entity.currency ?? null;
+    payload.currency = currency;
+    // Preformatted here on purpose: the email templates run inside n8n Code
+    // nodes, which cannot import `lib/money.ts`. Sending the label rather than
+    // asking them to divide keeps the XOF convention in exactly one place —
+    // it had already drifted across four surfaces once.
+    payload.totalLabel = formatMoney(entity.totalCents, currency);
+  }
+
+  // What a dunning email actually needs to state.
+  if (entity.amountDueCents !== undefined && entity.amountDueCents !== null) {
+    payload.amountDueCents = String(entity.amountDueCents);
+    payload.amountDueLabel = formatMoney(entity.amountDueCents, currency);
   }
 
   try {

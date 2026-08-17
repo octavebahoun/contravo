@@ -4,7 +4,7 @@ import { tenantDb } from '@/lib/db/tenant-db';
 import { reviews, reviewRequests, projects, clients } from '@/lib/db/schema';
 import { ApiError } from '@/lib/rbac';
 import { createAuditLog } from '@/lib/audit';
-import { emit } from '@/lib/webhooks';
+import { emit, withOutbox } from '@/lib/webhooks';
 import { buildEventPayload } from '@/lib/webhooks/payload-builder';
 
 export type CreateReviewRequestInput = Omit<
@@ -90,7 +90,7 @@ export async function submitReview(
   },
   ipAddress?: string | null
 ) {
-  return await db.transaction(async (tx) => {
+  return await withOutbox(async (tx, outbox) => {
     // 1. Get review request
     const [request] = await tx
       .select()
@@ -139,7 +139,7 @@ export async function submitReview(
       metadata: { rating: review.rating },
     });
 
-    await emit('review.created', organizationId, { review });
+    await outbox.emit('review.created', organizationId, { review });
 
     return review;
   });

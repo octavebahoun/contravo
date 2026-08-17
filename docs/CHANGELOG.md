@@ -5,6 +5,44 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed — Next épinglé en 15.5.23, sortie des canary
+- Le projet tournait sur `15.6.0-canary.59` : une canary d'une version **jamais sortie en stable**, la ligne étant passée de 15.5.x à 16.x. C'est le suspect principal du crash `removeChild` de `/dashboard/contracts`, dont le balisage avait été audité et jugé valide. 15.5.23 est le tag `backport`, c'est-à-dire la ligne 15.5 encore maintenue.
+- `experimental.ppr` et `experimental.clientSegmentCache` ont été retirés : réservés aux canary, `next build` refuse de démarrer avec eux sur une version stable. Ce sont des optimisations de rendu — les routes qui étaient en pré-rendu partiel sont désormais simplement rendues à la demande, sans perte fonctionnelle.
+- `next build` réécrit lui-même `tsconfig.json` (`"jsx": "react-jsx"` → `"preserve"`, Next compilant le JSX via SWC). Vitest héritait de ce réglage et a cessé de transformer le JSX : **tous les tests `.tsx`, et tous les `.ts` important le service PDF, ne se parsaient plus**. La configuration JSX est maintenant portée par `vitest.config.mjs`, via `oxc` puisque Vite 8 transforme avec oxc/rolldown et non plus esbuild.
+- Les 16 écrans du tableau de bord et les 100 tests passent sur la version épinglée. Le crash `removeChild` lui-même se constate au clic : à confirmer côté navigateur.
+
+### Fixed — Un événement était émis avant que l'écriture qui le justifie soit commitée
+- `emit()` était appelé depuis l'intérieur de `db.transaction()` mais écrivait par la connexion **globale**. Trois défauts distincts en découlaient :
+  1. la ligne d'outbox atterrissait hors de la transaction — une écriture métier annulée ensuite laissait quand même un webhook en file, **et déjà envoyé**, pour une entité qui n'a jamais existé ;
+  2. `dispatchDelivery` partait avant le commit, donc un consommateur pouvait rappeler et lire l'entité avant qu'elle soit visible. n8n récupérant un devis qu'on venait de lui annoncer, et recevant un 404, c'est cette course ;
+  3. toute erreur pendant la construction ou l'insertion de l'événement annulait la transaction métier — un `bigint` dans un payload avait déjà fait annuler la facture qui l'avait produit.
+- `withOutbox(fn)` remplace `db.transaction(fn)` sur les 9 transactions concernées : les événements sont insérés **avec** la transaction et dépêchés **après** son commit.
+- `tests/webhook-outbox.test.ts` fige l'invariant, dont le cas que l'ancien code ne pouvait pas passer : un événement émis puis suivi d'un échec ne laisse aucune ligne derrière lui.
+
+### Fixed — Un devis ou une facture créé directement en « envoyé » n'envoyait jamais son email
+- `buildEventPayload(withPdfUrl)` était appelé dans la transaction de création. Il rend le PDF, et `loadQuotePdfData` lit par la connexion globale : la ligne en cours de création lui était **invisible**, il jetait `NOT_FOUND`, et le `catch` avalait l'événement `quote.sent` / `invoice.sent` en entier. Or c'est exactement ce que fait le formulaire du tableau de bord, qui crée avec `status: 'sent'`.
+- L'émission a lieu après le commit. Vérifié : `quote.sent` part désormais avec son `pdfUrl` et son lien portail.
+- Un devis créé directement en `sent` ne renseignait pas `sentAt` et affichait « Envoyé le — » pour toujours.
+
+### Added — Relances de facture J+7 / J+14 / J+30
+- MVP5 §3.2 prévoit ces relances, et toutes les pièces existaient — la transition `mark_overdue`, l'événement `invoice.overdue`, le workflow `email_invoice_overdue_v1` — mais **rien ne les déclenchait**. Le seul chemin était un humain cliquant un bouton : une facture impayée était silencieusement oubliée.
+- `POST /api/internal/cron/invoice-reminders`, authentifié par `CRON_SECRET` en comparaison à temps constant, et le workflow n8n `cron_invoice_reminders_v1` qui l'appelle chaque jour à 8 h.
+- Table `invoice_reminders` (migration `0008`) : l'index unique `(invoice_id, stage)` **est** le mécanisme d'idempotence. La passe tourne tous les jours ; sans lui, chaque facture en retard serait relancée quotidiennement. La relance est réclamée avant tout envoi, et la ligne est relâchée si l'envoi échoue — sinon une panne passagère produirait une relance jamais envoyée dont la ligne affirme le contraire.
+- Le palier retenu est le plus élevé atteint, pas le suivant : une facture découverte tardivement (première exécution, ou reprise après panne) reçoit la relance qu'elle mérite au lieu de rejouer toute l'échelle.
+- Une facture soldée ou annulée n'est jamais relancée : la sélection s'appuie sur `amount_due_cents`, colonne générée.
+- Le même événement partant quatre fois, le template escalade désormais son ton (rappel → relance → deuxième → dernière) via `reminderStage`. Il recevait auparavant quatre fois exactement le même message.
+- `payload.totalLabel` et `payload.amountDueLabel` sont préformatés par l'application : les templates tournent dans des nœuds Code n8n qui ne peuvent pas importer `lib/money.ts`, et la convention XOF avait déjà divergé sur quatre surfaces.
+
+### Added — Gestion des endpoints webhook
+- La carte « Endpoint Webhook n8n / Make » de l'écran Développeur **ne faisait rien** : URL de démonstration dans un champ non contrôlé, deux événements codés en dur sur les quarante-six réellement émis, et un bouton « Enregistrer l'Endpoint » **sans `onClick`**. `createWebhookEndpoint()` existait dans la librairie sans aucun appelant, et aucune route ne permettait d'enregistrer une destination : le seul endpoint existant était le `n8n_primary` global, inséré à la main.
+- Écran fonctionnel : création, liste, activation/désactivation, suppression, rotation du secret, envoi d'un événement de test, et historique des livraisons avec renvoi manuel.
+- `lib/webhooks/events.ts` : catalogue des 46 événements, groupés et libellés. Rien ne validait le tableau `events` — un endpoint enregistré avec une faute de frappe était accepté puis **ne se déclenchait jamais**.
+- Le secret de signature n'est affiché qu'à la création et après rotation, comme une clé API : il n'est jamais relisté. Un secret perdu se remplace, il ne se récupère pas.
+- URL refusée si elle n'est pas en HTTPS, ou si l'hôte n'est joignable que depuis notre réseau (`localhost`, `127.*`, `10.*`, `192.168.*`, `172.16-31.*`, `169.254.*`, `.internal`, `.local`) : le dispatcher tourne côté serveur, une telle URL en ferait un forgeur de requêtes contre notre propre infrastructure.
+- Le quota `maxWebhookEndpoints` du plan est enfin appliqué sur ce chemin (1 en Free, 10 en Pro, 50 en Business).
+- `redeliverWebhook()` était écrit et injoignable, faute de route : une livraison abandonnée après ses six tentatives automatiques ne pouvait plus être rejouée.
+- L'endpoint global de la plateforme reste invisible et intouchable depuis une organisation (vérifié : `404` sur suppression comme sur rotation).
+
 ### Fixed — Tous les montants en XOF étaient divisés par 100
 - Le XOF n'a pas de subdivision (exposant ISO 4217 à 0) : une colonne `*_cents` d'un document métier contient des francs entiers, et `25000` vaut 25 000 XOF. Quatre surfaces divisaient malgré tout par 100, dont **les trois que le client voit** :
   - **le PDF joint à chaque email** imprimait « 250,00 XOF » sur une facture de 25 000 XOF ;

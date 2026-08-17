@@ -1,1 +1,1 @@
-Rappel — Facture {{number}} impayée
+{{reminder.label}} — Facture {{number}} : {{amountDueLabel}} à régler

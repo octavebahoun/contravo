@@ -4,7 +4,7 @@ import { tenantDb } from '@/lib/db/tenant-db';
 import { deliverables, projects } from '@/lib/db/schema';
 import { ApiError } from '@/lib/rbac';
 import { createAuditLog } from '@/lib/audit';
-import { emit } from '@/lib/webhooks';
+import { emit, withOutbox } from '@/lib/webhooks';
 
 /**
  * `fileSizeBytes` is a bigint column, which `NextResponse.json` cannot
@@ -224,7 +224,7 @@ export async function resubmitDeliverable(
   actorUserId?: string | null,
   ipAddress?: string | null
 ) {
-  return await db.transaction(async (tx) => {
+  return await withOutbox(async (tx, outbox) => {
     // 1. Get parent deliverable
     const [parent] = await tx
       .select()
@@ -269,7 +269,7 @@ export async function resubmitDeliverable(
       metadata: { parentId, version: deliverable.version },
     });
 
-    await emit('deliverable.resubmitted', organizationId, { deliverable, parentId });
+    await outbox.emit('deliverable.resubmitted', organizationId, { deliverable, parentId });
 
     return deliverable;
   });

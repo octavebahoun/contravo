@@ -4,7 +4,7 @@ import { tenantDb } from '@/lib/db/tenant-db';
 import { contracts, clients, projects } from '@/lib/db/schema';
 import { ApiError } from '@/lib/rbac';
 import { createAuditLog } from '@/lib/audit';
-import { emit } from '@/lib/webhooks';
+import { emit, withOutbox } from '@/lib/webhooks';
 import { getNextSequenceNumber } from './sequences.repo';
 
 export type CreateContractInput = Omit<
@@ -25,7 +25,7 @@ export async function createContract(
   actorUserId?: string | null,
   ipAddress?: string | null
 ) {
-  return await db.transaction(async (tx) => {
+  return await withOutbox(async (tx, outbox) => {
     // 1. Validate project and client exist
     const [project] = await tx
       .select()
@@ -69,7 +69,7 @@ export async function createContract(
       metadata: { number, title: contract.title },
     });
 
-    await emit('contract.created', organizationId, { contract });
+    await outbox.emit('contract.created', organizationId, { contract });
 
     return contract;
   });

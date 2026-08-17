@@ -16,6 +16,16 @@ Changes to the public HTTP API (`/api/v1/*`) are documented here.
 - Le montant transmis à GeniusPay était divisé par 100, y compris pour le XOF qui n'a pas de subdivision : une facture de 25 000 XOF aurait été encaissée 250 XOF. Le webhook centuplait symétriquement les frais et le montant net, et créditait le montant de l'intention plutôt que celui réellement confirmé par la passerelle.
 
 ### Added
+- Endpoints webhook sortants (scopes `webhooks:read` / `webhooks:manage`) :
+  - `GET /api/v1/webhooks/endpoints` — liste les endpoints de l'organisation. **Ne renvoie jamais le secret.** Le `n8n_primary` global de la plateforme est exclu.
+  - `POST /api/v1/webhooks/endpoints` — `{ url, events }`. Renvoie `201` avec le `secret`, **affiché une seule fois**. `400` si l'URL n'est pas HTTPS, si l'hôte est privé/local, ou si un nom d'événement est inconnu ; `403 QUOTA_EXCEEDED` au-delà du quota du plan.
+  - `PATCH /api/v1/webhooks/endpoints/:id` — `{ url?, events?, active? }`.
+  - `DELETE /api/v1/webhooks/endpoints/:id` — l'historique de livraison cascade.
+  - `POST /api/v1/webhooks/endpoints/:id/rotate-secret` — nouveau secret, renvoyé une fois. Les anciennes signatures cessent d'être valides.
+  - `POST /api/v1/webhooks/endpoints/:id/test` — envoie un événement `webhook.test` signé et **attend** la réponse : `{ deliveryId, status, attempts, responseCode, responseBody }`.
+  - `GET /api/v1/webhooks/deliveries` — historique (`endpointId`, `status`, `limit`, plafonné à 200).
+  - `POST /api/v1/webhooks/deliveries/:id/redeliver` — rejoue une livraison, y compris `exhausted`.
+  - Les endpoints d'une autre organisation, et celui de la plateforme, répondent `404`.
 - `POST /api/v1/portal/invoices/:id/pay`
   - Ouvre un paiement en ligne depuis le portail client. Authentifiée par jeton public, action `pay`.
   - Réponse `201` : `{ paymentIntentId, checkoutUrl, amountCents, currency, expiresAt }`.
