@@ -5,6 +5,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — Relances de facture J+7 / J+14 / J+30
+- MVP5 §3.2 prévoit ces relances, et toutes les pièces existaient — la transition `mark_overdue`, l'événement `invoice.overdue`, le workflow `email_invoice_overdue_v1` — mais **rien ne les déclenchait**. Le seul chemin était un humain cliquant un bouton : une facture impayée était silencieusement oubliée.
+- `POST /api/internal/cron/invoice-reminders`, authentifié par `CRON_SECRET` en comparaison à temps constant, et le workflow n8n `cron_invoice_reminders_v1` qui l'appelle chaque jour à 8 h.
+- Table `invoice_reminders` (migration `0008`) : l'index unique `(invoice_id, stage)` **est** le mécanisme d'idempotence. La passe tourne tous les jours ; sans lui, chaque facture en retard serait relancée quotidiennement. La relance est réclamée avant tout envoi, et la ligne est relâchée si l'envoi échoue — sinon une panne passagère produirait une relance jamais envoyée dont la ligne affirme le contraire.
+- Le palier retenu est le plus élevé atteint, pas le suivant : une facture découverte tardivement (première exécution, ou reprise après panne) reçoit la relance qu'elle mérite au lieu de rejouer toute l'échelle.
+- Une facture soldée ou annulée n'est jamais relancée : la sélection s'appuie sur `amount_due_cents`, colonne générée.
+- Le même événement partant quatre fois, le template escalade désormais son ton (rappel → relance → deuxième → dernière) via `reminderStage`. Il recevait auparavant quatre fois exactement le même message.
+- `payload.totalLabel` et `payload.amountDueLabel` sont préformatés par l'application : les templates tournent dans des nœuds Code n8n qui ne peuvent pas importer `lib/money.ts`, et la convention XOF avait déjà divergé sur quatre surfaces.
+
 ### Added — Gestion des endpoints webhook
 - La carte « Endpoint Webhook n8n / Make » de l'écran Développeur **ne faisait rien** : URL de démonstration dans un champ non contrôlé, deux événements codés en dur sur les quarante-six réellement émis, et un bouton « Enregistrer l'Endpoint » **sans `onClick`**. `createWebhookEndpoint()` existait dans la librairie sans aucun appelant, et aucune route ne permettait d'enregistrer une destination : le seul endpoint existant était le `n8n_primary` global, inséré à la main.
 - Écran fonctionnel : création, liste, activation/désactivation, suppression, rotation du secret, envoi d'un événement de test, et historique des livraisons avec renvoi manuel.

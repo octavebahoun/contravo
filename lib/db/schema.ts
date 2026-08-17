@@ -548,6 +548,33 @@ export const invoicePayments = pgTable('invoice_payments', {
   index('idx_payments_invoice').on(table.invoiceId),
 ]);
 
+/**
+ * One row per dunning notice actually sent for an invoice (MVP5 §3.2).
+ *
+ * The unique index on `(invoice_id, stage)` *is* the idempotency mechanism: the
+ * sweep runs daily, so without it every overdue invoice would be chased again
+ * every single day. `stage` is the number of days past due — `0` for the notice
+ * sent when the due date passes, then 7, 14 and 30.
+ */
+export const invoiceReminders = pgTable('invoice_reminders', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
+  invoiceId: uuid('invoice_id')
+    .notNull()
+    .references(() => invoices.id, { onDelete: 'cascade' }),
+  /** Days past the due date this notice corresponds to: 0 | 7 | 14 | 30. */
+  stage: integer('stage').notNull(),
+  /** Days actually elapsed when it was sent; may exceed `stage` after an outage. */
+  daysOverdue: integer('days_overdue').notNull(),
+  amountDueCents: bigint('amount_due_cents', { mode: 'bigint' }).notNull(),
+  sentAt: timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex('invoice_reminders_invoice_stage_unique_idx').on(table.invoiceId, table.stage),
+  index('idx_invoice_reminders_org').on(table.organizationId, table.sentAt),
+]);
+
 export const expenses = pgTable('expenses', {
   id: uuid('id').primaryKey().defaultRandom(),
   organizationId: uuid('organization_id')
