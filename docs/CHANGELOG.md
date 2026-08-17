@@ -5,6 +5,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed — L'envoi de facture répondait 500
+- `invoice.state.ts` affectait `updateFields.issueDate = new Date()`. `issue_date` est une colonne `date`, que drizzle mappe en mode chaîne : l'objet `Date` atteignait postgres.js non sérialisé et faisait jeter `Buffer.byteLength`. **`POST /api/v1/invoices/:id/transition {action:'send'}` échouait systématiquement en 500**, donc aucune facture ne pouvait être envoyée, y compris par le bouton « Envoyer » de l'écran Factures. Les 8 colonnes `date` du schéma ont été auditées : c'était le seul cas.
+- Chaîne complète validée en production sur FAC-2026-0003 : routeur n8n (branche `invoice.sent`) → `email_invoice_sent_v1` → `Has PDF?` en branche `true` → téléchargement R2 sans credential → pièce jointe de 3467 octets (`%PDF-`) → Resend accepté (`bcff7a45-8a1a-4c3e-98cf-41bb218c294c`).
+
+
 ### Fixed — Le routeur n8n ne pouvait pas être publié
 - Les 15 nœuds `executeWorkflow` de `router_dispatch_v1` référençaient leur sous-workflow avec `mode: "name"`. n8n ne résout que `list`, `id` et `url` : la référence était donc **impossible à résoudre**, et l'import échouait à la publication avec « references workflow X which is not published » pour chaque branche, alors que tous les sous-workflows étaient bien publiés.
 - `n8n/scripts/lint.ts` refuse désormais tout mode que n8n ne sait pas résoudre, pour que le dépôt ne puisse plus livrer un routeur impubliable.
