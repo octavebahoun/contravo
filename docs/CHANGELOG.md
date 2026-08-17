@@ -5,6 +5,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed — Le routeur n8n ne pouvait pas être publié
+- Les 15 nœuds `executeWorkflow` de `router_dispatch_v1` référençaient leur sous-workflow avec `mode: "name"`. n8n ne résout que `list`, `id` et `url` : la référence était donc **impossible à résoudre**, et l'import échouait à la publication avec « references workflow X which is not published » pour chaque branche, alors que tous les sous-workflows étaient bien publiés.
+- `n8n/scripts/lint.ts` refuse désormais tout mode que n8n ne sait pas résoudre, pour que le dépôt ne puisse plus livrer un routeur impubliable.
+- `n8n/scripts/resolve-workflow-ids.ts` (`pnpm n8n:resolve-ids`) interroge l'instance et réécrit les références en `mode: "id"`. Les identifiants étant propres à chaque instance, ils ne peuvent pas être versionnés ; le script signale les noms introuvables et les doublons plutôt que d'en choisir un au hasard.
+
+
 ### Added — Logo d'organisation dans les emails
 - `GET /api/v1/organizations/:id/logo` : route publique, non authentifiée, qui sert le logo depuis R2. Volontairement pas d'URL présignée — elle expire en une heure, et un client ouvrant son devis trois jours plus tard verrait une image cassée. Un logo n'est pas un secret.
 - La route ne sert que le fichier déclaré dans `logo_file_id`, et seulement s'il s'agit d'une image `ready` appartenant à cette organisation. Sans ces deux contrôles, elle permettrait de lire n'importe quel objet du bucket par identifiant. Limitée par IP, `nosniff`, cache long.
