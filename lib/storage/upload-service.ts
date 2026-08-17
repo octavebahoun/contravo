@@ -441,6 +441,48 @@ export async function uploadServerFile(
   await r2Client.send(uploadCommand);
 
   const fileResult = await db.transaction(async (tx) => {
+    // A document's R2 key is stable — `org/<id>/invoices/<id>/invoice-<number>.pdf`
+    // — so re-rendering it lands on the same key. Inserting blindly violated
+    // `files_r2_key_unique`, which made every `/pdf/regenerate` call answer 500
+    // once the first version existed. A regenerated document is the same
+    // document: the existing row is updated in place so the entity's
+    // `pdf_file_id` keeps pointing at it, and the quota moves by the size delta
+    // rather than counting a second file.
+    const [existing] = await tx
+      .select({ id: files.id, sizeBytes: files.sizeBytes })
+      .from(files)
+      .where(and(eq(files.organizationId, orgId), eq(files.r2Key, key)))
+      .limit(1);
+
+    if (existing) {
+      const [updated] = await tx
+        .update(files)
+        .set({
+          filename,
+          mimeType,
+          sizeBytes: BigInt(sizeBytes),
+          sha256,
+          kind,
+          status: 'ready',
+          scanResult: { result: 'clean', scanned_at: new Date().toISOString() },
+          linkedEntityType: linkedEntityType || null,
+          linkedEntityId: linkedEntityId || null,
+          uploadedByUserId: userId || null,
+          uploadedVia,
+          uploadedFromIp: ipAddress || null,
+        })
+        .where(eq(files.id, existing.id))
+        .returning();
+
+      await updateStorageQuotaInTx(tx, orgId, sizeBytes - Number(existing.sizeBytes), 0);
+
+      if (linkedEntityType && linkedEntityId) {
+        await linkFileToEntityInTx(tx, linkedEntityType, linkedEntityId, updated.id);
+      }
+
+      return updated;
+    }
+
     const [file] = await tx.insert(files).values({
       organizationId: orgId,
       r2Key: key,

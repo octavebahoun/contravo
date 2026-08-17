@@ -1,3 +1,14 @@
+/**
+ * SaaS subscription plans (MVP6).
+ *
+ * `priceMonthlyCents` is in **hundredths of XOF**: 15 000 XOF/month is
+ * `15_000_00`. This is *not* the convention used by business documents, where a
+ * `*_cents` column holds whole XOF because the franc has no subunit — see
+ * `lib/money.ts`. The divergence is deliberate rather than migrated: this side
+ * already divides by 100 before charging, and `subscription_cycles.amount_cents`
+ * holds historical rows in the same unit. Format these values with
+ * `formatSaasPrice`, never `formatMoney`.
+ */
 export const PLANS = {
   free: {
     id: 'free',
@@ -20,7 +31,7 @@ export const PLANS = {
   pro: {
     id: 'pro',
     name: 'Pro',
-    priceMonthlyCents: 15_000_00, // 15 000 XOF/month (1500000 cents in base unit if cents, or 15000 XOF in cents format)
+    priceMonthlyCents: 15_000_00, // 15 000 XOF/month
     currency: 'XOF',
     quotas: {
       maxMembers: 15,

@@ -14,6 +14,10 @@ import {
   FileSpreadsheet,
   HelpCircle,
 } from "lucide-react"
+// The two figures on this page are not in the same unit: the aggregate is
+// already in whole XOF, while `subscription_cycles.amount_cents` is in
+// hundredths of XOF. Both used to go through one "euro" formatter.
+import { formatMoney, formatSaasPrice } from "@/lib/money"
 
 const fetcher = (url: string) => fetch(url).then((res) => {
   if (!res.ok) throw new Error("Erreur de chargement")
@@ -44,12 +48,6 @@ export default function AdminFinancePage() {
     )
   }
 
-  const formatEuro = (cents: number) => {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "EUR",
-    }).format(cents / 100)
-  }
 
   return (
     <div className="space-y-6">
@@ -73,7 +71,7 @@ export default function AdminFinancePage() {
             ) : (
               <>
                 <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                  {formatEuro(parseFloat(data.aggregates.totalRevenueXof) * 100)}
+                  {formatMoney(Math.round(parseFloat(data.aggregates.totalRevenueXof)), "XOF")}
                 </div>
                 <p className="text-xs text-muted-foreground">Volume de paiements validés</p>
               </>
@@ -197,7 +195,7 @@ export default function AdminFinancePage() {
                       )}
                     </TableCell>
                     <TableCell className="font-mono font-semibold">
-                      {formatEuro(parseInt(tx.amountCents))}
+                      {formatSaasPrice(tx.amountCents)}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(tx.createdAt).toLocaleDateString("fr-FR", {

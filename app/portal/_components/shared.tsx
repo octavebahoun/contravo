@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { AlertCircle } from 'lucide-react';
+import { formatMoney } from '@/lib/money';
 
 /**
  * Presentation helpers shared by the portal screens.
@@ -8,13 +9,14 @@ import { AlertCircle } from 'lucide-react';
  * reads identically whatever locale the recipient's browser reports.
  */
 
-export function formatAmount(cents: number, currency: string): string {
-  const negative = cents < 0;
-  const abs = Math.abs(Math.round(cents));
-  const units = String(Math.floor(abs / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  const decimals = String(abs % 100).padStart(2, '0');
-  return `${negative ? '-' : ''}${units},${decimals} ${currency}`;
-}
+/**
+ * Formats a stored minor-unit amount.
+ *
+ * Delegates to the shared formatter. This used to divide by 100 for every
+ * currency, so **the client saw "250,00 XOF" on a 25 000 XOF invoice** — a
+ * different figure from the one the dashboard showed the issuer.
+ */
+export const formatAmount = formatMoney;
 
 export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return '—';

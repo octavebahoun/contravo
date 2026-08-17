@@ -1,4 +1,4 @@
-import { headers } from 'next/headers';
+import { getSelfOrigin } from '@/lib/config/self-origin';
 import { DocumentHeader, PortalError } from '../../_components/shared';
 import { ReviewForm } from './review-form';
 import { Star } from 'lucide-react';
@@ -22,9 +22,10 @@ async function loadReviewRequest(
   requestId: string,
   token: string
 ): Promise<ReviewRequestResponse | { error: string; status: number }> {
-  const host = (await headers()).get('host');
-  const protocol = host?.startsWith('localhost') ? 'http' : 'https';
-  const base = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
+  // The server's own origin, not NEXT_PUBLIC_APP_URL: that variable holds the
+  // public address used in client-facing links, so a local server was fetching
+  // production's API during its render.
+  const base = await getSelfOrigin();
 
   const response = await fetch(
     `${base}/api/v1/portal/reviews/${requestId}?token=${encodeURIComponent(token)}`,

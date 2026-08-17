@@ -1,4 +1,4 @@
-import { headers } from 'next/headers';
+import { getSelfOrigin } from '@/lib/config/self-origin';
 import {
   DocumentHeader,
   ItemsTable,
@@ -9,13 +9,19 @@ import {
   type LineItem,
 } from '../../_components/shared';
 import { CheckCircle2 } from 'lucide-react';
+import { PayButton } from './pay-button';
 
 /**
  * Invoice screen for the client portal (MVP3 §5).
  *
- * Shows the outstanding balance and how to settle it. Card / mobile-money
- * payment goes through GeniusPay, whose portal payment-intent route is not
- * wired yet, so the bank details are the actionable path for now.
+ * Shows the outstanding balance and how to settle it: online checkout through
+ * GeniusPay when the organization has connected a gateway, and the bank details
+ * either as the alternative or as the only path.
+ *
+ * Returning from the gateway lands back here with `?status=success|failed`. That
+ * only reflects what the checkout page said — the invoice itself is settled by
+ * the webhook, which re-fetches the transaction from GeniusPay first, so the
+ * banner is careful not to claim the payment is recorded.
  */
 
 type InvoiceResponse = {
@@ -43,6 +49,7 @@ type InvoiceResponse = {
     bankDetails: Record<string, string> | null;
   } | null;
   canPay: boolean;
+  onlinePayment: boolean;
 };
 
 const BANK_LABELS: Record<string, string> = {
@@ -57,9 +64,10 @@ async function loadInvoice(
   id: string,
   token: string
 ): Promise<InvoiceResponse | { error: string; status: number }> {
-  const host = (await headers()).get('host');
-  const protocol = host?.startsWith('localhost') ? 'http' : 'https';
-  const base = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
+  // The server's own origin, not NEXT_PUBLIC_APP_URL: that variable holds the
+  // public address used in client-facing links, so a local server was fetching
+  // production's API during its render.
+  const base = await getSelfOrigin();
 
   const response = await fetch(
     `${base}/api/v1/portal/invoices/${id}?token=${encodeURIComponent(token)}`,
@@ -82,10 +90,10 @@ export default async function PortalInvoicePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ token?: string }>;
+  searchParams: Promise<{ token?: string; status?: string }>;
 }) {
   const { id } = await params;
-  const { token } = await searchParams;
+  const { token, status: paymentStatus } = await searchParams;
 
   if (!token) {
     return (
@@ -111,13 +119,31 @@ export default async function PortalInvoicePage({
     );
   }
 
-  const { invoice, organization, canPay } = result;
+  const { invoice, organization, canPay, onlinePayment } = result;
   const bankEntries = Object.entries(organization?.bankDetails ?? {}).filter(
     ([, value]) => typeof value === 'string' && value.trim().length > 0
   );
 
   return (
     <div className="space-y-6">
+      {paymentStatus === 'success' && !invoice.paidAt ? (
+        <div className="rounded-xl border border-success/30 bg-success/5 p-5">
+          <p className="text-sm text-foreground">
+            <span className="font-semibold">Paiement transmis.</span> Sa confirmation par notre
+            prestataire peut prendre quelques instants — cette page se mettra à jour dès qu’il
+            l’aura validé.
+          </p>
+        </div>
+      ) : null}
+
+      {paymentStatus === 'failed' ? (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-5">
+          <p className="text-sm text-foreground">
+            <span className="font-semibold">Le paiement n’a pas abouti.</span> Aucun montant n’a été
+            débité. Vous pouvez réessayer ci-dessous.
+          </p>
+        </div>
+      ) : null}
       <div className="rounded-xl border border-border bg-card p-6 sm:p-8">
         <DocumentHeader
           eyebrow={organization?.name ?? 'Facture'}
@@ -169,7 +195,7 @@ export default async function PortalInvoicePage({
             </div>
           </div>
         </div>
-      ) : canPay && bankEntries.length > 0 ? (
+      ) : canPay ? (
         <div className="rounded-xl border border-border bg-card p-6">
           <h2 className="text-lg font-semibold text-foreground">Régler cette facture</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -179,28 +205,40 @@ export default async function PortalInvoicePage({
             </span>
           </p>
 
-          <dl className="mt-5 space-y-2">
-            {bankEntries.map(([key, value]) => (
-              <div key={key} className="flex flex-wrap justify-between gap-2 text-sm">
-                <dt className="text-muted-foreground">{BANK_LABELS[key] ?? key}</dt>
-                <dd className="font-mono text-foreground">{value}</dd>
-              </div>
-            ))}
-          </dl>
+          {onlinePayment ? (
+            <div className="mt-5">
+              <PayButton
+                invoiceId={invoice.id}
+                token={token}
+                amountLabel={formatAmount(invoice.amountDueCents, invoice.currency)}
+              />
+            </div>
+          ) : null}
 
-          <p className="mt-5 text-xs text-muted-foreground">
-            Indiquez la référence {invoice.number} lors de votre virement.
-          </p>
-        </div>
-      ) : canPay ? (
-        <div className="rounded-xl border border-border bg-card p-6">
-          <p className="text-sm text-muted-foreground">
-            Montant dû :{' '}
-            <span className="font-semibold text-foreground">
-              {formatAmount(invoice.amountDueCents, invoice.currency)}
-            </span>
-            . Contactez votre interlocuteur pour les modalités de règlement.
-          </p>
+          {bankEntries.length > 0 ? (
+            <>
+              {onlinePayment ? (
+                <p className="mt-6 text-sm font-medium text-foreground">Ou par virement</p>
+              ) : null}
+
+              <dl className="mt-3 space-y-2">
+                {bankEntries.map(([key, value]) => (
+                  <div key={key} className="flex flex-wrap justify-between gap-2 text-sm">
+                    <dt className="text-muted-foreground">{BANK_LABELS[key] ?? key}</dt>
+                    <dd className="font-mono text-foreground">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+
+              <p className="mt-5 text-xs text-muted-foreground">
+                Indiquez la référence {invoice.number} lors de votre virement.
+              </p>
+            </>
+          ) : !onlinePayment ? (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Contactez votre interlocuteur pour les modalités de règlement.
+            </p>
+          ) : null}
         </div>
       ) : null}
     </div>

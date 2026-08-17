@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/drizzle';
-import { invoiceItems, invoices, organizations } from '@/lib/db/schema';
+import { invoiceItems, invoices, organizations, paymentGatewayCredentials } from '@/lib/db/schema';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { ApiError } from '@/lib/rbac';
 import { formatErrorResponse } from '@/lib/errors';
@@ -62,6 +62,21 @@ export async function GET(
 
     const amountDue = Number(invoice.amountDueCents ?? 0);
 
+    // Whether to offer the online checkout at all. Without this the portal would
+    // show a "Pay online" button to every client, including organizations that
+    // never connected a gateway, and it would fail on click.
+    const [gateway] = await db
+      .select({ id: paymentGatewayCredentials.id })
+      .from(paymentGatewayCredentials)
+      .where(
+        and(
+          eq(paymentGatewayCredentials.organizationId, ctx.organizationId),
+          eq(paymentGatewayCredentials.provider, 'geniuspay'),
+          eq(paymentGatewayCredentials.status, 'active')
+        )
+      )
+      .limit(1);
+
     return NextResponse.json({
       invoice: {
         id: invoice.id,
@@ -97,6 +112,8 @@ export async function GET(
         amountDue > 0 &&
         !['paid', 'cancelled', 'refunded'].includes(invoice.status) &&
         (ctx.scopes.includes('pay') || ctx.scopes.includes('*')),
+      /** Online checkout is reachable: the organization has an active gateway. */
+      onlinePayment: Boolean(gateway) && ['sent', 'partial', 'overdue'].includes(invoice.status),
     });
   } catch (err) {
     return formatErrorResponse(err);

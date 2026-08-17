@@ -12,7 +12,8 @@ import {
   apiKeys,
   webhookEndpoints,
 } from '@/lib/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { eq, isNull, sql } from 'drizzle-orm';
+import { PLANS } from '@/lib/billing/plans';
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,15 +29,20 @@ export async function GET(request: NextRequest) {
     let businessCount = 0;
     let mrr = 0;
 
+    // `mrr` is expressed in the same unit as `PLANS.priceMonthlyCents` and
+    // `subscription_cycles.amount_cents`: hundredths of XOF. The prices used to
+    // be hardcoded here as whole XOF, so the figure disagreed with both the plan
+    // table and the finance page, and a plan price change silently left this
+    // endpoint behind.
     for (const sub of subs) {
       if (sub.status === 'active') {
         activeCount++;
         if (sub.planId === 'pro') {
           proCount++;
-          mrr += 15000;
+          mrr += PLANS.pro.priceMonthlyCents;
         } else if (sub.planId === 'business') {
           businessCount++;
-          mrr += 50000;
+          mrr += PLANS.business.priceMonthlyCents;
         } else {
           freeCount++;
         }
@@ -51,10 +57,12 @@ export async function GET(request: NextRequest) {
     const totalSubs = subs.length;
     const churnRate = totalSubs > 0 ? ((cancelledCount + suspendedCount) / totalSubs) * 100 : 0;
 
-    // 2. Count organizations
+    // 2. Count organizations. Soft-deleted ones were counted too, so the
+    // "active organizations" tile only ever went up.
     const [orgCount] = await db
       .select({ count: sql<number>`count(*)::int` })
-      .from(organizations);
+      .from(organizations)
+      .where(isNull(organizations.deletedAt));
 
     // 3. Count documents
     const [quotesCount] = await db.select({ count: sql<number>`count(*)::int` }).from(quotes);

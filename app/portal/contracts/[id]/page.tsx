@@ -1,4 +1,4 @@
-import { headers } from 'next/headers';
+import { getSelfOrigin } from '@/lib/config/self-origin';
 import { DocumentHeader, PortalError, formatDate } from '../../_components/shared';
 import { SignPanel } from './sign-panel';
 import { CheckCircle2 } from 'lucide-react';
@@ -31,9 +31,10 @@ async function loadContract(
   id: string,
   token: string
 ): Promise<ContractResponse | { error: string; status: number }> {
-  const host = (await headers()).get('host');
-  const protocol = host?.startsWith('localhost') ? 'http' : 'https';
-  const base = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
+  // The server's own origin, not NEXT_PUBLIC_APP_URL: that variable holds the
+  // public address used in client-facing links, so a local server was fetching
+  // production's API during its render.
+  const base = await getSelfOrigin();
 
   const response = await fetch(
     `${base}/api/v1/portal/contracts/${id}?token=${encodeURIComponent(token)}`,

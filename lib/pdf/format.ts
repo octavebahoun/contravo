@@ -1,3 +1,4 @@
+import { formatMoney as formatSharedMoney } from '@/lib/money';
 import type { PdfAddress } from './types';
 
 /**
@@ -9,27 +10,18 @@ import type { PdfAddress } from './types';
  */
 
 /**
- * Formats a cents amount using a fixed fr-FR-like convention.
+ * Formats a stored minor-unit amount for a PDF.
  *
- * Implemented manually rather than via `Intl.NumberFormat` because ICU data
- * differs between Node builds, which would break byte-for-byte determinism.
+ * Delegates to the shared money formatter so the PDF, the portal and the
+ * dashboard cannot drift apart again. It used to divide by 100 for every
+ * currency: **a 25 000 XOF invoice printed "250,00 XOF"** on the very document
+ * attached to the client's email. `lib/money.ts` is deterministic and
+ * `Intl`-free, which is what this module requires.
  *
- * @param cents - Amount in minor units.
+ * @param cents - Amount in the currency's minor unit, as stored.
  * @param currency - ISO code appended after the number (e.g. `XOF`).
  */
-export function formatMoney(cents: number, currency: string): string {
-  const negative = cents < 0;
-  const abs = Math.abs(Math.round(cents));
-  const units = Math.floor(abs / 100);
-  const decimals = abs % 100;
-
-  // Plain U+0020 as the thousands separator: the narrow no-break space (U+202F)
-  // is missing from the standard PDF Helvetica font and renders as a stray glyph.
-  const grouped = String(units).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  const body = `${grouped},${String(decimals).padStart(2, '0')}`;
-
-  return `${negative ? '-' : ''}${body} ${currency}`;
-}
+export const formatMoney = formatSharedMoney;
 
 /**
  * Formats a basis-points rate as a percentage (1250 → "12,5 %").

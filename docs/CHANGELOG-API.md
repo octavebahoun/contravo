@@ -12,8 +12,16 @@ Changes to the public HTTP API (`/api/v1/*`) are documented here.
 - Les en-têtes internes (`x-auth-type`, `x-user-id`, `x-organization-id`, `x-is-super-admin`, …) fournis par le client sont désormais purgés à l'entrée du middleware ; seules les valeurs qu'il calcule atteignent les handlers.
 - `GET|POST /api/v1/expenses` et `GET|PATCH /api/v1/expenses/:id` renvoyaient `500` (`amountCents` bigint non sérialisable). Les montants sont désormais transmis en chaînes décimales, comme sur les devis et factures. Idem `fileSizeBytes` sur les livrables.
 - `GET /api/v1/projects/:id/expenses` renvoyait `500` pour la même raison : le raccourci retournait les lignes brutes sans passer par `serializeExpense`. Il échouait dès qu'un projet avait au moins une dépense.
+- `POST /api/v1/{invoices,quotes,contracts}/:id/pdf/regenerate` renvoyait `500` dès qu'une première version du PDF existait : la clé R2 d'un document est stable et l'insertion violait `files_r2_key_unique`. La ligne `files` est désormais mise à jour en place.
+- Le montant transmis à GeniusPay était divisé par 100, y compris pour le XOF qui n'a pas de subdivision : une facture de 25 000 XOF aurait été encaissée 250 XOF. Le webhook centuplait symétriquement les frais et le montant net, et créditait le montant de l'intention plutôt que celui réellement confirmé par la passerelle.
 
 ### Added
+- `POST /api/v1/portal/invoices/:id/pay`
+  - Ouvre un paiement en ligne depuis le portail client. Authentifiée par jeton public, action `pay`.
+  - Réponse `201` : `{ paymentIntentId, checkoutUrl, amountCents, currency, expiresAt }`.
+  - L'intention porte le **solde restant dû**, pas le total. `400` si la facture n'est pas `sent`, `partial` ou `overdue` ; `409 PAYMENT_NOT_CONFIGURED` si l'organisation n'a pas de passerelle active ; `502 PAYMENT_INITIATION_FAILED` si GeniusPay refuse.
+  - Le jeton public n'est pas consommé : un checkout abandonné doit pouvoir être repris.
+- `GET /api/v1/portal/invoices/:id` expose `onlinePayment`, qui indique si le checkout est réellement disponible pour cette organisation.
 - `GET|POST /api/v1/invoices/:id/payments`
   - `GET` liste les encaissements d'une facture (scope `invoices:read`).
   - `POST` enregistre un paiement manuel (scope `invoices:write`) : `amountCents` (chaîne décimale), `method` (`bank_transfer`|`mobile_money`|`card`|`cash`|`check`|`other`), `paidAt`, `reference`, `notes` optionnels. `source` est forcé à `manual`.
