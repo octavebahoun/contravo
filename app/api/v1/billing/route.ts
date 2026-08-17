@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       planId,
       status: sub.status,
+      cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
+      currentPeriodEnd: sub.currentPeriodEnd.toISOString(),
       quotas: planConfig.quotas,
       usage: {
         membersCount: usage.membersCount || 1,

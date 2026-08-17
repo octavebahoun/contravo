@@ -3,6 +3,7 @@ import { getApiContext, checkScope } from '@/lib/auth/unified-auth';
 import {
   deleteExpense,
   getExpenseById,
+  serializeExpense,
   updateExpense,
 } from '@/lib/repositories/expenses.repo';
 import { formatErrorResponse } from '@/lib/errors';
@@ -38,7 +39,7 @@ export async function GET(
       throw new ApiError('NOT_FOUND', 'Expense not found', 404);
     }
 
-    return NextResponse.json(expense);
+    return NextResponse.json(serializeExpense(expense));
   } catch (err) {
     return formatErrorResponse(err);
   }
@@ -69,7 +70,7 @@ export async function PATCH(
       request.headers.get('x-forwarded-for') || '127.0.0.1'
     );
 
-    return NextResponse.json(expense);
+    return NextResponse.json(serializeExpense(expense));
   } catch (err) {
     return formatErrorResponse(err);
   }

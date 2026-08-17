@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import {
   Avatar,
   AvatarFallback,
@@ -21,7 +22,8 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { ChevronsUpDownIcon, SparklesIcon, BadgeCheckIcon, CreditCardIcon, BellIcon, LogOutIcon } from "lucide-react"
+import { ChevronsUpDownIcon, SparklesIcon, BadgeCheckIcon, CreditCardIcon, ShieldIcon, LogOutIcon, Loader2 } from "lucide-react"
+import { signOut } from "@/app/(login)/actions"
 
 export function NavUser({
   user,
@@ -33,6 +35,7 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
+  const [isSigningOut, startSignOut] = React.useTransition()
 
   const initials = React.useMemo(() => {
     if (!user.name || user.name === "Chargement...") return "U"
@@ -83,35 +86,47 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <SparklesIcon
-                />
-                Upgrade to Pro
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/billing">
+                  <SparklesIcon />
+                  Passer au plan supérieur
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <BadgeCheckIcon
-                />
-                Account
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/general">
+                  <BadgeCheckIcon />
+                  Mon compte
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCardIcon
-                />
-                Billing
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/billing">
+                  <CreditCardIcon />
+                  Abonnement
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <BellIcon
-                />
-                Notifications
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/security">
+                  <ShieldIcon />
+                  Sécurité
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <LogOutIcon
-              />
-              Log out
+            <DropdownMenuItem
+              disabled={isSigningOut}
+              onSelect={(event) => {
+                // Keep the menu mounted while the server action redirects.
+                event.preventDefault()
+                startSignOut(() => {
+                  void signOut()
+                })
+              }}
+            >
+              {isSigningOut ? <Loader2 className="animate-spin" /> : <LogOutIcon />}
+              Se déconnecter
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

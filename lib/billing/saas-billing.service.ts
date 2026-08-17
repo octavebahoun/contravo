@@ -37,15 +37,7 @@ export async function createSubscriptionCheckout(
     throw new BillingServiceError('Plan invalide', 400);
   }
 
-  // Verify user is owner or admin of organization
-  const [membership] = await db
-    .select()
-    .from(memberships)
-    .where(and(eq(memberships.organizationId, organizationId), eq(memberships.userId, userId)));
-
-  if (!membership || !['owner', 'admin'].includes(membership.role)) {
-    throw new BillingServiceError('Permission refusée : seul un administrateur ou propriétaire peut modifier l’abonnement', 403);
-  }
+  await assertBillingAdmin(organizationId, userId);
 
   // Get current active subscription
   let currentSub = await getSubscription(organizationId);
@@ -155,6 +147,100 @@ export async function createSubscriptionCheckout(
     invoiceNumber,
     amountCents: targetPlan.priceMonthlyCents,
   };
+}
+
+/**
+ * Guard shared by every self-service billing action: only an owner or an admin
+ * of the organization may change what it is billed.
+ */
+async function assertBillingAdmin(organizationId: string, userId: string) {
+  const [membership] = await db
+    .select()
+    .from(memberships)
+    .where(and(eq(memberships.organizationId, organizationId), eq(memberships.userId, userId)));
+
+  if (!membership || !['owner', 'admin'].includes(membership.role)) {
+    throw new BillingServiceError(
+      'Permission refusée : seul un administrateur ou propriétaire peut modifier l’abonnement',
+      403
+    );
+  }
+}
+
+/**
+ * Downgrade to Free.
+ *
+ * The paid period stays open until `currentPeriodEnd` — the organization keeps
+ * the features it has already paid for, and `getSubscription()` applies the
+ * switch to Free once that date is past. No refund, no proration: that is the
+ * standard for a monthly SaaS subscription and it keeps the money side simple.
+ */
+export async function cancelSubscription(organizationId: string, userId: string) {
+  await assertBillingAdmin(organizationId, userId);
+
+  const currentSub = await getSubscription(organizationId);
+
+  if (currentSub.planId === 'free') {
+    throw new BillingServiceError('Votre organisation est déjà sur le plan Gratuit', 400);
+  }
+
+  if (currentSub.cancelAtPeriodEnd) {
+    throw new BillingServiceError('La rétrogradation est déjà programmée', 400);
+  }
+
+  const [updated] = await db
+    .update(subscriptions)
+    .set({
+      cancelAtPeriodEnd: true,
+      cancelledAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(subscriptions.id, currentSub.id))
+    .returning();
+
+  await emit('subscription.cancelled', organizationId, {
+    organizationId,
+    planId: updated.planId,
+    cancelledAt: updated.cancelledAt,
+    effectiveAt: updated.currentPeriodEnd,
+  });
+
+  return {
+    planId: updated.planId,
+    cancelAtPeriodEnd: true,
+    effectiveAt: updated.currentPeriodEnd,
+  };
+}
+
+/**
+ * Undo a scheduled downgrade, as long as the paid period has not run out yet.
+ */
+export async function resumeSubscription(organizationId: string, userId: string) {
+  await assertBillingAdmin(organizationId, userId);
+
+  const currentSub = await getSubscription(organizationId);
+
+  if (!currentSub.cancelAtPeriodEnd || currentSub.planId === 'free') {
+    throw new BillingServiceError('Aucune rétrogradation n’est programmée', 400);
+  }
+
+  const [updated] = await db
+    .update(subscriptions)
+    .set({
+      cancelAtPeriodEnd: false,
+      cancelledAt: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(subscriptions.id, currentSub.id))
+    .returning();
+
+  await emit('subscription.resumed', organizationId, {
+    organizationId,
+    planId: updated.planId,
+    currentPeriodEnd: updated.currentPeriodEnd,
+  });
+
+  return { planId: updated.planId, cancelAtPeriodEnd: false };
 }
 
 /**

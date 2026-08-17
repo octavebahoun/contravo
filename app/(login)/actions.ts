@@ -19,6 +19,7 @@ import {
   validatedActionWithUser
 } from '@/lib/auth/middleware';
 import { createAuditLog } from '@/lib/audit';
+import { createOrganizationInvitation, hashInvitationToken } from '@/lib/invitations';
 import crypto from 'crypto';
 
 async function logActivity(
@@ -39,6 +40,21 @@ const signInSchema = z.object({
   email: z.string().email().min(3).max(255),
   password: z.string().min(8).max(100)
 });
+
+/**
+ * Where to land after authenticating.
+ *
+ * The sign-in form has always carried a `redirect` field, and both actions used
+ * to ignore it — an invitation link that bounced through sign-in lost its way
+ * back. Only same-origin absolute paths are accepted: anything protocol
+ * relative (`//evil.tld`) or absolute would turn this into an open redirect.
+ */
+function safeRedirect(formData: FormData): string {
+  const target = formData.get('redirect');
+  if (typeof target !== 'string') return '/dashboard';
+  if (!target.startsWith('/') || target.startsWith('//')) return '/dashboard';
+  return target;
+}
 
 export const signIn = validatedAction(signInSchema, async (data, formData) => {
   const { email, password } = data;
@@ -83,17 +99,18 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
   await logActivity(foundOrg?.id, foundUser.id, 'auth.login');
 
-  redirect('/dashboard');
+  redirect(safeRedirect(formData));
 });
 
 const signUpSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
-  inviteId: z.string().optional()
+  inviteId: z.string().optional(),
+  inviteToken: z.string().optional()
 });
 
 export const signUp = validatedAction(signUpSchema, async (data, formData) => {
-  const { email, password, inviteId } = data;
+  const { email, password, inviteId, inviteToken } = data;
 
   const existingUser = await db
     .select()
@@ -133,18 +150,31 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   let userRole: string;
   let createdOrg: typeof organizations.$inferSelect | null = null;
 
-  if (inviteId) {
-    // Check if there's a valid invitation
-    const [invitation] = await db
-      .select()
-      .from(invitations)
-      .where(
-        and(
-          eq(invitations.id, inviteId),
-          eq(invitations.email, email)
-        )
-      )
-      .limit(1);
+  if (inviteToken || inviteId) {
+    // An invited user must land inside the organization that invited them.
+    // Without this branch sign-up spun up a brand new personal organization and
+    // the invitation stayed pending forever.
+    const [invitation] = inviteToken
+      ? await db
+          .select()
+          .from(invitations)
+          .where(
+            and(
+              eq(invitations.tokenHash, hashInvitationToken(inviteToken)),
+              eq(invitations.email, email)
+            )
+          )
+          .limit(1)
+      : await db
+          .select()
+          .from(invitations)
+          .where(
+            and(
+              eq(invitations.id, inviteId!),
+              eq(invitations.email, email)
+            )
+          )
+          .limit(1);
 
     if (invitation && !invitation.acceptedAt && new Date(invitation.expiresAt) > new Date()) {
       orgId = invitation.organizationId;
@@ -203,21 +233,23 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   const token = await createSession(createdUser.id);
   await setSessionCookie(token);
 
-  redirect('/dashboard');
+  redirect(safeRedirect(formData));
 });
 
 export async function signOut() {
+  const cookieStore = await cookies();
   const user = (await getUser()) as User;
   if (user) {
     const userWithOrg = await getUserWithOrganization(user.id);
     await logActivity(userWithOrg?.organizationId, user.id, 'auth.logout');
-    const cookieStore = await cookies();
     const token = cookieStore.get('session')?.value;
     if (token) {
       await deleteSession(token);
     }
     cookieStore.delete('session');
   }
+  // Set client-side by the org switcher, so it outlives the session otherwise.
+  cookieStore.delete('organization_id');
   redirect('/sign-in');
 }
 
@@ -386,47 +418,19 @@ export const inviteTeamMember = validatedActionWithUser(
       return { error: 'User is not part of an organization' };
     }
 
-    const existingMember = await db
-      .select()
-      .from(users)
-      .leftJoin(memberships, eq(users.id, memberships.userId))
-      .where(
-        and(eq(users.email, email), eq(memberships.organizationId, userWithOrg.organizationId))
-      )
-      .limit(1);
-
-    if (existingMember.length > 0) {
-      return { error: 'User is already a member of this organization' };
+    try {
+      // Shared with POST /api/v1/organizations/[slug]/invitations: duplicate
+      // checks, member quota, and the `invitation.sent` event that actually
+      // gets the email out. This form used to insert the row and stop there.
+      await createOrganizationInvitation({
+        organizationId: userWithOrg.organizationId,
+        email,
+        role,
+        invitedByUserId: user.id,
+      });
+    } catch (error: any) {
+      return { error: error?.message || 'Impossible d’envoyer l’invitation' };
     }
-
-    const existingInvitation = await db
-      .select()
-      .from(invitations)
-      .where(
-        and(
-          eq(invitations.email, email),
-          eq(invitations.organizationId, userWithOrg.organizationId),
-          isNull(invitations.acceptedAt)
-        )
-      )
-      .limit(1);
-
-    if (existingInvitation.length > 0 && new Date(existingInvitation[0].expiresAt) > new Date()) {
-      return { error: 'An active invitation has already been sent to this email' };
-    }
-
-    const token = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-
-    await db.insert(invitations).values({
-      organizationId: userWithOrg.organizationId,
-      email,
-      role,
-      tokenHash,
-      expiresAt,
-      invitedBy: user.id
-    });
 
     await logActivity(
       userWithOrg.organizationId,
@@ -434,6 +438,6 @@ export const inviteTeamMember = validatedActionWithUser(
       'invitation.create'
     );
 
-    return { success: 'Invitation sent successfully' };
+    return { success: 'Invitation envoyée' };
   }
 );

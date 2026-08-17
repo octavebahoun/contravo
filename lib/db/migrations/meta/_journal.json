@@ -50,6 +50,13 @@
       "when": 1786724006517,
       "tag": "0006_tiny_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786934527605,
+      "tag": "0007_rare_stephen_strange",
+      "breakpoints": true
     }
   ]
 }

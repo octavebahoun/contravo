@@ -3,7 +3,8 @@ import type { NextRequest } from 'next/server';
 import { getSessionUser } from '@/lib/auth/session';
 import { verifyApiKey } from '@/lib/api-keys';
 import { verifyPublicToken } from '@/lib/public-tokens';
-import { rateLimit } from '@/lib/rate-limit';
+import { rateLimit, type RateLimitTier } from '@/lib/rate-limit';
+import { incrementPeriodUsage } from '@/lib/billing/quotas.service';
 import { db } from '@/lib/db/drizzle';
 import { memberships, organizations } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -14,6 +15,25 @@ export async function middleware(request: NextRequest) {
 
   // Create request headers to inject unified context
   const requestHeaders = new Headers(request.headers);
+
+  // Drop any auth header the client may have forged: from here on these are
+  // written by this middleware only, and `getApiContext()` trusts them blindly.
+  // `x-organization-id` is still read from `request.headers` below, where it is
+  // checked against a real membership before being re-emitted.
+  for (const header of [
+    'x-auth-type',
+    'x-auth-scopes',
+    'x-auth-role',
+    'x-user-id',
+    'x-organization-id',
+    'x-api-key-id',
+    'x-public-token-id',
+    'x-recipient-email',
+    'x-is-super-admin',
+  ]) {
+    requestHeaders.delete(header);
+  }
+
   requestHeaders.set('x-request-id', requestId);
 
   // 0. Handle Admin routes (/admin/* and /api/v1/admin/*)
@@ -116,17 +136,37 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 2. Handle API v1 routes (except docs, openapi.json, webhooks, and admin)
+  // 2. Handle API v1 routes (except admin, handled above, and the exempt list below)
   const isApiRoute = pathname.startsWith('/api/v1') && !pathname.startsWith('/api/v1/admin');
   const isDocsOrOpenApi =
     pathname === '/api/v1/openapi.json' ||
     pathname.startsWith('/api/v1/docs');
-  const isWebhookRoute = pathname === '/api/v1/webhooks/geniuspay';
+  // Webhooks authenticated by their own HMAC signature, not by a bearer token:
+  // requiring an auth context here would 401 the caller before the handler runs.
+  // `/api/v1/webhooks/verify` is deliberately NOT in this list — it needs the n8n
+  // API key, otherwise it becomes an open signature oracle.
+  const isWebhookRoute =
+    pathname === '/api/v1/webhooks/geniuspay' ||
+    pathname === '/api/v1/webhooks/geniuspay-excellence' ||
+    pathname === '/api/v1/webhooks/excellence-events';
   // Signature verification is intentionally public (MVP4 §7.3): a proof that
   // requires an account is not verifiable by a third party.
   const isPublicVerifyRoute = pathname.startsWith('/api/v1/verify/signature/');
+  // Auth endpoints are how a caller *obtains* a session (MVP2 §1) — they cannot
+  // require one. Each handler validates its own input and credentials.
+  const isAuthRoute = pathname.startsWith('/api/v1/auth/');
+  // Accepting an invitation runs its own getSession() check: the invitee has no
+  // membership in the target organization yet, so no org context can be resolved.
+  const isInvitationAcceptRoute = pathname === '/api/v1/invitations/accept';
 
-  if (isApiRoute && !isDocsOrOpenApi && !isWebhookRoute && !isPublicVerifyRoute) {
+  if (
+    isApiRoute &&
+    !isDocsOrOpenApi &&
+    !isWebhookRoute &&
+    !isPublicVerifyRoute &&
+    !isAuthRoute &&
+    !isInvitationAcceptRoute
+  ) {
     try {
       // Resolve client IP
       const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
@@ -320,7 +360,7 @@ export async function middleware(request: NextRequest) {
         );
       }
 
-      const plan = (org?.plan || 'free') as 'free' | 'pro' | 'enterprise';
+      const plan = (org?.plan || 'free') as RateLimitTier;
 
       // Run rate limiting
       const limitResult = await rateLimit(authContext.organizationId, plan);
@@ -345,6 +385,14 @@ export async function middleware(request: NextRequest) {
             },
           }
         );
+      }
+
+      // Meter the call for the monthly API quota (MVP6 §1.1). Metering must
+      // never turn into an outage: a counter failure is logged, not propagated.
+      try {
+        await incrementPeriodUsage(authContext.organizationId, 'apiCalls');
+      } catch (meteringError) {
+        console.error('API call metering failed:', meteringError);
       }
 
       // Successful request handling

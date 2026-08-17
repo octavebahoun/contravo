@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApiContext, checkScope } from '@/lib/auth/unified-auth';
-import { createDeliverable, listDeliverables } from '@/lib/repositories/deliverables.repo';
+import {
+  createDeliverable,
+  listDeliverables,
+  serializeDeliverable,
+} from '@/lib/repositories/deliverables.repo';
 import { formatErrorResponse } from '@/lib/errors';
 import { z } from 'zod';
 
@@ -32,7 +36,7 @@ export async function GET(
       limit: parseInt(searchParams.get('limit') || '20', 10),
     });
 
-    return NextResponse.json({ deliverables });
+    return NextResponse.json({ deliverables: deliverables.map(serializeDeliverable) });
   } catch (err) {
     return formatErrorResponse(err);
   }
@@ -58,7 +62,7 @@ export async function POST(
       request.headers.get('x-forwarded-for') || '127.0.0.1'
     );
 
-    return NextResponse.json(deliverable, { status: 201 });
+    return NextResponse.json(serializeDeliverable(deliverable), { status: 201 });
   } catch (err) {
     return formatErrorResponse(err);
   }

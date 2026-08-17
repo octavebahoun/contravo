@@ -1,0 +1,97 @@
+{
+  "id": "email_invitation_sent_v1",
+  "name": "email_invitation_sent_v1",
+  "nodes": [
+    {
+      "id": "b2c3d4e5-1111-4aaa-9000-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "b2c3d4e5-1111-4aaa-9000-000000000002",
+      "name": "Render Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        300
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// Template: invitation_sent/fr — rendu inline (versionné dans /n8n/email-templates)\nconst input = $('Execute Workflow Trigger').first().json;\nconst payload = input.payload || input;\nconst d = payload.data || {};\n\nconst SUBJECT_TPL = \"{{invitedByName}} vous invite \\u00e0 rejoindre {{organizationName}} sur Contravo\";\nconst BODY_MJML = \"<mjml><mj-body><mj-section><mj-column>\\n      <mj-text>Bonjour,</mj-text>\\n      <mj-text><strong>{{invitedByName}}</strong> vous invite \\u00e0 rejoindre l'espace <strong>{{organizationName}}</strong> sur Contravo en tant que {{roleLabel}}.</mj-text>\\n      <mj-button href=\\\"{{inviteUrl}}\\\">Rejoindre l'\\u00e9quipe</mj-button>\\n      <mj-text>Ce lien est valable 7 jours et ne fonctionne qu'avec l'adresse {{email}}.</mj-text>\\n      <mj-text>Si vous ne connaissez pas cette organisation, ignorez cet email.</mj-text>\\n      <mj-text>Contravo</mj-text>\\n    </mj-column></mj-section></mj-body></mjml>\\n\";\n\nconst ROLE_LABELS = {\n  owner: 'propriétaire',\n  admin: 'administrateur',\n  member: 'membre',\n  viewer: 'lecteur',\n};\n\nconst ctx = {\n  ...d,\n  email: d.email || '',\n  organizationName: d.organizationName || '',\n  invitedByName: d.invitedByName || 'Un membre de l\\'équipe',\n  roleLabel: ROLE_LABELS[d.role] || d.role || 'membre',\n  inviteUrl: d.inviteUrl || '',\n};\n\nfunction lookup(path) {\n  return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), ctx);\n}\nfunction resolve(tpl) {\n  return tpl.replace(/\\{\\{\\s*([\\w.]+)\\s*\\}\\}/g, (_, p) => {\n    const v = lookup(p);\n    return v == null ? '' : String(v);\n  });\n}\n\n// MJML -> HTML. mjml est optionnel dans l'image n8n : fallback si absent.\nfunction compile(mjmlSource) {\n  try {\n    const mjml2html = require('mjml');\n    const out = mjml2html(mjmlSource, { validationLevel: 'soft' });\n    if (out && out.html) return out.html;\n  } catch (e) {\n    // mjml non installé -> dégradation contrôlée vers un HTML simple\n  }\n  const body = mjmlSource\n    .replace(/<mj-button[^>]*href=\"([^\"]*)\"[^>]*>([\\s\\S]*?)<\\/mj-button>/g,\n             '<p><a href=\"$1\">$2</a></p>')\n    .replace(/<mj-text[^>]*>([\\s\\S]*?)<\\/mj-text>/g, '<p>$1</p>')\n    .replace(/<\\/?mj-(?:mjml|body|section|column|raw)[^>]*>/g, '')\n    .replace(/<\\/?mjml[^>]*>/g, '');\n  return '<!doctype html><html><body>' + body + '</body></html>';\n}\n\nconst to = [d.email].filter(Boolean);\nif (!to.length) {\n  throw new Error('Aucun destinataire résolu pour invitation_sent (event ' + (payload.id || '?') + ')');\n}\nif (!d.inviteUrl) {\n  throw new Error('inviteUrl absent : une invitation sans lien est inutile');\n}\n\nreturn [{ json: {\n  eventId: payload.id || '',\n  organizationId: payload.organizationId || '',\n  to,\n  subject: resolve(SUBJECT_TPL).trim(),\n  html: compile(resolve(BODY_MJML)),\n} }];\n"
+      }
+    },
+    {
+      "id": "b2c3d4e5-1111-4aaa-9000-000000000003",
+      "name": "Send via Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        540,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.eventId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: \"Contravo <onboarding@resend.dev>\", to: $json.to, subject: $json.subject, html: $json.html }) }}",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "RESEND_API_KEY"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Render Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Email": {
+      "main": [
+        [
+          {
+            "node": "Send via Resend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

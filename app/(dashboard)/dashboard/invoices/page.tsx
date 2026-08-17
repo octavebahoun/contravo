@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, FileText, CheckCircle2, Clock, AlertTriangle, Loader2, Download, Trash2 } from 'lucide-react';
+import { Plus, Search, FileText, CheckCircle2, Clock, AlertTriangle, Loader2, Download, Trash2, Send, Ban } from 'lucide-react';
 import { toast } from 'sonner';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -37,6 +37,7 @@ export default function InvoicesPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -132,6 +133,35 @@ export default function InvoicesPage() {
       toast.error(err.message || 'Erreur création facture');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  /**
+   * Drives the invoice state machine (MVP3 §5).
+   *
+   * `send` mints the client's portal token and emits `invoice.sent`, which n8n
+   * turns into the email carrying the payment link.
+   */
+  const handleTransition = async (id: string, action: 'send' | 'cancel') => {
+    try {
+      setPendingId(id);
+      const res = await fetch(`/api/v1/invoices/${id}/transition`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error?.message || errData.message || 'Transition refusée');
+      }
+
+      toast.success(action === 'send' ? 'Facture envoyée au client' : 'Facture annulée');
+      mutate();
+    } catch (err: any) {
+      toast.error(err.message || 'Erreur lors de la transition');
+    } finally {
+      setPendingId(null);
     }
   };
 
@@ -378,7 +408,8 @@ export default function InvoicesPage() {
                   <TableHead className="text-xs font-semibold text-[#0a0b0d]">Émission</TableHead>
                   <TableHead className="text-xs font-semibold text-[#0a0b0d]">Échéance</TableHead>
                   <TableHead className="text-xs font-semibold text-[#0a0b0d]">Montant Total</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d] text-right">Statut</TableHead>
+                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Statut</TableHead>
+                  <TableHead className="text-xs font-semibold text-[#0a0b0d] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -396,7 +427,52 @@ export default function InvoicesPage() {
                     <TableCell className="text-xs font-medium text-[#0a0b0d]">
                       {formatAmount(inv.totalCents)}
                     </TableCell>
-                    <TableCell className="text-right">{getStatusBadge(inv.status)}</TableCell>
+                    <TableCell>{getStatusBadge(inv.status)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {inv.status === 'draft' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={pendingId === inv.id}
+                            onClick={() => handleTransition(inv.id, 'send')}
+                            className="h-8 rounded-full text-[11px] text-[#0052ff] hover:bg-[#0052ff]/10"
+                          >
+                            {pendingId === inv.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Send className="h-3.5 w-3.5" />
+                            )}
+                            Envoyer
+                          </Button>
+                        )}
+
+                        {(inv.status === 'draft' || inv.status === 'sent' || inv.status === 'overdue') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={pendingId === inv.id}
+                            onClick={() => handleTransition(inv.id, 'cancel')}
+                            className="h-8 rounded-full text-[11px] text-[#cf202f] hover:bg-[#cf202f]/10"
+                          >
+                            <Ban className="h-3.5 w-3.5" />
+                            Annuler
+                          </Button>
+                        )}
+
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 rounded-full text-[11px] text-[#5b616e] hover:bg-gray-100"
+                        >
+                          <a href={`/api/v1/invoices/${inv.id}/pdf/download`}>
+                            <Download className="h-3.5 w-3.5" />
+                            PDF
+                          </a>
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

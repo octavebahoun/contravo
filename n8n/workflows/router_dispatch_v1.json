@@ -392,6 +392,48 @@
                 ],
                 "combinator": "and"
               }
+            },
+            {
+              "outputKey": "password_reset_requested",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "user.password_reset_requested"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "invitation_sent",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "invitation.sent"
+                  }
+                ],
+                "combinator": "and"
+              }
             }
           ]
         },
@@ -776,6 +818,58 @@
           "responseCode": 401
         }
       }
+    },
+    {
+      "id": "a1b2c3d4-2222-4bbb-9000-000000000001",
+      "name": "Run email_password_reset_requested_v1",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1080,
+        2220
+      ],
+      "parameters": {
+        "mode": "once",
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "email_password_reset_requested_v1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {}
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "b2c3d4e5-2222-4bbb-9000-000000000001",
+      "name": "Run email_invitation_sent_v1",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1080,
+        2340
+      ],
+      "parameters": {
+        "mode": "once",
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "email_invitation_sent_v1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {}
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
     }
   ],
   "connections": {
@@ -908,6 +1002,20 @@
         [
           {
             "node": "Run email_review_created_v1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Run email_password_reset_requested_v1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Run email_invitation_sent_v1",
             "type": "main",
             "index": 0
           }

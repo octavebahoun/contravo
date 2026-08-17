@@ -7,6 +7,7 @@ import { acceptInvitationSchema } from '@/lib/validation';
 import { ApiError } from '@/lib/rbac';
 import { formatErrorResponse } from '@/lib/errors';
 import { createAuditLog } from '@/lib/audit';
+import { assertQuota, recomputeQuotaUsage } from '@/lib/billing/quotas.service';
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
@@ -49,6 +50,17 @@ export async function POST(request: NextRequest) {
       throw new ApiError('INVALID_TOKEN', 'This invitation has expired', 400);
     }
 
+    // The link is only good for the address it was sent to. Without this, a
+    // forwarded or intercepted email would let anyone with an account walk into
+    // the organization.
+    if (user.email.toLowerCase() !== invitation.email.toLowerCase()) {
+      throw new ApiError(
+        'EMAIL_MISMATCH',
+        `Cette invitation a été envoyée à ${invitation.email}. Connectez-vous avec cette adresse pour l’accepter.`,
+        403
+      );
+    }
+
     // Check if user is already a member
     const existingMembership = await db
       .select()
@@ -75,6 +87,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // The seat is consumed here, not at invite time (MVP6 §1.1): an org that
+    // hit its member limit after sending invitations must not grow past it.
+    await assertQuota(invitation.organizationId, 'maxMembers');
+
     // Accept invitation and create membership in a transaction
     const membership = await db.transaction(async (tx) => {
       await tx
@@ -94,6 +110,8 @@ export async function POST(request: NextRequest) {
 
       return newMem;
     });
+
+    await recomputeQuotaUsage(invitation.organizationId);
 
     const ipAddress = request.headers.get('x-forwarded-for') || (request as any).ip || undefined;
     await createAuditLog({

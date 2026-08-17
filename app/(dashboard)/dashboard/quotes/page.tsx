@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, FileSpreadsheet, CheckCircle2, Clock, XCircle, Loader2, Trash2 } from 'lucide-react';
+import { Plus, Search, FileSpreadsheet, CheckCircle2, Clock, XCircle, Loader2, Trash2, Send, Download, Ban } from 'lucide-react';
 import { toast } from 'sonner';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -41,6 +41,7 @@ export default function QuotesPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -140,6 +141,36 @@ export default function QuotesPage() {
       toast.error(err.message || 'Erreur création devis');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  /**
+   * Drives the quote state machine (MVP3 §5).
+   *
+   * `send` is the step that mints the client's portal token and emits
+   * `quote.sent`, which n8n turns into the email — nothing leaves the app
+   * without it.
+   */
+  const handleTransition = async (id: string, action: 'send' | 'cancel') => {
+    try {
+      setPendingId(id);
+      const res = await fetch(`/api/v1/quotes/${id}/transition`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error?.message || errData.message || 'Transition refusée');
+      }
+
+      toast.success(action === 'send' ? 'Devis envoyé au client' : 'Devis annulé');
+      mutate();
+    } catch (err: any) {
+      toast.error(err.message || 'Erreur lors de la transition');
+    } finally {
+      setPendingId(null);
     }
   };
 
@@ -405,7 +436,8 @@ export default function QuotesPage() {
                   <TableHead className="text-xs font-semibold text-[#0a0b0d]">Client</TableHead>
                   <TableHead className="text-xs font-semibold text-[#0a0b0d]">Valide Jusqu'au</TableHead>
                   <TableHead className="text-xs font-semibold text-[#0a0b0d]">Montant Total</TableHead>
-                  <TableHead className="text-xs font-semibold text-[#0a0b0d] text-right">Statut</TableHead>
+                  <TableHead className="text-xs font-semibold text-[#0a0b0d]">Statut</TableHead>
+                  <TableHead className="text-xs font-semibold text-[#0a0b0d] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -422,7 +454,52 @@ export default function QuotesPage() {
                     <TableCell className="text-xs font-medium text-[#0a0b0d]">
                       {formatAmount(q.totalCents)}
                     </TableCell>
-                    <TableCell className="text-right">{getStatusBadge(q.status)}</TableCell>
+                    <TableCell>{getStatusBadge(q.status)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {q.status === 'draft' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={pendingId === q.id}
+                            onClick={() => handleTransition(q.id, 'send')}
+                            className="h-8 rounded-full text-[11px] text-[#0052ff] hover:bg-[#0052ff]/10"
+                          >
+                            {pendingId === q.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Send className="h-3.5 w-3.5" />
+                            )}
+                            Envoyer
+                          </Button>
+                        )}
+
+                        {(q.status === 'draft' || q.status === 'sent' || q.status === 'viewed') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={pendingId === q.id}
+                            onClick={() => handleTransition(q.id, 'cancel')}
+                            className="h-8 rounded-full text-[11px] text-[#cf202f] hover:bg-[#cf202f]/10"
+                          >
+                            <Ban className="h-3.5 w-3.5" />
+                            Annuler
+                          </Button>
+                        )}
+
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 rounded-full text-[11px] text-[#5b616e] hover:bg-gray-100"
+                        >
+                          <a href={`/api/v1/quotes/${q.id}/pdf/download`}>
+                            <Download className="h-3.5 w-3.5" />
+                            PDF
+                          </a>
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

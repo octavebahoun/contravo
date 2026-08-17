@@ -1,0 +1,7 @@
+<mjml><mj-body><mj-section><mj-column>
+      <mj-text>Bonjour {{fullName}},</mj-text>
+      <mj-text>Vous avez demandé la réinitialisation de votre mot de passe Contravo. Ce lien expire dans {{expiresInMinutes}} minutes et ne fonctionne qu'une seule fois.</mj-text>
+      <mj-button href="{{resetUrl}}">Définir un nouveau mot de passe</mj-button>
+      <mj-text>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email : votre mot de passe actuel reste valable.</mj-text>
+      <mj-text>Contravo</mj-text>
+    </mj-column></mj-section></mj-body></mjml>
