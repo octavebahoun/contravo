@@ -32,7 +32,9 @@ export async function POST(request: NextRequest) {
 
     const { fileId, uploadUrl, r2Key } = await initiateUpload({
       orgId: ctx.organizationId,
-      userId: ctx.userId || 'system',
+      // `uploaded_by_user_id` is a nullable FK to users: an API-key upload has
+      // no user behind it, and the literal 'system' would break the insert.
+      userId: ctx.userId || null,
       kind: validated.kind,
       filename: validated.filename,
       mimeType: validated.mimeType,

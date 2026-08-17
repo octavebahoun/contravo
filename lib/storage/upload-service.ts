@@ -150,7 +150,7 @@ async function generateR2Key(
  */
 export async function initiateUpload(params: {
   orgId: string;
-  userId: string;
+  userId: string | null;
   kind: R2KeyKind;
   filename: string;
   mimeType: string;

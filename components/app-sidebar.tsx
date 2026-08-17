@@ -27,6 +27,7 @@ import {
   Package,
   Receipt,
   MessageSquareQuote,
+  FolderOpen,
   CreditCard,
   Settings,
   Activity,
@@ -48,6 +49,7 @@ const data = {
     { title: "Livrables", url: "/dashboard/deliverables", icon: Package },
     { title: "Dépenses", url: "/dashboard/expenses", icon: Receipt },
     { title: "Avis clients", url: "/dashboard/reviews", icon: MessageSquareQuote },
+    { title: "Fichiers", url: "/dashboard/files", icon: FolderOpen },
     { title: "Abonnement", url: "/dashboard/billing", icon: CreditCard },
   ],
   settingsNav: [
