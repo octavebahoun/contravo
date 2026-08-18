@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { composeLegalMentions, composeBankDetails, type SetupInput } from '@/app/onboarding/actions';
+import { composeLegalMentions, composeBankDetails, type SetupInput } from '@/app/onboarding/compose';
 
 /**
  * The first-run setup writes two fields that end up printed on every document:

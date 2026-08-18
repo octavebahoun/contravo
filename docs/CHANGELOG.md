@@ -5,6 +5,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed — `next build` échouait sur le fichier d'actions de la mise en route
+- `app/onboarding/actions.ts` porte `'use server'`, où **tout export doit être une fonction asynchrone**. `composeLegalMentions` et `composeBankDetails`, deux fonctions pures exportées à côté des actions, faisaient échouer la compilation.
+- Ni `tsc` ni les tests ne pouvaient le voir : la règle appartient au compilateur Next seul. Trouvé en construisant l'application avant de fusionner sur `main` — c'est-à-dire au dernier endroit où c'était encore trouvable avant un déploiement cassé.
+- Le schéma, le type et les deux fonctions vivent désormais dans `app/onboarding/compose.ts`. `actions.ts` n'exporte plus que ses deux actions.
+
 ### Fixed — Les webhooks partaient quinze minutes après l'évènement, ou jamais
 - `dispatchPending` lançait ses envois sans les attendre. Sur Vercel, la fonction peut être gelée à l'instant où la réponse part : l'appel HTTP n'avait alors jamais lieu, et la ligne restait `pending` avec **zéro tentative**. Constaté sur une demande de réinitialisation de mot de passe — l'évènement en base, aucune exécution côté n8n, aucune erreur nulle part.
 - Le balayage de reprise finissait par la rattraper, mais seulement après `PENDING_STALE_MINUTES` : quinze minutes. Pour un lien de réinitialisation, c'est la différence entre un produit qui marche et un produit qui ne marche pas.

@@ -4,7 +4,8 @@ import { useState, useTransition, useRef, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { completeOnboarding, skipOnboarding, type SetupInput } from '../actions';
+import { completeOnboarding, skipOnboarding } from '../actions';
+import type { SetupInput } from '../compose';
 
 /**
  * First-run setup, one question per screen.
