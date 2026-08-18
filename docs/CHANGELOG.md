@@ -5,6 +5,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed — Supprimer son compte abandonnait l'organisation derrière lui
+- `deleteAccount` ne supprimait que la ligne `users`. Les appartenances tombaient en cascade, mais l'organisation restait : ses clients, ses devis, ses factures et ses fichiers R2 survivaient sans qu'aucun compte ne puisse plus jamais les atteindre — ni les consulter, ni les effacer.
+- Constaté sur la base fraîchement remise à zéro : une inscription à 23:17, une suppression de compte à 23:17:42, et une organisation fantôme créée une minute avant la vraie. Le journal d'audit en portait la trace exacte (`org.create`, `auth.signup`, `auth.delete_account`).
+- Les organisations devenues sans membre sont désormais supprimées avec le dernier de leurs membres. Seulement celles-là : un propriétaire qui quitte une équipe ne doit pas emporter le travail des autres.
+- `lib/db/bootstrap-n8n-key.ts` exige en outre une organisation **avec propriétaire**. Le tri par ancienneté seul avait retenu exactement l'organisation fantôme : la clé aurait été émise pour une organisation où personne ne peut se connecter.
+
 ### Fixed — « Failed to create user. Please try again. » sur une adresse déjà inscrite
 - L'inscription renvoyait le même message pour deux causes opposées : l'adresse est déjà prise, ou l'insertion a échoué. Le conseil donné — réessayer — était impossible à suivre dans le premier cas : l'adresse restera prise au deuxième essai comme au premier. Les deux cas sont désormais distingués, et le premier renvoie vers la connexion.
 - La connexion, elle, garde son message unique et volontairement vague pour les deux échecs possibles : c'est là que l'énumération de comptes serait exploitable, pas à l'inscription.

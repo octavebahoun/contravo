@@ -10,6 +10,7 @@
     "db:purge": "npx tsx lib/db/purge.ts",
     "db:reset": "npx tsx lib/db/purge.ts --yes --all-users",
     "n8n:key": "npx tsx lib/db/bootstrap-n8n-key.ts",
+    "n8n:key:issue": "npx tsx lib/db/bootstrap-n8n-key.ts --yes",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",

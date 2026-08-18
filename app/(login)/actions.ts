@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import {
   User,
@@ -343,6 +343,20 @@ export const deleteAccount = validatedActionWithUser(
     );
 
     await db.delete(users).where(eq(users.id, user.id));
+
+    // Les appartenances tombent en cascade avec le compte — et laissaient
+    // derrière elles une organisation sans aucun membre : ses clients, ses
+    // devis et ses factures survivaient sans que personne ne puisse plus jamais
+    // les atteindre, ni les effacer. Une organisation que plus aucun compte ne
+    // rejoint est morte : elle part avec le dernier de ses membres.
+    //
+    // Seulement celles devenues vides : un propriétaire qui s'en va d'une
+    // équipe ne doit pas emporter le travail des autres.
+    await db.execute(sql`
+      delete from organizations o
+       where not exists (
+         select 1 from memberships m where m.organization_id = o.id
+       )`);
 
     const cookieStore = await cookies();
     const token = cookieStore.get('session')?.value;

@@ -24,14 +24,22 @@ const SCOPES = ['webhooks:manage', 'clients:read'];
 const confirmed = process.argv.includes('--yes');
 
 async function main() {
-  const orgs = await raw<{ id: string; name: string; created_at: string }>(
-    'select id, name, created_at from organizations order by created_at'
+  // Une organisation sans membre est inatteignable : personne ne peut s'y
+  // connecter, donc aucune clé émise pour elle ne servirait jamais. Le tri par
+  // ancienneté seul avait retenu exactement cela — l'organisation abandonnée
+  // par une suppression de compte, créée une minute avant la vraie.
+  const orgs = await raw<{ id: string; name: string; created_at: string; owner: string }>(
+    `select o.id, o.name, o.created_at, u.email as owner
+       from organizations o
+       join memberships m on m.organization_id = o.id and m.role = 'owner'
+       join users u on u.id = m.user_id
+      order by o.created_at`
   );
 
   if (orgs.length === 0) {
     console.error(
-      '\nAucune organisation. S’inscrire sur l’application d’abord : une clé API\n' +
-        'appartient forcément à une organisation.\n'
+      '\nAucune organisation avec un propriétaire. S’inscrire sur l’application\n' +
+        'd’abord : une clé API appartient forcément à une organisation.\n'
     );
     process.exitCode = 1;
     return;
@@ -44,7 +52,7 @@ async function main() {
   if (orgs.length > 1) {
     console.log(`${orgs.length} organisations — la plus ancienne est retenue.`);
   }
-  console.log(`Organisation : ${org.name}`);
+  console.log(`Organisation : ${org.name}  (propriétaire ${org.owner})`);
 
   const existing = await raw<{ id: string; prefix: string }>(
     'select id, prefix from api_keys where name = $1 and revoked_at is null',
