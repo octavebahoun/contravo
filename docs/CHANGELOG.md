@@ -5,6 +5,57 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — Mise en route au premier accès (`/onboarding`)
+- L'inscription ne peut inventer qu'un nom d'organisation (`"<untel>'s Organization"`) et laisse vides les mentions légales et les coordonnées bancaires. La première facture partait donc sans les mentions qui en font un document opposable, et sans le RIB par lequel le client est censé payer. Six étapes, posées une fois, en tirent un compte réellement utilisable.
+- `organizations.onboarding_completed_at` (migration `0009_onboarding.sql`) porte l'état. Le middleware redirige vers `/onboarding` tant qu'il est nul, sur la même passe qui vérifie déjà la suspension : l'organisation courante n'est résolue qu'une fois, la garde ne coûte aucune requête supplémentaire.
+- La migration **estampille les organisations existantes** : sans cela, tout compte déjà en service se serait retrouvé enfermé dans un formulaire de première mise en route.
+- Le passage est **sautable**, et sauter estampille quand même. Redemander à chaque connexion transformerait la mise en route en péage ; les champs restent accessibles dans les Paramètres.
+- Seul un propriétaire écrit les réglages de l'organisation ; un membre invité ne reçoit que l'estampille. Le formulaire n'a pas à devenir un contournement du contrôle d'accès.
+- `composeLegalMentions` et `composeBankDetails` sont exportées et testées à part (`tests/onboarding-composition.test.ts`) : ce sont elles qui décident du texte imprimé sur chaque PDF, et un champ vide ne doit jamais produire une ligne orpheline du type « IBAN : ».
+
+### Added — Purge de la base et jeu de données de démonstration
+- `lib/db/purge.ts` vide le schéma `public` et les objets R2 correspondants. La base portait 459 lignes de résidus de développement : 17 organisations dont la moitié nommées `"<untel>'s Organization"`, 118 lignes d'audit, 105 livraisons de webhook, des factures issues de tests ratés. Inutilisable pour une démonstration, et surtout : des fixtures qui masquent les vrais problèmes.
+- Deux choses survivent volontairement. **`users`** : un hash de mot de passe ne se régénère pas, vider la table condamnerait les comptes réels — seuls les comptes correspondant aux motifs de test sont supprimés. **Le journal de migration**, qui vit dans le schéma `drizzle` et non dans `public`, donc `drizzle-kit migrate` considère toujours le schéma à jour.
+- Simulation par défaut : le script affiche ce qu'il détruirait et ne détruit rien sans `--yes`.
+- Un seul `TRUNCATE ... CASCADE` plutôt qu'une suppression table par table : les clés étrangères `RESTRICT` (`invoice_payments.invoice_id`, `signatures.signed_pdf_file_id`) exigeraient un ordre exact. Les objets R2 sont supprimés **avant**, sinon chaque PDF généré resterait orphelin dans le bucket pour toujours.
+- `lib/db/seed-demo.ts` : une agence — Studio Baobab, Abidjan — 4 clients, 4 projets, 4 devis, 3 contrats, 5 factures, 2 encaissements, 3 relances, 5 dépenses, 3 livrables et un avis. Les quatre dossiers sont à quatre étapes différentes du cycle de vie, de sorte qu'un seul passage dans l'application montre la chaîne entière.
+- **Toutes les dates sont relatives au jour d'exécution.** Des dates figées rendraient la facture en retard vieille de deux mois au moment du tournage, et l'échelle de relance sauterait directement à son dernier cran.
+- Les montants sont en francs entiers et réconcilient : somme des lignes = HT, HT + TVA = total, `amount_due_cents` (colonne générée) = total − encaissé. Vérifié en base après le semis.
+- `quota_usage` n'est délibérément pas écrit : des triggers `AFTER INSERT/UPDATE/DELETE` sur `clients`, `projects`, `memberships`, `api_keys` et `webhook_endpoints` tiennent déjà cette ligne à jour — et l'avaient calculée juste. L'écrire à la main ne pouvait que les contredire.
+- `document_sequences` est positionné aux derniers numéros émis : sans cela, le premier document créé pendant une démonstration s'appellerait `DEV-2026-0001` et entrerait en collision avec une ligne existante.
+- Les identifiants GeniusPay sandbox sont re-chiffrés depuis `.env` vers l'organisation de démonstration, pour que le paiement Mobile Money soit réellement exécutable. Aucun secret n'est porté par le script.
+- Le semis est rejouable : l'organisation `studio-baobab` est démontée d'abord, et rien d'autre n'est touché.
+
+### Fixed — Deux écrans du tableau de bord renvoyaient 500 sur la fiche client
+- `GET /api/v1/clients/:id/invoices` et `GET /api/v1/clients/:id/projects` échouaient sur `Do not know how to serialize a BigInt`. **La fiche client n'a donc jamais affiché ni ses projets ni ses factures**, depuis qu'elle existe.
+- La sérialisation des montants existait, mais **en ligne** dans les routes de liste (`/api/v1/invoices`, `/api/v1/projects`) : elle n'a simplement jamais été recopiée dans les deux routes rattachées à un client. Une logique dupliquée finit toujours par manquer quelque part.
+- `serializeInvoice` et `serializeProject` vivent désormais dans leurs dépôts, et `bigintToString` dans `lib/money.ts` — la convention « les unités mineures traversent le réseau en chaînes » appartient au même endroit que le reste de la convention monétaire. Les quatre routes s'en servent.
+- `budgetCents` reste `null` plutôt que `"0"` : un projet sans budget est un état réel, que l'interface doit pouvoir distinguer de zéro.
+- Trouvé en filmant la vidéo de présentation : la scène 4 aurait enregistré un écran vide sous une voix off énumérant « ses projets, ses devis, ses factures ».
+
+### Added — Outillage de la vidéo de présentation (`video/`)
+- Script, storyboard, plan de tournage et un enregistreur qui **filme l'application réelle** : Chrome piloté par Puppeteer sur le jeu de démonstration, encodé en 1920×1080 à 30 images/s. Aucun mockup, aucune animation de substitution — pour un SaaS B2B, la seule chose qui convainc est que la chaîne fonctionne, et une reconstitution ne le prouve pas.
+- Les plans référencent des **numéros de document** (`DEV-2026-0003`), jamais des UUID, résolus en base au moment du tournage : le jeu de démonstration est re-semé régulièrement et ses identifiants changent à chaque fois.
+- Trois détails qui séparent une capture utilisable d'une capture inutilisable :
+  - **Curseur de synthèse.** `Page.screencast` capture la page, pas le pointeur : sans lui, les clics donnent l'impression que l'interface réagit à rien. Il est injecté au chargement du document, pas à sa création — `document.body` n'existe pas encore à ce moment-là, et l'ajout échouait silencieusement.
+  - **Mouvements interpolés.** Un `scrollBy` atterrit en une image, ce qui se lit comme une coupe et non comme un mouvement. Scrolls et déplacements de souris sont lissés dans le temps.
+  - **Badge dev de Next masqué.** Il se trouve dans un portail en coin de chaque page de développement, et n'a rien à faire dans une vidéo produit.
+- Le scroll est passé en chaîne à `page.evaluate` et non en fonction : tsx compile avec `keepNames` d'esbuild, qui enveloppe chaque fonction nommée dans un appel `__name()` absent du navigateur — d'où un `__name is not defined` à la première prise.
+- Chrome est lancé sans bac à sable : cet Ubuntu interdit les espaces de noms utilisateur non privilégiés via AppArmor, et le zygote refuse de démarrer. Acceptable **ici seulement** — l'outil ne charge que notre propre localhost.
+- Le jeton de portail est frappé par `generatePublicToken`, la fonction même qu'emprunte l'envoi : seul son hash est stocké, rejouer un lien reçu par mail est impossible, et la page filmée reste identique à celle qu'ouvre un vrai client.
+- La capture se connecte sous **Fatou Diarra**, l'administratrice créée par le seed, et non sous le compte propriétaire réel. D'abord parce que l'en-tête et le menu utilisateur affichent ce compte, et qu'une adresse Gmail personnelle à l'écran ruinerait la cohérence de l'organisation de démonstration ; ensuite parce que le seed fixe ce mot de passe, donc filmer ne réclame aucun secret. `admin` couvre tout ce que la liste de plans touche.
+- Le tournage réel a corrigé quatre défauts que seule une prise pouvait révéler :
+  - **Le serveur de dev compile la route à la première visite.** La scène des relances est revenue en dix secondes de spinner. Chaque plan visite donc son URL deux fois : la première paie la compilation hors caméra. Une vue qui tourne encore au bout de 20 s fait désormais échouer la prise plutôt que d'enregistrer le spinner.
+  - **Une étape en échec tuait tout le processus.** Le screencast restait actif, et fermer le contexte par-dessus levait `Page.screencastFrameAck: Target closed` depuis la boucle d'évènements — un rejet non capturé qui emportait toutes les scènes encore en file. Le recorder est maintenant arrêté dans le `finally`.
+  - **Une page qui ne repeint pas ne produit aucune image.** L'écran développeur tient exactement dans la fenêtre : rien à faire défiler, donc rien à repeindre, donc un fichier de zéro octet. Un pixel invisible change de couleur à chaque frame pour garder le flux vivant.
+  - **Les jetons de portail étaient refusés.** Les actions étaient inventées (`view`) au lieu d'être reprises de `payload-builder` (`read`) : le portail répondait « Accès refusé » à chaque plan client.
+- Les libellés des boutons ont été **lus sur les pages**, pas devinés : « Envoyer au client », « Accepter le devis », « Signer le contrat », « Payer … en ligne ». Les quatre premières prises de la chaîne avaient échoué sur des sélecteurs plausibles mais faux.
+- Le jeu de démo a suivi : le devis repasse en `draft` (le bouton « Envoyer » n'existe que sur un brouillon) et le contrat en `sent` (le portail n'affiche le pavé de signature qu'une fois le contrat envoyé).
+- L'organisation n'est plus résolue au démarrage mais à la première utilisation : les plans sans référence à un document — la landing — se filment désormais même quand la base est injoignable, c'est-à-dire précisément quand on a besoin d'avancer sur autre chose.
+
+### Fixed — Le catalogue de webhooks compte 48 événements, pas 46
+- L'entrée précédente de ce changelog et le script de la vidéo annonçaient 46. `WEBHOOK_EVENT_NAMES` en contient 48, répartis en 9 groupes, sans doublon ni caractère générique dans le compte. Corrigé là où le chiffre est énoncé.
+
 ### Changed — Next épinglé en 15.5.23, sortie des canary
 - Le projet tournait sur `15.6.0-canary.59` : une canary d'une version **jamais sortie en stable**, la ligne étant passée de 15.5.x à 16.x. C'est le suspect principal du crash `removeChild` de `/dashboard/contracts`, dont le balisage avait été audité et jugé valide. 15.5.23 est le tag `backport`, c'est-à-dire la ligne 15.5 encore maintenue.
 - `experimental.ppr` et `experimental.clientSegmentCache` ont été retirés : réservés aux canary, `next build` refuse de démarrer avec eux sur une version stable. Ce sont des optimisations de rendu — les routes qui étaient en pré-rendu partiel sont désormais simplement rendues à la demande, sans perte fonctionnelle.
@@ -34,9 +85,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - `payload.totalLabel` et `payload.amountDueLabel` sont préformatés par l'application : les templates tournent dans des nœuds Code n8n qui ne peuvent pas importer `lib/money.ts`, et la convention XOF avait déjà divergé sur quatre surfaces.
 
 ### Added — Gestion des endpoints webhook
-- La carte « Endpoint Webhook n8n / Make » de l'écran Développeur **ne faisait rien** : URL de démonstration dans un champ non contrôlé, deux événements codés en dur sur les quarante-six réellement émis, et un bouton « Enregistrer l'Endpoint » **sans `onClick`**. `createWebhookEndpoint()` existait dans la librairie sans aucun appelant, et aucune route ne permettait d'enregistrer une destination : le seul endpoint existant était le `n8n_primary` global, inséré à la main.
+- La carte « Endpoint Webhook n8n / Make » de l'écran Développeur **ne faisait rien** : URL de démonstration dans un champ non contrôlé, deux événements codés en dur sur les quarante-huit réellement émis, et un bouton « Enregistrer l'Endpoint » **sans `onClick`**. `createWebhookEndpoint()` existait dans la librairie sans aucun appelant, et aucune route ne permettait d'enregistrer une destination : le seul endpoint existant était le `n8n_primary` global, inséré à la main.
 - Écran fonctionnel : création, liste, activation/désactivation, suppression, rotation du secret, envoi d'un événement de test, et historique des livraisons avec renvoi manuel.
-- `lib/webhooks/events.ts` : catalogue des 46 événements, groupés et libellés. Rien ne validait le tableau `events` — un endpoint enregistré avec une faute de frappe était accepté puis **ne se déclenchait jamais**.
+- `lib/webhooks/events.ts` : catalogue des 48 événements, groupés et libellés. Rien ne validait le tableau `events` — un endpoint enregistré avec une faute de frappe était accepté puis **ne se déclenchait jamais**.
 - Le secret de signature n'est affiché qu'à la création et après rotation, comme une clé API : il n'est jamais relisté. Un secret perdu se remplace, il ne se récupère pas.
 - URL refusée si elle n'est pas en HTTPS, ou si l'hôte n'est joignable que depuis notre réseau (`localhost`, `127.*`, `10.*`, `192.168.*`, `172.16-31.*`, `169.254.*`, `.internal`, `.local`) : le dispatcher tourne côté serveur, une telle URL en ferait un forgeur de requêtes contre notre propre infrastructure.
 - Le quota `maxWebhookEndpoints` du plan est enfin appliqué sur ce chemin (1 en Free, 10 en Pro, 50 en Business).

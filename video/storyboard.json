@@ -1,0 +1,261 @@
+{
+  "title": "Contravo — du devis à l'encaissement",
+  "ratio": "16:9",
+  "voice": "george",
+  "subtitles": true,
+  "subtitleStyle": "cinematic",
+  "music": "sounds/music/leberch-cinematic-space.mp3",
+  "musicVolume": 0.05,
+  "sfxVolume": 0.9,
+  "youtubeMetadata": {
+    "title": "Contravo — du devis à l'encaissement",
+    "description": "Contravo relie le devis, le contrat signé, la facture, le paiement Mobile Money et la relance automatique dans une seule chaîne. Pensé pour les agences et les indépendants qui facturent en francs CFA.\n\nAu sommaire :\n00:00 Le constat\n00:20 Le tableau de bord\n00:45 Devis et envoi\n01:15 Portail client et signature\n01:40 Paiement Mobile Money\n02:05 Relances automatiques\n02:20 Webhooks et API\n\nTout ce qui apparaît à l'écran est l'application réelle, filmée sur un jeu de données de démonstration. Aucun mockup.",
+    "tags": [
+      "Contravo",
+      "facturation",
+      "devis",
+      "franc CFA",
+      "XOF",
+      "Mobile Money",
+      "Wave",
+      "Orange Money",
+      "signature électronique",
+      "SaaS",
+      "Côte d'Ivoire",
+      "Afrique de l'Ouest",
+      "relance de facture"
+    ]
+  },
+  "scenes": [
+    {
+      "id": 1,
+      "narration": "Un devis envoyé par mail. Un contrat signé, scanné, puis perdu. Une facture relancée de mémoire, quand on y pense. À la fin du mois, personne ne sait vraiment ce qui a été encaissé.",
+      "mediaPath": "scene_01_constat.png",
+      "mediaPrompt": "Bureau d'une petite agence en Afrique de l'Ouest, fin de journée, lumière chaude rasante. Factures papier empilées, carnet annoté, téléphone éteint, tasse froide.",
+      "motionPrompt": "très léger travelling avant sur la pile de factures",
+      "effects": {
+        "zoom": "in",
+        "transition": "none",
+        "cameraMotion": "dolly"
+      }
+    },
+    {
+      "id": 2,
+      "narration": "Contravo relie tout ça. Une seule chaîne, du devis jusqu'à l'argent sur le compte.",
+      "mediaPath": "scene_02_promesse.mp4",
+      "mediaVolume": 0,
+      "effects": {
+        "zoom": "none",
+        "transition": "black"
+      },
+      "kineticTitle": {
+        "text": "*Contravo*",
+        "position": "center",
+        "fontSize": "6.5rem",
+        "startInSeconds": 0.3,
+        "variant": "reveal",
+        "highlightColor": "#F04E23"
+      }
+    },
+    {
+      "id": 3,
+      "narration": "Le tableau de bord montre ce qui est signé, ce qui reste à encaisser, et ce qui est déjà en retard. Aucune estimation : ce sont les factures elles-mêmes qui parlent.",
+      "mediaPath": "scene_03_tableau-de-bord.mp4",
+      "mediaVolume": 0,
+      "effects": {
+        "zoom": "none",
+        "transition": "fade"
+      }
+    },
+    {
+      "id": 4,
+      "narration": "Un client, c'est une fiche unique. Ses projets, ses devis, ses factures, ce qu'il a payé et ce qu'il doit encore.",
+      "mediaPath": "scene_04_fiche-client.mp4",
+      "mediaVolume": 0,
+      "effects": {
+        "zoom": "none",
+        "transition": "fade"
+      }
+    },
+    {
+      "id": 5,
+      "narration": "Le devis se construit ligne par ligne : quantité, prix unitaire, remise. La TVA s'applique au bon endroit, et les montants sont en francs CFA, sans centimes, parce que le franc n'en a pas.",
+      "mediaPath": "scene_05_devis-lignes.mp4",
+      "mediaVolume": 0,
+      "effects": {
+        "zoom": "none",
+        "transition": "wipe"
+      },
+      "kineticTitle": {
+        "text": "En francs CFA. *Sans centimes.*",
+        "position": "bottom",
+        "fontSize": "2.4rem",
+        "variant": "reveal",
+        "highlightColor": "#F04E23"
+      }
+    },
+    {
+      "id": 6,
+      "narration": "Un clic sur Envoyer. Le PDF se génère, le mail part avec la pièce jointe, et un lien privé est créé pour le client.",
+      "mediaPath": "scene_06_envoi.mp4",
+      "mediaVolume": 0,
+      "effects": {
+        "zoom": "none",
+        "transition": "fade"
+      },
+      "sounds": [
+        {
+          "src": "sounds/sfx/swoosh.mp3",
+          "volume": 0.3,
+          "trimEnd": 1.1
+        },
+        {
+          "src": "sounds/sfx/pop.mp3",
+          "volume": 0.45,
+          "trimEnd": 0.8
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "narration": "Le client reçoit un vrai document. Vos mentions légales, vos coordonnées bancaires, votre numéro de devis. Pas une capture d'écran envoyée à la hâte.",
+      "mediaPath": "scene_07_document-pdf.mp4",
+      "mediaVolume": 0,
+      "effects": {
+        "zoom": "none",
+        "transition": "fade"
+      },
+      "playbackRate": 0.8
+    },
+    {
+      "id": 8,
+      "narration": "Il ouvre son lien. Aucun compte à créer, aucun mot de passe. Il lit, et il accepte.",
+      "mediaPath": "scene_08_portail-acceptation.mp4",
+      "mediaVolume": 0,
+      "effects": {
+        "zoom": "none",
+        "transition": "wipe"
+      },
+      "kineticTitle": {
+        "text": "*Aucun compte* à créer.",
+        "position": "bottom",
+        "fontSize": "2.4rem",
+        "variant": "reveal",
+        "highlightColor": "#F04E23"
+      }
+    },
+    {
+      "id": 9,
+      "narration": "Le contrat suit le même chemin. Le client signe à l'écran, et Contravo scelle le document : empreinte du PDF, horodatage, adresse du signataire. La signature reste vérifiable des mois plus tard.",
+      "mediaPath": "scene_09_signature-contrat.mp4",
+      "mediaVolume": 0,
+      "effects": {
+        "zoom": "none",
+        "transition": "fade"
+      },
+      "sounds": [
+        {
+          "src": "sounds/sfx/put-cap-on-pen.mp3",
+          "volume": 0.5
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "narration": "Vient la facture. Trois millions cent quatre-vingt-six mille francs à régler. Le client la voit, et il a un bouton pour la payer.",
+      "mediaPath": "scene_10_facture-a-payer.mp4",
+      "mediaVolume": 0,
+      "effects": {
+        "zoom": "none",
+        "transition": "fade"
+      }
+    },
+    {
+      "id": 11,
+      "narration": "Mobile Money, Wave, Orange Money, ou carte : le client choisit, il est redirigé vers la passerelle, et il paie depuis son téléphone en quelques secondes.",
+      "mediaPath": "scene_11_paiement-passerelle.mp4",
+      "mediaVolume": 0,
+      "effects": {
+        "zoom": "none",
+        "transition": "zoomPunch"
+      },
+      "sounds": [
+        {
+          "src": "sounds/sfx/swoosh.mp3",
+          "volume": 0.3,
+          "trimEnd": 1.1
+        }
+      ],
+      "playbackRate": 0.9
+    },
+    {
+      "id": 13,
+      "narration": "La passerelle confirme. Contravo enregistre le montant réellement reçu, les frais, et le net. Puis la facture passe à payée, toute seule.",
+      "mediaPath": "scene_13_facture-payee.mp4",
+      "mediaVolume": 0,
+      "effects": {
+        "zoom": "none",
+        "transition": "fade"
+      },
+      "kineticTitle": {
+        "text": "Le montant *réellement reçu.*",
+        "position": "bottom",
+        "fontSize": "2.4rem",
+        "variant": "reveal",
+        "highlightColor": "#F04E23"
+      },
+      "sounds": [
+        {
+          "src": "sounds/sfx/pop.mp3",
+          "volume": 0.5,
+          "trimEnd": 0.8
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "narration": "Et quand personne ne paie ? Contravo relance sans qu'on le lui demande. Le jour de l'échéance, puis à sept jours, à quatorze, à trente. Le ton monte à chaque cran.",
+      "mediaPath": "scene_14_relances-automatiques.mp4",
+      "mediaVolume": 0,
+      "effects": {
+        "zoom": "none",
+        "transition": "wipe"
+      },
+      "kineticTitle": {
+        "text": "J+0 · J+7 · J+14 · *J+30*",
+        "position": "bottom",
+        "fontSize": "2.6rem",
+        "variant": "reveal",
+        "highlightColor": "#F04E23"
+      }
+    },
+    {
+      "id": 15,
+      "narration": "Chaque événement de cette chaîne est diffusable. Devis accepté, contrat signé, paiement reçu : votre système reçoit un webhook signé, avec les tentatives et les réponses tracées. Quarante-huit événements, et une API documentée.",
+      "mediaPath": "scene_15_webhooks-api.mp4",
+      "mediaVolume": 0,
+      "effects": {
+        "zoom": "none",
+        "transition": "fade"
+      },
+      "kineticTitle": {
+        "text": "*48 événements.* Une API documentée.",
+        "position": "bottom",
+        "fontSize": "2.2rem",
+        "variant": "reveal",
+        "highlightColor": "#F04E23"
+      }
+    },
+    {
+      "id": 16,
+      "narration": "",
+      "card": {
+        "text": "Contravo",
+        "subtext": "Du devis à l'encaissement."
+      },
+      "effects": {
+        "transition": "black"
+      }
+    }
+  ]
+}
