@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApiContext, checkScope } from '@/lib/auth/unified-auth';
-import { createInvoice, listInvoices } from '@/lib/repositories/invoices.repo';
+import { createInvoice, listInvoices, serializeInvoice } from '@/lib/repositories/invoices.repo';
 import { formatErrorResponse } from '@/lib/errors';
 import { z } from 'zod';
 
@@ -47,17 +47,7 @@ export async function GET(request: NextRequest) {
       limit,
     });
 
-    const serializedInvoices = invoicesList.map((inv) => ({
-      ...inv,
-      subtotalCents: inv.subtotalCents.toString(),
-      discountCents: inv.discountCents.toString(),
-      taxCents: inv.taxCents.toString(),
-      totalCents: inv.totalCents.toString(),
-      amountPaidCents: inv.amountPaidCents.toString(),
-      amountDueCents: inv.amountDueCents.toString(),
-    }));
-
-    return NextResponse.json({ invoices: serializedInvoices });
+    return NextResponse.json({ invoices: invoicesList.map(serializeInvoice) });
   } catch (err) {
     return formatErrorResponse(err);
   }

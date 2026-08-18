@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApiContext, checkScope } from '@/lib/auth/unified-auth';
-import { createProject, listProjects } from '@/lib/repositories/projects.repo';
+import { createProject, listProjects, serializeProject } from '@/lib/repositories/projects.repo';
 import { assertQuota, recomputeQuotaUsage } from '@/lib/billing/quotas.service';
 import { formatErrorResponse } from '@/lib/errors';
 import { z } from 'zod';
@@ -35,13 +35,7 @@ export async function GET(request: NextRequest) {
       limit,
     });
 
-    // Handle BigInt serialization by converting to strings where necessary
-    const serializedProjects = projectsList.map((p) => ({
-      ...p,
-      budgetCents: p.budgetCents?.toString() || null,
-    }));
-
-    return NextResponse.json({ projects: serializedProjects });
+    return NextResponse.json({ projects: projectsList.map(serializeProject) });
   } catch (err) {
     return formatErrorResponse(err);
   }
@@ -69,12 +63,7 @@ export async function POST(request: NextRequest) {
 
     await recomputeQuotaUsage(ctx.organizationId);
 
-    const serializedProject = {
-      ...project,
-      budgetCents: project.budgetCents?.toString() || null,
-    };
-
-    return NextResponse.json(serializedProject, { status: 201 });
+    return NextResponse.json(serializeProject(project), { status: 201 });
   } catch (err) {
     return formatErrorResponse(err);
   }

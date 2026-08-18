@@ -140,3 +140,21 @@ export function fromGatewayAmount(
   const value = toNumber(amount);
   return BigInt(Math.round(currencyDecimals(currency) === 0 ? value : value * 100));
 }
+
+/**
+ * A money column on its way into a JSON response.
+ *
+ * Every `*_cents` column is a `bigint`, and `JSON.stringify` — hence
+ * `NextResponse.json` — throws outright on one: *Do not know how to serialize a
+ * BigInt*, which surfaces as a 500 rather than as a missing field. Minor units
+ * therefore cross the wire as decimal strings, everywhere, without exception.
+ *
+ * The parameter is `unknown` because the repositories hand back loosely typed
+ * rows; `null` maps to `"0"` so a caller never has to special-case a generated
+ * column that the database always computes.
+ */
+export function bigintToString(value: unknown): string {
+  if (value === null || value === undefined) return '0';
+  if (typeof value === 'bigint') return value.toString();
+  return String(value);
+}
