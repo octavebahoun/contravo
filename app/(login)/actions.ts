@@ -73,7 +73,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
   if (userWithOrg.length === 0) {
     return {
-      error: 'Invalid email or password. Please try again.',
+      error: 'Adresse ou mot de passe incorrect.',
       email,
       password
     };
@@ -88,7 +88,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
   if (!isPasswordValid) {
     return {
-      error: 'Invalid email or password. Please try again.',
+      error: 'Adresse ou mot de passe incorrect.',
       email,
       password
     };
@@ -119,8 +119,12 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     .limit(1);
 
   if (existingUser.length > 0) {
+    // Dire lequel des deux cas s'est produit. « Réessayez » était un conseil
+    // impossible à suivre : l'adresse restera prise au deuxième essai comme au
+    // premier. La connexion, elle, garde son message unique et volontairement
+    // vague — c'est là que l'énumération de comptes serait exploitable.
     return {
-      error: 'Failed to create user. Please try again.',
+      error: 'Un compte existe déjà avec cette adresse. Connectez-vous.',
       email,
       password
     };
@@ -140,7 +144,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 
   if (!createdUser) {
     return {
-      error: 'Failed to create user. Please try again.',
+      error: 'La création du compte a échoué. Réessayez.',
       email,
       password
     };
@@ -193,7 +197,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
         .where(eq(organizations.id, orgId))
         .limit(1);
     } else {
-      return { error: 'Invalid or expired invitation.', email, password };
+      return { error: 'Invitation invalide ou expirée.', email, password };
     }
   } else {
     // Create a new organization if there's no invitation
@@ -210,7 +214,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 
     if (!createdOrg) {
       return {
-        error: 'Failed to create organization. Please try again.',
+        error: 'La création de l’organisation a échoué. Réessayez.',
         email,
         password
       };
@@ -274,7 +278,7 @@ export const updatePassword = validatedActionWithUser(
         currentPassword,
         newPassword,
         confirmPassword,
-        error: 'Current password is incorrect.'
+        error: 'Mot de passe actuel incorrect.'
       };
     }
 
@@ -283,7 +287,7 @@ export const updatePassword = validatedActionWithUser(
         currentPassword,
         newPassword,
         confirmPassword,
-        error: 'New password must be different from the current password.'
+        error: 'Le nouveau mot de passe doit différer de l’actuel.'
       };
     }
 
@@ -292,7 +296,7 @@ export const updatePassword = validatedActionWithUser(
         currentPassword,
         newPassword,
         confirmPassword,
-        error: 'New password and confirmation password do not match.'
+        error: 'Le nouveau mot de passe et sa confirmation ne correspondent pas.'
       };
     }
 
@@ -326,7 +330,7 @@ export const deleteAccount = validatedActionWithUser(
     if (!isPasswordValid) {
       return {
         password,
-        error: 'Incorrect password. Account deletion failed.'
+        error: 'Mot de passe incorrect. La suppression du compte a échoué.'
       };
     }
 
@@ -381,7 +385,7 @@ export const removeTeamMember = validatedActionWithUser(
     const userWithOrg = await getUserWithOrganization(user.id);
 
     if (!userWithOrg?.organizationId) {
-      return { error: 'User is not part of an organization' };
+      return { error: 'Ce compte n’appartient à aucune organisation.' };
     }
 
     await db
@@ -415,7 +419,7 @@ export const inviteTeamMember = validatedActionWithUser(
     const userWithOrg = await getUserWithOrganization(user.id);
 
     if (!userWithOrg?.organizationId) {
-      return { error: 'User is not part of an organization' };
+      return { error: 'Ce compte n’appartient à aucune organisation.' };
     }
 
     try {

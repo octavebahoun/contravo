@@ -5,6 +5,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed — « Failed to create user. Please try again. » sur une adresse déjà inscrite
+- L'inscription renvoyait le même message pour deux causes opposées : l'adresse est déjà prise, ou l'insertion a échoué. Le conseil donné — réessayer — était impossible à suivre dans le premier cas : l'adresse restera prise au deuxième essai comme au premier. Les deux cas sont désormais distingués, et le premier renvoie vers la connexion.
+- La connexion, elle, garde son message unique et volontairement vague pour les deux échecs possibles : c'est là que l'énumération de comptes serait exploitable, pas à l'inscription.
+- Les douze messages d'authentification étaient en anglais dans une application entièrement française. Traduits.
+
 ### Added — Remise à zéro d'avant production
 - `lib/db/purge.ts --all-users` supprime **tous** les comptes, jeu de démonstration compris : avant une mise en production, le premier compte créé doit être l'administrateur définitif et traverser l'inscription puis la mise en route comme le fera n'importe quel client. Sans ce drapeau, la purge épargne les comptes réels — le bon comportement en développement, le mauvais ici.
 - `lib/db/bootstrap-n8n-key.ts` réémet la clé dont n8n se sert pour rappeler `/api/v1/webhooks/verify`. Elle ne peut pas être recréée par la purge : `api_keys.organization_id` est NOT NULL et il n'existe plus d'organisation à ce moment-là. L'ordre — purge, inscription, clé — n'est donc pas un usage mais une contrainte du schéma, et la purge l'affiche désormais en fin de course.
