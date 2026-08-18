@@ -5,6 +5,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed — Les webhooks partaient quinze minutes après l'évènement, ou jamais
+- `dispatchPending` lançait ses envois sans les attendre. Sur Vercel, la fonction peut être gelée à l'instant où la réponse part : l'appel HTTP n'avait alors jamais lieu, et la ligne restait `pending` avec **zéro tentative**. Constaté sur une demande de réinitialisation de mot de passe — l'évènement en base, aucune exécution côté n8n, aucune erreur nulle part.
+- Le balayage de reprise finissait par la rattraper, mais seulement après `PENDING_STALE_MINUTES` : quinze minutes. Pour un lien de réinitialisation, c'est la différence entre un produit qui marche et un produit qui ne marche pas.
+- Les envois passent désormais par `after()` : le runtime garde l'exécution vivante après la réponse. Hors contexte de requête — scripts, tests, le balayage lui-même — `after()` lève, et le comportement d'origine reprend la main : rien ne gèle ces processus-là.
+- Le filet de sécurité reste en place. `after()` réduit le délai au cas normal ; le balayage couvre toujours le processus qui meurt pour de bon.
+
 ### Fixed — Supprimer son compte abandonnait l'organisation derrière lui
 - `deleteAccount` ne supprimait que la ligne `users`. Les appartenances tombaient en cascade, mais l'organisation restait : ses clients, ses devis, ses factures et ses fichiers R2 survivaient sans qu'aucun compte ne puisse plus jamais les atteindre — ni les consulter, ni les effacer.
 - Constaté sur la base fraîchement remise à zéro : une inscription à 23:17, une suppression de compte à 23:17:42, et une organisation fantôme créée une minute avant la vraie. Le journal d'audit en portait la trace exacte (`org.create`, `auth.signup`, `auth.delete_account`).

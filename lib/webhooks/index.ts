@@ -1,3 +1,4 @@
+import { after } from 'next/server';
 import crypto from 'crypto';
 import { db } from '@/lib/db/drizzle';
 import { webhookEndpoints, webhookDeliveries } from '@/lib/db/schema';
@@ -426,12 +427,33 @@ async function queueDeliveries(
   return pending;
 }
 
-/** Fires queued deliveries in the background, never throwing at the caller. */
+/**
+ * Fires queued deliveries in the background, never throwing at the caller.
+ *
+ * Wrapped in `after()`: on Vercel the function may be frozen the instant the
+ * response is returned, and a fire-and-forget dispatch then simply never
+ * happens. The row stayed `pending` with zero attempts until the retry sweep
+ * picked it up — fifteen minutes later, which for a password-reset link is the
+ * difference between working and not.
+ */
 export function dispatchPending(pending: PendingDispatch[]): void {
-  for (const item of pending) {
-    dispatchDelivery(item.deliveryId, item.url, item.secret, item.payload).catch((err) => {
-      console.error(`Error dispatching webhook delivery ${item.deliveryId}:`, err);
-    });
+  if (pending.length === 0) return;
+
+  const run = () => {
+    for (const item of pending) {
+      dispatchDelivery(item.deliveryId, item.url, item.secret, item.payload).catch((err) => {
+        console.error(`Error dispatching webhook delivery ${item.deliveryId}:`, err);
+      });
+    }
+  };
+
+  try {
+    after(run);
+  } catch {
+    // Outside a request scope — scripts, tests, the cron sweep — `after()`
+    // throws. Nothing freezes those processes, so the original behaviour is
+    // already correct there.
+    run();
   }
 }
 
