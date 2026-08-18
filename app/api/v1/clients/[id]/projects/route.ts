@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApiContext, checkScope } from '@/lib/auth/unified-auth';
-import { listProjects } from '@/lib/repositories/projects.repo';
+import { listProjects, serializeProject } from '@/lib/repositories/projects.repo';
 import { formatErrorResponse } from '@/lib/errors';
 
 export async function GET(
@@ -22,7 +22,7 @@ export async function GET(
       limit,
     });
 
-    return NextResponse.json({ projects: clientProjects });
+    return NextResponse.json({ projects: clientProjects.map(serializeProject) });
   } catch (err) {
     return formatErrorResponse(err);
   }

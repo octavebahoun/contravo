@@ -51,3 +51,9 @@ postgres_data/
 # Claude Code local tooling
 /.claude/
 /skills-lock.json
+
+# Clips filmés pour la vidéo de présentation (lourds, régénérables)
+/video/out/
+
+# Bibliothèque audio partagée entre projets vidéo (58 Mo, vit hors du dépôt)
+/video/sounds/

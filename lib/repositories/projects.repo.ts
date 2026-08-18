@@ -6,6 +6,7 @@ import { ApiError } from '@/lib/rbac';
 import { createAuditLog } from '@/lib/audit';
 import { emit, withOutbox } from '@/lib/webhooks';
 import { getNextSequenceNumber } from './sequences.repo';
+import { bigintToString } from '@/lib/money';
 
 export type CreateProjectInput = Omit<
   typeof projects.$inferInsert,
@@ -13,6 +14,23 @@ export type CreateProjectInput = Omit<
 >;
 
 export type UpdateProjectInput = Partial<CreateProjectInput>;
+
+/**
+ * `budgetCents` is a `bigint`, which `NextResponse.json` cannot serialize — the
+ * route throws and answers 500 instead of listing anything.
+ *
+ * Same story as `serializeInvoice`: the logic sat inline in `GET /api/v1/projects`
+ * and never reached `GET /api/v1/clients/:id/projects`, which had therefore never
+ * returned a single project.
+ */
+export function serializeProject<T extends Record<string, unknown>>(project: T) {
+  return {
+    ...project,
+    // Null stays null here rather than becoming "0": a project without a budget
+    // is a real state, and the interface must be able to tell it from zero.
+    budgetCents: project.budgetCents == null ? null : bigintToString(project.budgetCents),
+  };
+}
 
 export async function createProject(
   organizationId: string,

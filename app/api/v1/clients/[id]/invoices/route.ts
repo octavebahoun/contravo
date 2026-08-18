@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getApiContext, checkScope } from '@/lib/auth/unified-auth';
 import { invoices } from '@/lib/db/schema';
 import { eq, and, sql, desc } from 'drizzle-orm';
+import { serializeInvoice } from '@/lib/repositories/invoices.repo';
 import { formatErrorResponse } from '@/lib/errors';
 
 export async function GET(
@@ -29,7 +30,7 @@ export async function GET(
       .limit(limit)
       .offset(offset);
 
-    return NextResponse.json({ invoices: clientInvoices });
+    return NextResponse.json({ invoices: clientInvoices.map(serializeInvoice) });
   } catch (err) {
     return formatErrorResponse(err);
   }

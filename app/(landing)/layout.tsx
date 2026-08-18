@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { LandingHeader } from './_components/header';
 import { LandingFooter } from './_components/faq-footer';
+import { LandingMotionProvider } from './_components/motion-provider';
 
 /**
  * Public marketing shell.
@@ -10,10 +11,12 @@ import { LandingFooter } from './_components/faq-footer';
  */
 export default function LandingLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-background">
-      <LandingHeader />
-      <main>{children}</main>
-      <LandingFooter />
-    </div>
+    <LandingMotionProvider>
+      <div className="min-h-screen bg-background">
+        <LandingHeader />
+        <main>{children}</main>
+        <LandingFooter />
+      </div>
+    </LandingMotionProvider>
   );
 }

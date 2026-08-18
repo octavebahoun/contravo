@@ -7,6 +7,7 @@ import { createAuditLog } from '@/lib/audit';
 import { emit, withOutbox } from '@/lib/webhooks';
 import { getNextSequenceNumber } from './sequences.repo';
 import { buildEventPayload } from '@/lib/webhooks/payload-builder';
+import { bigintToString } from '@/lib/money';
 
 export type CreateInvoiceInput = Omit<
   typeof invoices.$inferInsert,
@@ -32,6 +33,29 @@ export type CreateInvoiceItemInput = Omit<
 >;
 
 export type UpdateInvoiceInput = Partial<CreateInvoiceInput>;
+
+/**
+ * Money columns are `bigint`, which `NextResponse.json` refuses outright — it
+ * throws `Do not know how to serialize a BigInt` and the route answers 500.
+ *
+ * This lived inline in `GET /api/v1/invoices` and was simply never copied to
+ * `GET /api/v1/clients/:id/invoices`, so the invoice list on a client's page had
+ * been failing since it was written. Sharing one function is what stops the next
+ * route from forgetting.
+ *
+ * Same convention as everywhere else: minor units cross the wire as strings.
+ */
+export function serializeInvoice<T extends Record<string, unknown>>(invoice: T) {
+  return {
+    ...invoice,
+    subtotalCents: bigintToString(invoice.subtotalCents),
+    discountCents: bigintToString(invoice.discountCents),
+    taxCents: bigintToString(invoice.taxCents),
+    totalCents: bigintToString(invoice.totalCents),
+    amountPaidCents: bigintToString(invoice.amountPaidCents),
+    amountDueCents: bigintToString(invoice.amountDueCents),
+  };
+}
 
 export function calculateInvoiceTotals(
   items: { quantity: string; unitPriceCents: bigint; discountBps: number }[],

@@ -38,6 +38,10 @@
 | **Excellence Merchant** | Excellence Team (nous) | Encaisser les abonnements SaaS des orgs (**Étape 6, ce doc**) | Clés stockées en env `EXCELLENCE_GENIUSPAY_*` |
 | **Org Merchant** | Chaque org cliente | Encaisser les factures que l'org émet à SES clients (**Étape 3**) | Clés stockées chiffrées dans `payment_gateway_credentials` |
 
+> **Révisé le 18/08/2026** : GeniusPay ne propose pas encore plusieurs comptes
+> marchands par utilisateur. Les deux flux partagent donc un compte unique,
+> distingués par `metadata.kind`. Voir `doc/COMPTE-EXCELLENCE.md`.
+
 **Ne jamais mélanger.** Les tables et endpoints Étape 6 utilisent exclusivement le compte Excellence. Les tables Étape 3 (`payment_gateway_credentials`) ne concernent jamais le billing SaaS.
 
 ---

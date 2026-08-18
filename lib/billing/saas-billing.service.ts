@@ -40,6 +40,22 @@ export async function createSubscriptionCheckout(
 
   await assertBillingAdmin(organizationId, userId);
 
+  // Le compte marchand est vérifié AVANT la moindre écriture. La version
+  // précédente descendait jusqu'ici sans clés, puis fabriquait une URL de repli
+  // pointant sur /dashboard/billing lui-même : l'utilisateur y était renvoyé,
+  // aucun code ne lisait les paramètres, la page se rechargeait à l'identique —
+  // et chaque clic laissait derrière lui un cycle « pending » qui n'attendait
+  // rien. Une erreur franche vaut mieux qu'un paiement qui fait semblant.
+  const apiKeyPublic = process.env.EXCELLENCE_GENIUSPAY_API_KEY_PUBLIC;
+  const apiSecret = process.env.EXCELLENCE_GENIUSPAY_API_SECRET;
+
+  if (!apiKeyPublic || !apiSecret) {
+    throw new BillingServiceError(
+      'Le paiement des abonnements n\u2019est pas encore configur\u00e9 sur cette instance.',
+      503
+    );
+  }
+
   // Get current active subscription
   let currentSub = await getSubscription(organizationId);
 
@@ -85,50 +101,52 @@ export async function createSubscriptionCheckout(
     })
     .returning();
 
-  // Configure GeniusPay Excellence Client
-  const apiKeyPublic = process.env.EXCELLENCE_GENIUSPAY_API_KEY_PUBLIC;
-  const apiSecret = process.env.EXCELLENCE_GENIUSPAY_API_SECRET;
   const env = (process.env.EXCELLENCE_GENIUSPAY_ENV as 'sandbox' | 'live') || 'sandbox';
-
-  let checkoutUrl: string;
-  let gatewayReference: string | null = null;
 
   const baseUrl = getAppUrl();
   const successUrl = `${baseUrl}/dashboard/billing?status=success&cycle_id=${cycle.id}`;
   const errorUrl = `${baseUrl}/dashboard/billing?status=failed&cycle_id=${cycle.id}`;
 
-  if (apiKeyPublic && apiSecret) {
-    const geniusClient = new GeniusPayClient(apiKeyPublic, apiSecret, env);
-    try {
-      const response = await geniusClient.initiatePayment({
-        amount: targetPlan.priceMonthlyCents / 100,
-        currency: targetPlan.currency,
-        description: `Abonnement Contravo SaaS ${targetPlan.name}`,
-        successUrl,
-        errorUrl,
-        metadata: {
-          kind: 'saas_subscription',
-          org_id: organizationId,
-          cycle_id: cycle.id,
-          attempt_id: attempt.id,
-          plan_id: targetPlanId,
-        },
-      });
+  const geniusClient = new GeniusPayClient(apiKeyPublic, apiSecret, env);
 
-      if (response.success && response.data) {
-        gatewayReference = response.data.reference;
-        checkoutUrl = response.data.checkout_url || response.data.payment_url || `${baseUrl}/dashboard/billing`;
-      } else {
-        checkoutUrl = `${baseUrl}/dashboard/billing?error=payment_initiation_failed`;
-      }
-    } catch (err: any) {
-      console.error('Failed to initiate GeniusPay Excellence payment:', err);
-      checkoutUrl = `${baseUrl}/dashboard/billing?error=payment_initiation_failed`;
+  let checkoutUrl: string;
+  let gatewayReference: string;
+
+  try {
+    const response = await geniusClient.initiatePayment({
+      amount: targetPlan.priceMonthlyCents / 100,
+      currency: targetPlan.currency,
+      description: `Abonnement Contravo SaaS ${targetPlan.name}`,
+      successUrl,
+      errorUrl,
+      metadata: {
+        kind: 'saas_subscription',
+        org_id: organizationId,
+        cycle_id: cycle.id,
+        attempt_id: attempt.id,
+        plan_id: targetPlanId,
+      },
+    });
+
+    const url = response.data?.checkout_url || response.data?.payment_url;
+
+    // Une réponse sans URL est un échec, quoi qu'en dise `success` : il n'y a
+    // nulle part où envoyer le client.
+    if (!response.success || !url) {
+      throw new Error(response.error?.message || 'La passerelle n\u2019a renvoy\u00e9 aucune URL de paiement');
     }
-  } else {
-    // Fallback / Sandbox URL generator when env not populated
-    gatewayReference = `MTX-SAAS-${Date.now()}`;
-    checkoutUrl = `${baseUrl}/dashboard/billing?simulated_checkout=1&attempt_id=${attempt.id}&ref=${gatewayReference}`;
+
+    gatewayReference = response.data!.reference;
+    checkoutUrl = url;
+  } catch (err) {
+    // Le cycle et la tentative sont écrits avant l'appel parce que leurs
+    // identifiants voyagent dans les metadata de la passerelle — c'est par eux
+    // que le webhook de confirmation retrouve l'abonnement. Ils sont donc
+    // marqués en échec, jamais laissés en « pending » : un cycle en attente qui
+    // n'attend rien fausse la relecture de l'historique de facturation.
+    const reason = err instanceof Error ? err.message : 'Erreur inconnue';
+    await markCheckoutFailed(cycle.id, attempt.id, reason);
+    throw new BillingServiceError(`\u00c9chec de l\u2019initialisation du paiement : ${reason}`, 502);
   }
 
   // Update attempt with gateway reference & checkout url
@@ -148,6 +166,21 @@ export async function createSubscriptionCheckout(
     invoiceNumber,
     amountCents: targetPlan.priceMonthlyCents,
   };
+}
+
+/**
+ * Closes a cycle and its attempt when the gateway never took the payment.
+ */
+async function markCheckoutFailed(cycleId: string, attemptId: string, reason: string) {
+  await db
+    .update(subscriptionPaymentAttempts)
+    .set({ status: 'failed', failureReason: reason, updatedAt: new Date() })
+    .where(eq(subscriptionPaymentAttempts.id, attemptId));
+
+  await db
+    .update(subscriptionCycles)
+    .set({ status: 'failed', failedReason: reason })
+    .where(eq(subscriptionCycles.id, cycleId));
 }
 
 /**
