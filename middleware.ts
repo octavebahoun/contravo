@@ -104,16 +104,14 @@ export async function middleware(request: NextRequest) {
 
       // Check if organization is suspended
       const organizationId = request.cookies.get('organization_id')?.value;
+      let currentOrg: typeof organizations.$inferSelect | undefined;
+
       if (organizationId) {
-        const [org] = await db
+        [currentOrg] = await db
           .select()
           .from(organizations)
           .where(eq(organizations.id, organizationId))
           .limit(1);
-
-        if (org && org.subscriptionStatus === 'suspended') {
-          return NextResponse.redirect(new URL('/suspended', request.url));
-        }
       } else {
         const ms = await db
           .select({
@@ -124,9 +122,19 @@ export async function middleware(request: NextRequest) {
           .where(eq(memberships.userId, user.id))
           .limit(1);
 
-        if (ms.length > 0 && ms[0].organization.subscriptionStatus === 'suspended') {
-          return NextResponse.redirect(new URL('/suspended', request.url));
-        }
+        currentOrg = ms[0]?.organization;
+      }
+
+      if (currentOrg?.subscriptionStatus === 'suspended') {
+        return NextResponse.redirect(new URL('/suspended', request.url));
+      }
+
+      // First-run setup. Sign-up can only invent a placeholder name and leaves
+      // the legal footer and payment details empty, so the first invoice PDF
+      // would go out without the mentions that make it a valid document. The
+      // stamp is written even when the flow is skipped, so this asks once.
+      if (currentOrg && !currentOrg.onboardingCompletedAt) {
+        return NextResponse.redirect(new URL('/onboarding', request.url));
       }
     } catch (error) {
       console.error('Middleware session check failed:', error);

@@ -67,6 +67,15 @@ export const organizations = pgTable('organizations', {
   customMaxStorageBytes: bigint('custom_max_storage_bytes', { mode: 'bigint' }),
   customMaxApiKeys: integer('custom_max_api_keys'),
   customMaxWebhookEndpoints: integer('custom_max_webhook_endpoints'),
+  /**
+   * When the first-run setup was finished, `null` while it still has to be.
+   *
+   * Sign-up can only invent a placeholder — `"<login>'s Organization"`, no legal
+   * footer, no bank details — so the very first invoice PDF would go out without
+   * the mentions that make it a valid document. This column is what the gate
+   * reads to send an owner through `/onboarding` before the dashboard.
+   */
+  onboardingCompletedAt: timestamp('onboarding_completed_at', { withTimezone: true }),
 });
 
 export const files = pgTable('files', {
