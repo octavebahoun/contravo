@@ -5,6 +5,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed — « Passer à Pro » changeait l'URL sans rien faire
+- `createSubscriptionCheckout` lit `EXCELLENCE_GENIUSPAY_API_KEY_PUBLIC` et `EXCELLENCE_GENIUSPAY_API_SECRET`. **Ces variables n'ont jamais été renseignées** : `.env.example` ne portait que des `***`, et il n'existe qu'un seul compte GeniusPay, celui des factures des organisations. Le compte marchand « Excellence » de `doc/MVP6.md` §2 n'a pas d'existence côté passerelle.
+- Sans elles, le service retombait sur une URL de repli pointant sur `/dashboard/billing` lui-même : le navigateur y allait, aucun code ne lisait `simulated_checkout=1`, la page se rechargeait à l'identique. Un repli qui imite un paiement sans en être un vaut moins qu'une erreur franche — et chaque clic laissait tout de même un `subscription_cycle` en `pending` et un `subscription_payment_attempts`, insérés avant l'appel à la passerelle.
+- Les clés sandbox existantes servent de compte Excellence **en test uniquement**, ce que `doc/MVP6.md` interdit en production : en `live`, ces clés encaissent l'argent d'Excellence, celles des organisations le leur. À séparer avant la bascule.
+- `GeniusPayClient` envoie désormais `Accept: application/json`. Sans cet en-tête, la passerelle répond à une erreur de validation par une page HTML en 200 : le motif du refus — « Le montant minimum pour XOF est 200 » — se perdait derrière un `Unexpected token '<'` illisible. Trouvé en sondant l'API avec un montant volontairement trop bas.
+- Vérifié de bout en bout sur le sandbox : `POST /payments` répond `checkout_url = https://geniuspay.ci/checkout/SANDBOX_…`, page joignable en 200.
+
 ### Added — Mise en route au premier accès (`/onboarding`)
 - L'inscription ne peut inventer qu'un nom d'organisation (`"<untel>'s Organization"`) et laisse vides les mentions légales et les coordonnées bancaires. La première facture partait donc sans les mentions qui en font un document opposable, et sans le RIB par lequel le client est censé payer. Six étapes, posées une fois, en tirent un compte réellement utilisable.
 - `organizations.onboarding_completed_at` (migration `0009_onboarding.sql`) porte l'état. Le middleware redirige vers `/onboarding` tant qu'il est nul, sur la même passe qui vérifie déjà la suspension : l'organisation courante n'est résolue qu'une fois, la garde ne coûte aucune requête supplémentaire.

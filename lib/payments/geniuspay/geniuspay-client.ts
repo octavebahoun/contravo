@@ -71,6 +71,10 @@ export class GeniusPayClient {
       'X-API-Key': this.publicKey,
       'X-API-Secret': this.secretKey,
       'Content-Type': 'application/json',
+      // Sans cet en-tête, la passerelle répond à une erreur de validation par
+      // une page HTML en 200 plutôt qu'un 422 JSON : le motif du refus se
+      // perdait derrière un « Unexpected token '<' » illisible.
+      Accept: 'application/json',
       ...options.headers,
     };
 
