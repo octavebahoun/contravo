@@ -5,6 +5,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed — Le paiement d'abonnement échoue franchement au lieu de faire semblant
+- `createSubscriptionCheckout` vérifie le compte marchand **avant la moindre écriture**. Le repli qui fabriquait une fausse URL de paiement est supprimé : il renvoyait l'utilisateur sur la page dont il venait, et laissait derrière chaque clic un `subscription_cycle` en `pending` et une tentative de paiement qui n'attendaient rien.
+- Une réponse de passerelle sans URL est traitée comme un échec, quoi qu'en dise son champ `success` : il n'y a nulle part où envoyer le client. Le cycle et la tentative passent alors en `failed` avec le motif renvoyé par GeniusPay, au lieu de rester en attente indéfiniment.
+- Le message d'erreur distingue les deux cas : « pas encore configuré » (503, aucune clé) et « échec de l'initialisation » (502, la passerelle refuse, avec sa raison).
+- `doc/COMPTE-EXCELLENCE.md` : la marche à suivre pour ouvrir le compte marchand qui encaissera réellement les abonnements — les trois valeurs à recopier, l'URL de webhook à déclarer, et le plafond de 500 000 XOF/mois du compte actuel, soit une trentaine d'abonnements Pro.
+
 ### Fixed — « Passer à Pro » changeait l'URL sans rien faire
 - `createSubscriptionCheckout` lit `EXCELLENCE_GENIUSPAY_API_KEY_PUBLIC` et `EXCELLENCE_GENIUSPAY_API_SECRET`. **Ces variables n'ont jamais été renseignées** : `.env.example` ne portait que des `***`, et il n'existe qu'un seul compte GeniusPay, celui des factures des organisations. Le compte marchand « Excellence » de `doc/MVP6.md` §2 n'a pas d'existence côté passerelle.
 - Sans elles, le service retombait sur une URL de repli pointant sur `/dashboard/billing` lui-même : le navigateur y allait, aucun code ne lisait `simulated_checkout=1`, la page se rechargeait à l'identique. Un repli qui imite un paiement sans en être un vaut moins qu'une erreur franche — et chaque clic laissait tout de même un `subscription_cycle` en `pending` et un `subscription_payment_attempts`, insérés avant l'appel à la passerelle.
