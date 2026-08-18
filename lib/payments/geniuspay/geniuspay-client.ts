@@ -56,6 +56,24 @@ export class GeniusPayClient {
   private baseUrl: string;
 
   constructor(publicKey: string, secretKey: string, environment: 'sandbox' | 'live' = 'sandbox') {
+    // L'URL est la même des deux côtés : c'est la **clé** qui décide du bac à
+    // sable ou du réel, jamais ce paramètre. Déclarer `live` en gardant des
+    // clés sandbox laissait donc tourner de vrais paiements en simulation, sans
+    // le moindre signe. Le désaccord devient une erreur immédiate.
+    const declared = environment === 'live' ? 'live' : 'sandbox';
+    const actual = publicKey.includes('sandbox')
+      ? 'sandbox'
+      : publicKey.includes('live')
+        ? 'live'
+        : null;
+
+    if (actual && actual !== declared) {
+      throw new Error(
+        `Clés GeniusPay ${actual} pour un environnement déclaré ${declared}. ` +
+          'Le nom du bac à sable ne tient qu’aux clés : corriger les deux ensemble.'
+      );
+    }
+
     this.publicKey = publicKey;
     this.secretKey = secretKey;
     this.environment = environment;

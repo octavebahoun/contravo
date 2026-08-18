@@ -18,9 +18,15 @@
  *
  * Dry run by default — pass `--yes` to actually delete.
  *
- *   npx tsx lib/db/purge.ts            # shows what would go
- *   npx tsx lib/db/purge.ts --yes      # does it
+ *   npx tsx lib/db/purge.ts                   # shows what would go
+ *   npx tsx lib/db/purge.ts --yes             # does it
  *   npx tsx lib/db/purge.ts --yes --skip-r2
+ *   npx tsx lib/db/purge.ts --yes --all-users # remise à zéro complète
+ *
+ * `--all-users` supprime **tous** les comptes, y compris les vrais : c'est la
+ * remise à zéro d'avant mise en production, où l'on veut que le premier compte
+ * créé soit le compte administrateur définitif et qu'il traverse l'inscription
+ * et la mise en route comme le fera n'importe quel client.
  */
 import 'dotenv/config';
 import { raw, dbDriver } from './drizzle';
@@ -50,6 +56,7 @@ const DISPOSABLE_USER_PATTERNS = [
 const args = new Set(process.argv.slice(2));
 const confirmed = args.has('--yes');
 const skipR2 = args.has('--skip-r2');
+const allUsers = args.has('--all-users');
 
 async function listPublicTables(): Promise<string[]> {
   const rows = await raw<{ table_name: string }>(`
@@ -112,10 +119,12 @@ async function main() {
   const nonEmpty = toTruncate.filter((t) => (counts.get(t) ?? 0) > 0);
   const totalRows = nonEmpty.reduce((sum, t) => sum + (counts.get(t) ?? 0), 0);
 
-  const disposableUsers = await raw<{ id: string; email: string }>(
-    'select id, email from users where email ilike any($1::text[]) order by email',
-    [DISPOSABLE_USER_PATTERNS]
-  );
+  const disposableUsers = allUsers
+    ? await raw<{ id: string; email: string }>('select id, email from users order by email')
+    : await raw<{ id: string; email: string }>(
+        'select id, email from users where email ilike any($1::text[]) order by email',
+        [DISPOSABLE_USER_PATTERNS]
+      );
 
   // Le tuyau n8n n'appartient à aucune organisation et ne se reconstruit pas
   // depuis un seed. Le vider a coupé tous les emails de l'instance sans que
@@ -138,7 +147,7 @@ async function main() {
 
   console.log(`\nusers conservés : ${(counts.get('users') ?? 0) - disposableUsers.length}`);
   if (disposableUsers.length > 0) {
-    console.log(`users supprimés : ${disposableUsers.length}`);
+    console.log(`users supprimés : ${disposableUsers.length}${allUsers ? '  (--all-users : TOUS les comptes)' : ''}`);
     for (const u of disposableUsers) console.log(`          ${u.email}`);
   }
 
@@ -191,7 +200,19 @@ async function main() {
 
   const remaining = await countRows('users');
   console.log(`\nBase vide. ${remaining} comptes conservés.`);
-  console.log('Suite : npx tsx lib/db/seed-demo.ts\n');
+  if (allUsers) {
+    // Les clés API sont rattachées à une organisation (`organization_id` NOT
+    // NULL) : aucune ne peut exister avant la première inscription. L'ordre
+    // n'est donc pas négociable, et l'oublier laisse n8n en 401 sans que rien
+    // ne le signale côté Contravo.
+    console.log('\nSuite, dans cet ordre :');
+    console.log('  1. s’inscrire sur l’application — ce compte devient le propriétaire');
+    console.log('  2. dérouler la mise en route (/onboarding)');
+    console.log('  3. npx tsx lib/db/bootstrap-n8n-key.ts  → recoller la clé dans n8n');
+    console.log('  Détail complet : doc/MISE-EN-PRODUCTION.md\n');
+  } else {
+    console.log('Suite : npx tsx lib/db/seed-demo.ts\n');
+  }
 }
 
 main()

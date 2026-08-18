@@ -5,6 +5,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — Remise à zéro d'avant production
+- `lib/db/purge.ts --all-users` supprime **tous** les comptes, jeu de démonstration compris : avant une mise en production, le premier compte créé doit être l'administrateur définitif et traverser l'inscription puis la mise en route comme le fera n'importe quel client. Sans ce drapeau, la purge épargne les comptes réels — le bon comportement en développement, le mauvais ici.
+- `lib/db/bootstrap-n8n-key.ts` réémet la clé dont n8n se sert pour rappeler `/api/v1/webhooks/verify`. Elle ne peut pas être recréée par la purge : `api_keys.organization_id` est NOT NULL et il n'existe plus d'organisation à ce moment-là. L'ordre — purge, inscription, clé — n'est donc pas un usage mais une contrainte du schéma, et la purge l'affiche désormais en fin de course.
+- L'ancienne clé est **révoquée**, jamais supprimée : la ligne garde sa trace d'audit et une clé compromise ne peut pas réapparaître.
+- `doc/MISE-EN-PRODUCTION.md` déroule les six étapes et, pour chacune, le signe qu'elle a réussi. Les deux qui cassent sans bruit y sont nommées : la clé n8n absente (le routeur répond 200 puis meurt en 401, Contravo note « livré avec succès ») et Resend resté en bac à sable (`onboarding@resend.dev` ne livre qu'au titulaire du compte).
+
+### Fixed — Un environnement GeniusPay déclaré `live` pouvait encaisser en simulation
+- `GeniusPayClient` utilise la **même URL** en bac à sable et en réel : seules les clés distinguent les deux. `EXCELLENCE_GENIUSPAY_ENV` était donc stocké et jamais lu — déclarer `live` en gardant des clés sandbox laissait tourner de vrais paiements en simulation, sans le moindre signe.
+- Le constructeur refuse désormais de démarrer quand le préfixe des clés contredit l'environnement déclaré. Un basculement à moitié fait échoue immédiatement, avec la raison, au lieu de produire des encaissements fantômes.
+
 ### Fixed — Le routeur n8n recevait les évènements mais ne pouvait plus envoyer un seul email
 - `lib/db/purge.ts` a détruit la clé API dont n8n se sert pour rappeler Contravo. Depuis, chaque évènement suivait le même trajet : livraison acceptée (HTTP 200, la base la note `success`), puis `POST /api/v1/webhooks/verify` refusé en **401 UNAUTHENTICATED** et exécution n8n en erreur. Aucun email depuis le 18/08 15:07 — et rien côté Contravo pour le signaler, puisque de son point de vue la livraison avait réussi.
 - Le routeur ne peut pas vérifier la signature lui-même : le bac à sable des nœuds Code n8n interdit `crypto` et `process.env`. Il renvoie donc le corps à Contravo, ce qui fait de cette route un maillon obligatoire du chemin des emails — et de sa clé un point de panne unique, invisible depuis le tableau de bord.

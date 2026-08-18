@@ -8,6 +8,8 @@
     "db:seed": "npx tsx lib/db/seed.ts",
     "db:seed:demo": "npx tsx lib/db/seed-demo.ts",
     "db:purge": "npx tsx lib/db/purge.ts",
+    "db:reset": "npx tsx lib/db/purge.ts --yes --all-users",
+    "n8n:key": "npx tsx lib/db/bootstrap-n8n-key.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
