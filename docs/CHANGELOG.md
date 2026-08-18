@@ -5,6 +5,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed — Le routeur n8n recevait les évènements mais ne pouvait plus envoyer un seul email
+- `lib/db/purge.ts` a détruit la clé API dont n8n se sert pour rappeler Contravo. Depuis, chaque évènement suivait le même trajet : livraison acceptée (HTTP 200, la base la note `success`), puis `POST /api/v1/webhooks/verify` refusé en **401 UNAUTHENTICATED** et exécution n8n en erreur. Aucun email depuis le 18/08 15:07 — et rien côté Contravo pour le signaler, puisque de son point de vue la livraison avait réussi.
+- Le routeur ne peut pas vérifier la signature lui-même : le bac à sable des nœuds Code n8n interdit `crypto` et `process.env`. Il renvoie donc le corps à Contravo, ce qui fait de cette route un maillon obligatoire du chemin des emails — et de sa clé un point de panne unique, invisible depuis le tableau de bord.
+- La purge protège désormais ce câblage : l'endpoint `n8n_primary` global est **sauvegardé et réinséré** après le `TRUNCATE`, secret compris, et toute clé portant `webhooks:manage` est annoncée avant destruction avec la marche à suivre. Le secret d'une clé ne se relit pas — la seule protection possible est de prévenir.
+- Nouvelle clé émise pour n8n, portée par l'organisation réelle et non par celle de démonstration : `seed-demo.ts` démonte `studio-baobab` à chaque passage et l'emporterait avec.
+
+### Changed — Un seul compte GeniusPay pour les abonnements et les factures
+- GeniusPay ne propose pas encore plusieurs comptes marchands par utilisateur. Le compte « Excellence » distinct que prévoyait `doc/MVP6.md` §2 n'est pas ouvrable : les abonnements passent par le compte des transactions clientes, et les variables `EXCELLENCE_GENIUSPAY_*` pointent délibérément sur les mêmes clés.
+- Les deux flux restent séparés là où ça compte : `metadata.kind = 'saas_subscription'` à l'aller, un handler qui écarte tout le reste au retour, et deux jeux de tables distincts (`subscription_cycles` d'un côté, `invoice_payments` de l'autre). Chaque encaissement reste horodaté et rattachable.
+- Ce qui est réellement partagé, c'est le **plafond** : 500 000 XOF par mois pour les deux flux réunis, commission 1,5 %. À 15 000 XOF l'abonnement Pro, une trentaine d'abonnements le saturent avant même de compter les factures des agences.
+- `doc/COMPTE-EXCELLENCE.md` porte la décision, ce qui la rend sûre, et les quatre variables à échanger le jour où le multi-compte existera — aucune ligne de code à toucher ce jour-là.
+
 ### Changed — Le paiement d'abonnement échoue franchement au lieu de faire semblant
 - `createSubscriptionCheckout` vérifie le compte marchand **avant la moindre écriture**. Le repli qui fabriquait une fausse URL de paiement est supprimé : il renvoyait l'utilisateur sur la page dont il venait, et laissait derrière chaque clic un `subscription_cycle` en `pending` et une tentative de paiement qui n'attendaient rien.
 - Une réponse de passerelle sans URL est traitée comme un échec, quoi qu'en dise son champ `success` : il n'y a nulle part où envoyer le client. Le cycle et la tentative passent alors en `failed` avec le motif renvoyé par GeniusPay, au lieu de rester en attente indéfiniment.

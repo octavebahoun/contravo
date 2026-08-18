@@ -28,6 +28,15 @@ import { raw, dbDriver } from './drizzle';
 /** Tables whose contents survive the purge. */
 const KEEP_TABLES = new Set(['users']);
 
+type PlatformEndpoint = {
+  organization_id: string | null;
+  kind: string;
+  url: string;
+  secret: string;
+  events: string[];
+  active: boolean;
+};
+
 /**
  * Accounts created by tests or by the demo seed itself. Everything else in
  * `users` is assumed to be a real person and is left alone.
@@ -108,6 +117,19 @@ async function main() {
     [DISPOSABLE_USER_PATTERNS]
   );
 
+  // Le tuyau n8n n'appartient à aucune organisation et ne se reconstruit pas
+  // depuis un seed. Le vider a coupé tous les emails de l'instance sans que
+  // rien ne le signale : les livraisons partaient vers un endpoint absent, et
+  // le routeur n8n se voyait refuser l'appel de vérification faute de clé.
+  const n8nEndpoints = await raw<PlatformEndpoint>(
+    `select organization_id, kind, url, secret, events, active
+     from webhook_endpoints where kind = 'n8n_primary'`
+  );
+  const integrationKeys = await raw<{ name: string; prefix: string }>(
+    `select name, prefix from api_keys
+     where revoked_at is null and scopes @> array['webhooks:manage']::text[]`
+  );
+
   console.log(`\nDriver : ${dbDriver}`);
   console.log(`\n${nonEmpty.length} tables non vides, ${totalRows} lignes :`);
   for (const table of nonEmpty) {
@@ -118,6 +140,17 @@ async function main() {
   if (disposableUsers.length > 0) {
     console.log(`users supprimés : ${disposableUsers.length}`);
     for (const u of disposableUsers) console.log(`          ${u.email}`);
+  }
+
+  if (n8nEndpoints.length > 0) {
+    console.log(`\nendpoint n8n global : ${n8nEndpoints.length} — réinséré après la purge`);
+  }
+  if (integrationKeys.length > 0) {
+    console.log(`\nATTENTION — ${integrationKeys.length} clé(s) API portant « webhooks:manage » vont être détruites.`);
+    for (const k of integrationKeys) console.log(`          ${k.prefix}…  ${k.name}`);
+    console.log('          Le secret d’une clé ne se relit pas : il faudra en émettre une nouvelle');
+    console.log('          et la recoller dans la credential n8n, sans quoi le routeur reçoit');
+    console.log('          les évènements mais se fait refuser /api/v1/webhooks/verify (401).');
   }
 
   if (!confirmed) {
@@ -143,6 +176,17 @@ async function main() {
   if (disposableUsers.length > 0) {
     await raw('delete from users where id = any($1::uuid[])', [disposableUsers.map((u) => u.id)]);
     console.log(`DB  · ${disposableUsers.length} comptes de test supprimés`);
+  }
+
+  for (const e of n8nEndpoints) {
+    await raw(
+      `insert into webhook_endpoints (organization_id, kind, url, secret, events, active)
+       values ($1, $2, $3, $4, $5, $6)`,
+      [e.organization_id, e.kind, e.url, e.secret, e.events, e.active]
+    );
+  }
+  if (n8nEndpoints.length > 0) {
+    console.log(`DB  · ${n8nEndpoints.length} endpoint(s) n8n réinséré(s), secret inchangé`);
   }
 
   const remaining = await countRows('users');
