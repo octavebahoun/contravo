@@ -5,6 +5,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed — Toute page rendue côté serveur retournait 500 dès que `DB_DRIVER=neon-ws`
+- `ws` charge son accélérateur de masquage par un `require` optionnel. Empaqueté par Next, cet appel se résout sur un module vide et la première trame WebSocket meurt sur `TypeError: b.mask is not a function`, suivie de « Connection terminated unexpectedly ». **L'inscription, le tableau de bord et la mise en route retournaient 500** — sans rien afficher d'utile, Next masquant le détail en production.
+- Le drapeau avait été ajouté pour les scripts, sur un réseau qui bloque le port 5432 ; personne n'avait vérifié ce qu'il faisait à l'application elle-même. `serverExternalPackages: ['ws', '@neondatabase/serverless']` les laisse chargés par `require` au démarrage, comme sous Node.
+- Reproduit dans un navigateur réel — inscription, six étapes de mise en route, validation — avant et après, plutôt que déduit de la trace.
+
+### Changed — La fin de la mise en route ne laisse plus l'écran figé onze secondes
+- `completeOnboarding` redirigeait côté serveur. Appelée depuis `startTransition`, cette redirection oblige Next à rendre `/dashboard` dans la réponse de l'action : **11,1 s mesurées** entre le clic et l'arrivée, pendant lesquelles l'écran reste sur le récapitulatif, sans indication. Rien n'était cassé — mais rien ne distinguait cette attente d'un bouton mort.
+- L'action retourne désormais sa destination et le client navigue lui-même : **4,0 s** dans les mêmes conditions. `router.replace`, pour que le bouton Retour du navigateur ne ramène pas sur un formulaire déjà validé.
+
+### Added — Téléphone et directeur de la publication des mentions légales
+- Deux des sept champs manquants sont renseignés. Les cinq autres — forme juridique, capital, RCCM, NCC, siège social — restent affichés `[À COMPLÉTER]` en attendant les documents d'immatriculation.
+
 ### Added — Mentions légales, confidentialité et conditions d'utilisation
 - Trois pages publiques : `/mentions-legales`, `/confidentialite`, `/conditions`. Le pied de page pointait jusqu'ici sur `#cgu`, `#confidentialite` et `#contact` — trois ancres qui n'existaient nulle part : cliquer ne faisait rien.
 - Le contenu décrit **l'architecture réelle**, pas une clause de style. La liste des sous-traitants est celle des services effectivement appelés — Vercel, Neon, Cloudflare R2, Resend, GeniusPay, n8n — avec ce que chacun voit passer. Les durées de conservation reprennent celles que le code applique déjà, jusqu'au jeton de portail dont seule l'empreinte est stockée.

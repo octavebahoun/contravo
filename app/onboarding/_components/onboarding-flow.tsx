@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -80,6 +81,7 @@ export function OnboardingFlow({
     organizationName: '',
     contactEmail,
   });
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -104,14 +106,30 @@ export function OnboardingFlow({
   };
   const back = () => setIndex((i) => Math.max(i - 1, 0));
 
+  // `router.replace` plutôt que `push` : la mise en route ne doit pas rester
+  // dans l'historique, sinon le bouton Retour du navigateur ramène sur un
+  // formulaire déjà validé. `refresh()` force la relecture de l'organisation
+  // par le middleware, qui vient tout juste de recevoir son estampille.
+  const go = (path: string) => {
+    router.replace(path);
+    router.refresh();
+  };
+
   const finish = () => {
+    setError(null);
     startTransition(async () => {
       const result = await completeOnboarding(data);
-      if (result?.error) setError(result.error);
+      if ('error' in result) setError(result.error);
+      else go(result.redirectTo);
     });
   };
 
-  const skip = () => startTransition(async () => { await skipOnboarding(); });
+  const skip = () =>
+    startTransition(async () => {
+      const result = await skipOnboarding();
+      if ('error' in result) setError(result.error);
+      else go(result.redirectTo);
+    });
 
   // Enter advances, exactly like the rest of the flow's keyboard path. Shift is
   // free for multi-line fields, and the last step submits instead.

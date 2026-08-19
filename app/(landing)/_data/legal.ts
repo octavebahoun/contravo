@@ -21,10 +21,10 @@ export const publisher = {
   /** Numéro de Compte Contribuable. */
   ncc: TODO,
   address: TODO,
-  phone: TODO,
+  phone: '+225 01 50 65 45 75 · +225 01 47 79 70 82',
   email: 'contact@excellenceteam.site',
   /** Personne physique responsable du contenu publié. */
-  publicationDirector: TODO,
+  publicationDirector: 'Octave Précieux BAHOUN-HOUTOUKPE',
   site: 'https://contravo-7g6p.vercel.app',
 };
 

@@ -1,6 +1,5 @@
 'use server';
 
-import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import { organizations, users, memberships } from '@/lib/db/schema';
@@ -13,7 +12,17 @@ import {
   type SetupInput,
 } from './compose';
 
-export async function completeOnboarding(input: SetupInput) {
+/**
+ * Résultat d'une action de mise en route.
+ *
+ * La navigation est **rendue au client** plutôt que faite ici par `redirect()`.
+ * Appelée depuis `startTransition`, une action qui redirige laissait l'écran sur
+ * le récapitulatif : les réponses étaient bien enregistrées, mais rien ne
+ * bougeait — indiscernable, pour qui regarde, d'un bouton mort.
+ */
+type OnboardingResult = { error: string } | { redirectTo: string };
+
+export async function completeOnboarding(input: SetupInput): Promise<OnboardingResult> {
   const parsed = setupSchema.safeParse(input);
   if (!parsed.success) {
     return { error: 'Certaines réponses sont invalides.' };
@@ -22,7 +31,7 @@ export async function completeOnboarding(input: SetupInput) {
 
   // `getSession()` resolves to the user row itself, not to a `{ user }` wrapper.
   const user = await getSession();
-  if (!user) redirect('/sign-in');
+  if (!user) return { redirectTo: '/sign-in' };
 
   const [membership] = await db
     .select({ organizationId: memberships.organizationId, role: memberships.role })
@@ -39,7 +48,7 @@ export async function completeOnboarding(input: SetupInput) {
   // theirs to describe.
   if (membership.role !== 'owner') {
     await markDone(membership.organizationId);
-    redirect('/dashboard');
+    return { redirectTo: '/dashboard' };
   }
 
   await db
@@ -65,7 +74,7 @@ export async function completeOnboarding(input: SetupInput) {
     action: 'org.onboarded',
   });
 
-  redirect('/dashboard');
+  return { redirectTo: '/dashboard' };
 }
 
 /**
@@ -76,9 +85,9 @@ export async function completeOnboarding(input: SetupInput) {
  * still written, so the gate does not ask again; everything asked here remains
  * editable under Paramètres › Général.
  */
-export async function skipOnboarding() {
+export async function skipOnboarding(): Promise<OnboardingResult> {
   const user = await getSession();
-  if (!user) redirect('/sign-in');
+  if (!user) return { redirectTo: '/sign-in' };
 
   const [membership] = await db
     .select({ organizationId: memberships.organizationId })
@@ -87,7 +96,7 @@ export async function skipOnboarding() {
     .limit(1);
 
   if (membership) await markDone(membership.organizationId);
-  redirect('/dashboard');
+  return { redirectTo: '/dashboard' };
 }
 
 async function markDone(organizationId: string) {

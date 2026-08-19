@@ -30,6 +30,12 @@ if (!process.env.POSTGRES_URL) {
  *
  * Only Neon-hosted URLs work with `neon-ws`; anything else must stay on the
  * default.
+ *
+ * Sous Next, `ws` et `@neondatabase/serverless` doivent rester **hors du
+ * bundle** (`serverExternalPackages` dans `next.config.ts`). Empaqueté, `ws`
+ * perd son accélérateur de masquage et la première trame meurt sur
+ * `TypeError: b.mask is not a function` : toutes les pages rendues côté serveur
+ * retournent 500, inscription comprise.
  */
 const driver = process.env.DB_DRIVER === 'neon-ws' ? 'neon-ws' : 'postgres-js';
 
