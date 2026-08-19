@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApiContext, checkScope } from '@/lib/auth/unified-auth';
-import { getPresignedGetUrl } from '@/lib/storage/presign';
+import { getPresignedGetUrl, INLINE_VIEWABLE_MIME } from '@/lib/storage/presign';
 import { db } from '@/lib/db/drizzle';
 import { files } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -47,17 +47,37 @@ export async function GET(
       }
     }
 
-    // 3. Generate presigned GET URL
+    // 3. Display in place, or save to disk?
+    //
+    // Everything used to be `attachment`, so the interface could only ever hand
+    // a document to another application — a signed contract or a signature could
+    // not be looked at without leaving the site. `inline` is what the in-app
+    // viewer asks for, and only for types it knows how to render.
+    const wantsInline = searchParams.get('disposition') === 'inline';
+    const mimeType = file.mimeType.toLowerCase();
+
+    if (wantsInline && !INLINE_VIEWABLE_MIME.has(mimeType)) {
+      throw new ApiError(
+        'UNSUPPORTED_MEDIA_TYPE',
+        `Ce type de fichier (${file.mimeType}) ne s’affiche pas dans le navigateur ; téléchargez-le.`,
+        415
+      );
+    }
+
     const downloadUrl = await getPresignedGetUrl(
       file.r2Key,
       ctx.organizationId,
       expiresIn,
-      file.filename
+      file.filename,
+      wantsInline ? { inline: true, contentType: mimeType } : undefined
     );
 
     return NextResponse.json({
       downloadUrl,
       expiresIn,
+      disposition: wantsInline ? 'inline' : 'attachment',
+      mimeType: file.mimeType,
+      filename: file.filename,
     });
   } catch (err) {
     return formatErrorResponse(err);

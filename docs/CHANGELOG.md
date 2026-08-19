@@ -5,6 +5,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — Ouvrir un document sans quitter le site
+- `getPresignedGetUrl` forçait `Content-Disposition: attachment` sur **tous** les liens. Un contrat signé, un justificatif ou la signature d'un client ne pouvaient donc qu'être téléchargés puis ouverts dans une autre application : rien ne s'affichait dans Contravo.
+- Nouveau bouton « Ouvrir » sur chaque fichier de `/dashboard/files`, et visionneuse en surcouche — `<iframe>` pour les PDF, `<img>` pour les images — avec « Télécharger » et « Ouvrir dans un onglet » à portée.
+- **Les octets ne transitent toujours pas par le serveur** : la visionneuse pointe sur la même URL R2 éphémère que le téléchargement, demandée avec `?disposition=inline`. Proxifier un livrable de plusieurs mégaoctets à travers une fonction serverless aurait été payer deux fois pour le même transfert.
+- Liste blanche explicite (`INLINE_VIEWABLE_MIME`) : PDF, PNG, JPEG, WebP, GIF. Tout autre type demandé en `inline` est refusé en `415`. `image/svg+xml` en est absent volontairement — un SVG embarque du script, et une visionneuse de documents n'a aucune raison d'offrir un moyen d'en exécuter.
+- Le type enregistré est épinglé sur la réponse (`ResponseContentType`), pour que le navigateur rende le document tel qu'il a été déclaré et non tel qu'il l'aurait deviné.
+- Vérifié contre R2 : le lien `inline` renvoie bien `Content-Disposition: inline` et `Content-Type: application/pdf` (ou `image/png`), et le téléchargement classique reste `attachment`.
+
 ### Added — Demander un avis depuis l'écran Avis clients
 - L'écran ne montrait que les avis **reçus**. Rien nulle part ne permettait d'en demander un : la route `POST /projects/:id/review-request` existait et n'avait aucun appelant dans l'interface.
 - Nouveau tableau « Demander un avis » : un projet par ligne, avec son client, l'état de la demande (jamais demandée · envoyée le … · avis reçu) et le bouton qui l'envoie.

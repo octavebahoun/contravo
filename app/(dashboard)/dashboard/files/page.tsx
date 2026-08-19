@@ -28,6 +28,7 @@ import {
   Image as ImageIcon,
   Loader2,
   Paperclip,
+  Eye,
   Search,
   Trash2,
   Upload,
@@ -41,6 +42,7 @@ import {
   StatusBadge,
   type StatusTone,
 } from '../_components/module-ui';
+import { FileViewer, isViewable, type ViewerFile } from './_components/file-viewer';
 
 /**
  * Documents stored by the organization.
@@ -119,6 +121,7 @@ export default function FilesPage() {
   const [pendingDelete, setPendingDelete] = useState<StoredFile | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<ViewerFile | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const query = new URLSearchParams({ limit: '100' });
@@ -186,7 +189,7 @@ export default function FilesPage() {
     }
   };
 
-  const handleDownload = async (file: StoredFile) => {
+  const handleDownload = async (file: { id: string; filename: string; mimeType: string }) => {
     setDownloadingId(file.id);
     try {
       const res = await fetch(`/api/v1/files/${file.id}/download`);
@@ -345,6 +348,23 @@ export default function FilesPage() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            title="Ouvrir"
+                            disabled={!isDownloadable || !isViewable(file.mimeType)}
+                            onClick={() =>
+                              setViewing({
+                                id: file.id,
+                                filename: file.filename,
+                                mimeType: file.mimeType,
+                              })
+                            }
+                            className="h-8 rounded-full text-[11px] text-foreground hover:bg-muted"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Télécharger"
                             disabled={!isDownloadable || downloadingId === file.id}
                             onClick={() => handleDownload(file)}
                             className="h-8 rounded-full text-[11px] text-primary hover:bg-primary/10"
@@ -373,6 +393,12 @@ export default function FilesPage() {
           )}
         </CardContent>
       </Card>
+
+      <FileViewer
+        file={viewing}
+        onClose={() => setViewing(null)}
+        onDownload={(file) => handleDownload(file)}
+      />
 
       <Dialog open={isUploadOpen} onOpenChange={(open) => !isUploading && setIsUploadOpen(open)}>
         <DialogContent className="rounded-xl sm:max-w-md">
