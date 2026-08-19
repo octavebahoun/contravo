@@ -129,9 +129,9 @@ export const footerDetails = {
     {
       title: 'Produit',
       links: [
-        { label: 'Fonctionnalités', href: '#fonctionnalites' },
-        { label: 'Comment ça marche', href: '#etapes' },
-        { label: 'FAQ', href: '#faq' },
+        { label: 'Fonctionnalités', href: '/#fonctionnalites' },
+        { label: 'Comment ça marche', href: '/#etapes' },
+        { label: 'FAQ', href: '/#faq' },
       ],
     },
     {
@@ -145,11 +145,19 @@ export const footerDetails = {
       title: 'Développeurs',
       links: [{ label: 'Documentation API', href: '/api/v1/docs' }],
     },
+    {
+      title: 'Légal',
+      links: [
+        { label: 'Mentions légales', href: '/mentions-legales' },
+        { label: 'Politique de confidentialité', href: '/confidentialite' },
+        { label: 'Conditions d’utilisation', href: '/conditions' },
+      ],
+    },
   ],
 };
 
 export const menuItems = [
-  { label: 'Fonctionnalités', href: '#fonctionnalites' },
-  { label: 'Comment ça marche', href: '#etapes' },
-  { label: 'FAQ', href: '#faq' },
+  { label: 'Fonctionnalités', href: '/#fonctionnalites' },
+  { label: 'Comment ça marche', href: '/#etapes' },
+  { label: 'FAQ', href: '/#faq' },
 ];

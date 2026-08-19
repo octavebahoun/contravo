@@ -5,6 +5,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — Mentions légales, confidentialité et conditions d'utilisation
+- Trois pages publiques : `/mentions-legales`, `/confidentialite`, `/conditions`. Le pied de page pointait jusqu'ici sur `#cgu`, `#confidentialite` et `#contact` — trois ancres qui n'existaient nulle part : cliquer ne faisait rien.
+- Le contenu décrit **l'architecture réelle**, pas une clause de style. La liste des sous-traitants est celle des services effectivement appelés — Vercel, Neon, Cloudflare R2, Resend, GeniusPay, n8n — avec ce que chacun voit passer. Les durées de conservation reprennent celles que le code applique déjà, jusqu'au jeton de portail dont seule l'empreinte est stockée.
+- Le tableau des formules des CGU est **construit depuis `PLANS`** : les prix et les quotas affichés ne peuvent pas diverger de ceux que l'application facture.
+- L'identité de l'éditeur vit dans `app/(landing)/_data/legal.ts`, partagée par les trois pages : une identité corrigée à un seul endroit ne peut pas se contredire d'une page à l'autre. Les champs manquants s'affichent en clair comme `[À COMPLÉTER]` — une mention légale incomplète doit se voir, pas se deviner.
+- Les ancres du menu deviennent absolues (`/#faq` au lieu de `#faq`) : depuis une page légale, elles pointaient sur une section inexistante de la page courante.
+
 ### Fixed — `next build` échouait sur le fichier d'actions de la mise en route
 - `app/onboarding/actions.ts` porte `'use server'`, où **tout export doit être une fonction asynchrone**. `composeLegalMentions` et `composeBankDetails`, deux fonctions pures exportées à côté des actions, faisaient échouer la compilation.
 - Ni `tsc` ni les tests ne pouvaient le voir : la règle appartient au compilateur Next seul. Trouvé en construisant l'application avant de fusionner sur `main` — c'est-à-dire au dernier endroit où c'était encore trouvable avant un déploiement cassé.
