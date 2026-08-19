@@ -5,6 +5,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — Demander un avis depuis l'écran Avis clients
+- L'écran ne montrait que les avis **reçus**. Rien nulle part ne permettait d'en demander un : la route `POST /projects/:id/review-request` existait et n'avait aucun appelant dans l'interface.
+- Nouveau tableau « Demander un avis » : un projet par ligne, avec son client, l'état de la demande (jamais demandée · envoyée le … · avis reçu) et le bouton qui l'envoie.
+- Le client destinataire ne se choisit pas — un projet appartient déjà à un client. Laisser sélectionner les deux séparément n'aurait fait qu'ouvrir la porte à un avis demandé à la mauvaise personne.
+- Route `GET /api/v1/reviews/requests` : sans elle, une demande déjà envoyée était indiscernable d'une jamais envoyée, et redemander était le seul moyen de le savoir.
+
+### Fixed — Redemander un avis aurait effacé celui déjà reçu
+- `createReviewRequest` supprimait la demande existante pour satisfaire l'index unique sur `project_id`. Or `reviews.request_id` est en `ON DELETE CASCADE` : sur un projet ayant déjà reçu un avis, la redemande **détruisait le témoignage du client**, sans un mot.
+- Personne ne l'avait déclenché parce qu'aucun bouton n'appelait cette route. En ajouter un revenait à armer le piège — d'où le correctif dans le même mouvement : une demande n'est remplaçable que si personne n'y a répondu, sinon `409 ALREADY_REVIEWED`.
+- Vérifié pour de vrai : avis soumis, redemande refusée en 409, l'avis toujours là. Sonde effacée et demande remise en attente ensuite.
+
 ### Fixed — Demander un avis client répondait 500
 - `review_requests.expires_at` était `NOT NULL` **sans valeur par défaut**, alors que la route traite le champ comme facultatif : l'insertion violait la contrainte à chaque demande. Un `as never` sur l'objet passé au dépôt empêchait le compilateur de le dire.
 - La colonne prend `now() + 60 days` (migration `0011`), la durée du jeton de portail qui ouvre l'avis — les deux expirant séparément laisseraient soit un lien mort sur une demande vivante, soit l'inverse. Le `as never` disparaît.

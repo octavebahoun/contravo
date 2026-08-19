@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Search, Star, Check, X, MessageSquareQuote } from 'lucide-react';
+import { Loader2, Search, Star, Check, X, MessageSquareQuote, Send, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   fetcher,
@@ -34,6 +34,23 @@ interface Review {
 interface Project {
   id: string;
   name: string;
+  clientId: string;
+  status: string;
+}
+
+interface Client {
+  id: string;
+  displayName: string;
+  email: string;
+}
+
+interface ReviewRequest {
+  id: string;
+  projectId: string;
+  clientId: string;
+  status: 'pending' | 'submitted' | 'expired';
+  sentAt: string | null;
+  expiresAt: string;
 }
 
 const MODERATION_LABELS: Record<Review['moderationStatus'], { label: string; tone: StatusTone }> = {
@@ -63,15 +80,23 @@ export default function ReviewsPage() {
   const [search, setSearch] = useState('');
   const [moderationFilter, setModerationFilter] = useState('all');
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [requestingId, setRequestingId] = useState<string | null>(null);
 
   const { data, isLoading, mutate } = useSWR<{ reviews: Review[] }>(
     `/api/v1/reviews${moderationFilter !== 'all' ? `?moderationStatus=${moderationFilter}` : ''}`,
     fetcher
   );
   const { data: projectsData } = useSWR<{ projects: Project[] }>('/api/v1/projects', fetcher);
+  const { data: clientsData } = useSWR<{ clients: Client[] }>('/api/v1/clients', fetcher);
+  const { data: requestsData, mutate: mutateRequests } = useSWR<{ requests: ReviewRequest[] }>(
+    '/api/v1/reviews/requests',
+    fetcher
+  );
 
   const reviews = data?.reviews || [];
   const projects = projectsData?.projects || [];
+  const clients = clientsData?.clients || [];
+  const requests = requestsData?.requests || [];
 
   const filteredReviews = reviews.filter((review) => {
     if (!search) return true;
@@ -89,6 +114,44 @@ export default function ReviewsPage() {
 
   const getProjectName = (projectId: string) =>
     projects.find((p) => p.id === projectId)?.name || 'Projet inconnu';
+
+  const getClient = (clientId: string) => clients.find((c) => c.id === clientId);
+
+  /**
+   * Envoie la demande d'avis pour un projet.
+   *
+   * Le client destinataire n'est pas à choisir : un projet appartient déjà à
+   * un client, et laisser sélectionner les deux séparément n'aurait fait
+   * qu'ouvrir la porte à un avis demandé à la mauvaise personne.
+   */
+  const handleRequestReview = async (project: Project) => {
+    setRequestingId(project.id);
+    try {
+      const res = await fetch(`/api/v1/projects/${project.id}/review-request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: project.clientId }),
+      });
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(
+          payload?.error?.message || payload?.message || 'Demande d’avis refusée'
+        );
+      }
+
+      const client = getClient(project.clientId);
+      toast.success(
+        client?.email
+          ? `Demande envoyée à ${client.email}`
+          : 'Demande d’avis envoyée'
+      );
+      mutateRequests();
+    } catch (err: any) {
+      toast.error(err.message || 'Demande d’avis impossible');
+    } finally {
+      setRequestingId(null);
+    }
+  };
 
   const handleModerate = async (id: string, moderationStatus: 'approved' | 'rejected') => {
     try {
@@ -140,6 +203,105 @@ export default function ReviewsPage() {
           icon={<MessageSquareQuote className="h-4 w-4 text-muted-foreground" />}
         />
       </div>
+
+      <Card className="rounded-xl border border-border bg-card">
+        <CardHeader className="p-5 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Send className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-medium text-foreground">Demander un avis</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Un email part au client du projet avec son lien personnel. Rien ne quitte cet écran
+            sans que vous cliquiez.
+          </p>
+        </CardHeader>
+
+        <CardContent className="p-0">
+          {projects.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground text-xs">
+              Aucun projet. Créez-en un pour pouvoir demander un avis à son client.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="text-xs font-semibold text-foreground">Projet</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Client</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Demande</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground text-right">
+                    Action
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {projects.map((project) => {
+                  const client = getClient(project.clientId);
+                  const request = requests.find((r) => r.projectId === project.id);
+                  const hasReview = reviews.some((r) => r.projectId === project.id);
+                  const isSending = requestingId === project.id;
+
+                  return (
+                    <TableRow key={project.id} className="border-border hover:bg-muted/50">
+                      <TableCell className="text-xs text-foreground">
+                        <div className="font-medium">{project.name}</div>
+                        <div className="text-[11px] text-muted-foreground font-normal">
+                          {project.status}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {client ? (
+                          <>
+                            <div className="text-foreground">{client.displayName}</div>
+                            <div className="text-[11px]">{client.email}</div>
+                          </>
+                        ) : (
+                          'Client inconnu'
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {hasReview ? (
+                          <StatusBadge tone="success">Avis reçu</StatusBadge>
+                        ) : request?.status === 'pending' ? (
+                          <span>
+                            Envoyée le {formatDate(request.sentAt || request.expiresAt)}
+                          </span>
+                        ) : request?.status === 'expired' ? (
+                          <StatusBadge tone="danger">Expirée</StatusBadge>
+                        ) : (
+                          <span className="text-[11px]">Jamais demandée</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {hasReview ? (
+                          // Pas de bouton : redemander effacerait l'avis reçu.
+                          // Le dépôt refuse de toute façon, autant ne pas
+                          // proposer le geste.
+                          <span className="text-[11px] text-muted-foreground">Terminé</span>
+                        ) : (
+                          <Button
+                            variant={request ? 'ghost' : 'outline'}
+                            size="sm"
+                            disabled={isSending || !client}
+                            onClick={() => handleRequestReview(project)}
+                            className="h-8 rounded-full text-[11px] border-border"
+                          >
+                            {isSending ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Mail className="h-3.5 w-3.5" />
+                            )}
+                            {request ? 'Renvoyer le lien' : 'Demander un avis'}
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="rounded-xl border border-border bg-card">
         <CardHeader className="p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">

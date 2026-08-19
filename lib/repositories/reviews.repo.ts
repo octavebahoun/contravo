@@ -35,7 +35,28 @@ export async function createReviewRequest(
     throw new ApiError('VALIDATION_ERROR', 'Client not found', 400);
   }
 
-  // Delete any existing review request for the project to respect unique constraint
+  // An already-received review blocks the whole operation. `reviews.request_id`
+  // cascades on delete, so re-requesting on such a project would silently
+  // **destroy the client's testimonial** — and the dashboard now has a button
+  // that calls this. One review per project is the model the unique index on
+  // `project_id` already states; saying so out loud is cheaper than losing one.
+  const [existingReview] = await db
+    .select({ id: reviews.id })
+    .from(reviews)
+    .where(and(eq(reviews.projectId, input.projectId), eq(reviews.organizationId, organizationId)))
+    .limit(1);
+
+  if (existingReview) {
+    throw new ApiError(
+      'ALREADY_REVIEWED',
+      'Ce projet a déjà reçu un avis : en redemander un effacerait le premier.',
+      409
+    );
+  }
+
+  // Only a request nobody answered may be replaced — re-sending a link to a
+  // client who never responded is legitimate, and the unique index on
+  // `project_id` requires the old row to go first.
   await db
     .delete(reviewRequests)
     .where(and(eq(reviewRequests.projectId, input.projectId), eq(reviewRequests.organizationId, organizationId)));
@@ -177,6 +198,24 @@ export async function listReviews(
     .orderBy(desc(reviews.submittedAt))
     .limit(limit)
     .offset(offset);
+
+  return results;
+}
+
+/**
+ * Review requests still outstanding for this organization.
+ *
+ * The dashboard had no way to see them: the Avis screen listed only reviews
+ * *received*, so a request already sent looked exactly like one never sent, and
+ * asking twice was the only way to find out. One row per project — the unique
+ * index on `project_id` guarantees it.
+ */
+export async function listReviewRequests(organizationId: string) {
+  const tdb = tenantDb(organizationId);
+
+  const results = await tdb
+    .select(reviewRequests)
+    .orderBy(desc(reviewRequests.sentAt));
 
   return results;
 }
