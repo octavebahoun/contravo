@@ -39,6 +39,14 @@ import {
 import { NavUser } from "@/components/nav-user"
 import { TeamSwitcher } from "@/components/team-switcher"
 
+/**
+ * Entrées de « Paramètres » que seuls un propriétaire ou un administrateur voient.
+ *
+ * « Encaissement » porte les identifiants de la passerelle : quiconque les
+ * détient peut encaisser au nom de l'organisation.
+ */
+const ADMIN_ONLY_NAV = ["/dashboard/developer", "/dashboard/payments"]
+
 const data = {
   mainNav: [
     { title: "Tableau de bord", url: "/dashboard", icon: LayoutDashboard },
@@ -136,7 +144,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupLabel>Paramètres</SidebarGroupLabel>
           <SidebarMenu>
             {data.settingsNav.filter(item => {
-              if (item.url === "/dashboard/developer") {
+              // Écrans réservés aux propriétaires et administrateurs. Leur page
+              // et leur API refusent déjà les autres rôles ; les retirer d'ici
+              // évite en plus d'annoncer une porte qui ne s'ouvrira pas.
+              if (ADMIN_ONLY_NAV.includes(item.url)) {
                 const currentUserMember = activeTeam?.teamMembers?.find(
                   (m: any) => m.user?.id === userData?.id
                 );

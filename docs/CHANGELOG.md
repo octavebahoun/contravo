@@ -5,6 +5,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — Promotion super-admin en ligne de commande
+- `npm run db:super-admin <email>` (et `--revoke`). `users.is_super_admin` ouvre `/admin` et alimente l'en-tête `x-is-super-admin` ; **rien dans le produit ne peut le poser**, et c'est voulu — un propriétaire d'organisation ne doit pas pouvoir se promouvoir au niveau plateforme. En pratique cela voulait dire éditer la ligne à la main, et une remise à zéro (`npm run db:reset`) laissait le premier compte sans le drapeau : la section Administration n'apparaissait jamais.
+
+### Changed — « Encaissement » disparaît de la barre latérale pour les non-administrateurs
+- La page et sa route refusaient déjà les autres rôles, mais l'entrée restait visible de tous : seul `/dashboard/developer` était filtré. Les deux écrans partagent désormais la même liste. Ces identifiants permettent d'encaisser au nom de l'organisation — autant ne pas annoncer une porte qui ne s'ouvrira pas.
+
 ### Added — Le portail client peut enfin encaisser : connexion du compte GeniusPay
 - Tout le circuit de paiement existait — `createPaymentIntent`, la redirection vers la page de règlement, le webhook signé qui **re-consulte la transaction chez GeniusPay avant de créditer quoi que ce soit** — mais **rien ne pouvait écrire une ligne dans `payment_gateway_credentials`** : seul le jeu de démonstration en créait. Toute organisation réelle avait donc `onlinePayment: false`, le portail retombait sur les coordonnées bancaires, et le bouton « Payer » n'apparaissait jamais. C'est cette moitié manquante.
 - Écran `/dashboard/payments` (« Encaissement »), réservé aux propriétaires et administrateurs : les clés permettent d'encaisser au nom de l'organisation.
