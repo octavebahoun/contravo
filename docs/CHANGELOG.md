@@ -5,6 +5,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed — Le retour de paiement affichait « Lien incomplet » au client
+- `createPaymentIntent` construisait les URL de retour sans jeton (`…/portal/invoices/<id>?status=success`). L'écran du portail en exige un : le client qui venait de payer était accueilli par une erreur d'accès, quel que soit le sort de son paiement.
+- La réparation évidente — réutiliser le jeton avec lequel le client est arrivé — reviendrait à confier à un tiers un lien valable **90 jours**. Le retour transporte donc un jeton **frappé pour l'occasion** : même facture, **24 h**, révoqué si l'initiation échoue.
+- Il conserve l'action `pay`, parce que l'URL d'erreur atterrit sur le même écran : dire à un client dont la carte a été refusée de « réessayer ci-dessous » sans rien afficher dessous n'aurait pas été un correctif. La capacité reste étroite — elle n'ouvre un règlement que pour le solde de cette facture, et cesse de fonctionner dès qu'elle est soldée.
+- Vérifié sur l'application construite : l'URL de retour répond `200`, affiche « Paiement transmis » et conserve le bloc de règlement. Jeton de sonde révoqué ensuite.
+
 ### Security — `GET /api/user` renvoyait l'empreinte du mot de passe au navigateur
 - `getSessionUser` sélectionnait la ligne `users` entière et la retournait telle quelle ; `app/api/user/route.ts` la sérialise directement. **Chaque page du tableau de bord recevait donc l'empreinte argon2 du compte connecté** — inexploitable en l'état, mais elle n'a rien à faire côté client, et une injection de script ou un proxy de journalisation la ramassait avec le reste.
 - La session expose désormais un type `SessionUser` explicite, sans `password_hash`. Le changement de mot de passe et la suppression de compte — les deux seuls appelants qui en avaient besoin, deux actions serveur — la lisent à la demande via `getUserPasswordHash(userId)`.

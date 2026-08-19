@@ -9,6 +9,7 @@ import { buildEventPayload } from '../../webhooks/payload-builder';
 import { getAppUrl } from '@/lib/config/app-url';
 import { fromGatewayAmount, toGatewayAmount } from '@/lib/money';
 import { ApiError } from '@/lib/rbac';
+import { generatePublicToken, revokePublicToken } from '@/lib/public-tokens';
 
 
 
@@ -97,7 +98,34 @@ export async function createPaymentIntent(
     credentials.environment as 'sandbox' | 'live'
   );
 
-  // 5. Create local Payment Intent
+  // 5. Mint the token the gateway will send the client back with.
+  //
+  // The return URL used to carry no token at all, so the portal answered the
+  // client's own payment with « Lien incomplet » — the screen requires one. The
+  // obvious repair, forwarding the token the client arrived with, would hand a
+  // third party a link valid for 90 days; this one lasts a day and dies with the
+  // checkout it was minted for.
+  //
+  // It keeps `pay` because the *error* URL lands here too, and telling a client
+  // whose card was refused to "try again below" with nothing below is not a
+  // repair. The capability is narrow either way: it can only ever open a
+  // checkout for this invoice's outstanding balance, and stops working the
+  // moment the invoice is settled.
+  const returnToken = await generatePublicToken({
+    organizationId,
+    resourceType: 'invoice',
+    resourceId: invoiceId,
+    recipientEmail: clientRecord.email,
+    actions: ['read', 'pay'],
+    expiresInDays: 1,
+    maxUses: null,
+  });
+
+  const returnUrl = (status: 'success' | 'failed') =>
+    `${getAppUrl()}/portal/invoices/${invoiceId}?status=${status}` +
+    `&token=${encodeURIComponent(returnToken.token)}`;
+
+  // 6. Create local Payment Intent
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h expiration
   const [localIntent] = await db
     .insert(paymentIntents)
@@ -114,7 +142,7 @@ export async function createPaymentIntent(
     })
     .returning();
 
-  // 6. Call GeniusPay to initiate checkout
+  // 7. Call GeniusPay to initiate checkout
   try {
     const response = await client.initiatePayment({
       // GeniusPay takes the amount in the currency's normal unit — its own
@@ -129,8 +157,8 @@ export async function createPaymentIntent(
         phone: clientRecord.phone || undefined,
         country: 'CI', // Default to CI (Côte d'Ivoire) as standard country scope
       },
-      successUrl: `${getAppUrl()}/portal/invoices/${invoiceId}?status=success`,
-      errorUrl: `${getAppUrl()}/portal/invoices/${invoiceId}?status=failed`,
+      successUrl: returnUrl('success'),
+      errorUrl: returnUrl('failed'),
       metadata: {
         organization_id: organizationId,
         invoice_id: invoiceId,
@@ -142,7 +170,7 @@ export async function createPaymentIntent(
       throw new Error(response.error?.message || 'GeniusPay initiation failed');
     }
 
-    // 7. Update local Payment Intent with Gateway reference & URLs
+    // 8. Update local Payment Intent with Gateway reference & URLs
     const [updatedIntent] = await db
       .update(paymentIntents)
       .set({
@@ -166,6 +194,12 @@ export async function createPaymentIntent(
         updatedAt: new Date(),
       })
       .where(eq(paymentIntents.id, localIntent.id));
+
+    // No checkout exists, so nothing will ever redirect back: the return token
+    // would otherwise sit valid for a day for a payment that never began.
+    await revokePublicToken(returnToken.id, organizationId).catch((revokeError) => {
+      console.error('Failed to revoke the unused payment return token:', revokeError);
+    });
 
     if (err instanceof ApiError) throw err;
 
