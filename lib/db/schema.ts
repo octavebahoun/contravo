@@ -674,7 +674,18 @@ export const reviewRequests = pgTable('review_requests', {
     .references(() => clients.id, { onDelete: 'restrict' }),
   status: text('status').notNull(), // enum: 'pending'|'submitted'|'expired'
   sentAt: timestamp('sent_at', { withTimezone: true }),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  /**
+   * When the request stops accepting a review.
+   *
+   * `NOT NULL` with no default made every creation that omitted it fail on the
+   * constraint — and the route treats it as optional, so asking a client for a
+   * review answered `500`. The default matches the life of the portal token that
+   * opens the review, 60 days: the two expiring apart would leave either a dead
+   * link on a live request or the reverse.
+   */
+  expiresAt: timestamp('expires_at', { withTimezone: true })
+    .notNull()
+    .default(sql`now() + interval '60 days'`),
   createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [

@@ -5,6 +5,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed — Demander un avis client répondait 500
+- `review_requests.expires_at` était `NOT NULL` **sans valeur par défaut**, alors que la route traite le champ comme facultatif : l'insertion violait la contrainte à chaque demande. Un `as never` sur l'objet passé au dépôt empêchait le compilateur de le dire.
+- La colonne prend `now() + 60 days` (migration `0011`), la durée du jeton de portail qui ouvre l'avis — les deux expirant séparément laisseraient soit un lien mort sur une demande vivante, soit l'inverse. Le `as never` disparaît.
+- Vérifié en créant une vraie demande : `expires_at` au 18 octobre, soit 60 jours. Sonde supprimée, et son email annulé avant envoi puisqu'il aurait porté un lien vers une demande effacée.
+
+### Fixed — Le logo était bien envoyé mais ne s'affichait jamais
+- `requireOrg` ne résolvait l'organisation que par son **slug**, alors que le tableau de bord n'a sous la main que son **id** : `/api/team` renvoie la ligne de l'organisation, et l'envoi de logo appelait `POST /organizations/<uuid>/logo`. La requête ne trouvait rien et repartait en 403.
+- D'où un symptôme trompeur : le fichier arrivait bien dans R2 et apparaissait dans « Fichiers », téléchargeable — mais `logo_file_id` n'était jamais écrit, donc le logo restait invisible partout. Facile à prendre pour un problème de stockage ; ce n'en était pas un.
+- `requireOrg` accepte désormais l'uuid **ou** le slug, comme le faisait déjà le GET public du logo. Les faire diverger était précisément le piège.
+- Vérifié sur l'application construite : `POST` répond 200 et écrit `logo_file_id`, le `GET` sert bien l'image (`image/png`, 200).
+
 ### Fixed — Le retour de paiement affichait « Lien incomplet » au client
 - `createPaymentIntent` construisait les URL de retour sans jeton (`…/portal/invoices/<id>?status=success`). L'écran du portail en exige un : le client qui venait de payer était accueilli par une erreur d'accès, quel que soit le sort de son paiement.
 - La réparation évidente — réutiliser le jeton avec lequel le client est arrivé — reviendrait à confier à un tiers un lien valable **90 jours**. Le retour transporte donc un jeton **frappé pour l'occasion** : même facture, **24 h**, révoqué si l'initiation échoue.

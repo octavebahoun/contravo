@@ -32,8 +32,11 @@ export async function POST(
       {
         projectId: id,
         clientId: validated.clientId,
+        // Omis, la base applique 60 jours — la durée du jeton de portail qui
+        // ouvre l'avis. Le `as never` qui vivait ici masquait justement le fait
+        // que la colonne était obligatoire sans valeur par défaut.
         ...(validated.expiresAt ? { expiresAt: new Date(validated.expiresAt) } : {}),
-      } as never,
+      },
       ctx.userId,
       request.headers.get('x-forwarded-for') || '127.0.0.1'
     );
