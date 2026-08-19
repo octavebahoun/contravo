@@ -31,6 +31,7 @@ export async function GET(
         id: org.id,
         name: org.name,
         slug: org.slug,
+        autoRemindersEnabled: org.autoRemindersEnabled,
         createdAt: org.createdAt,
         role: context.organization.role,
       },
@@ -53,22 +54,28 @@ export async function PATCH(
     const body = await request.json();
     const validated = updateOrgSchema.parse(body);
 
+    // Only what was actually sent: the settings screen patches the reminder
+    // toggle alone, and spelling out `name: undefined` here would blank it.
     const [updatedOrg] = await db
       .update(organizations)
       .set({
-        name: validated.name,
+        ...(validated.name !== undefined ? { name: validated.name } : {}),
+        ...(validated.autoRemindersEnabled !== undefined
+          ? { autoRemindersEnabled: validated.autoRemindersEnabled }
+          : {}),
         updatedAt: new Date(),
       })
       .where(eq(organizations.id, context.organization.id))
       .returning();
 
-    await context.audit('organization.update', { name: validated.name });
+    await context.audit('organization.update', validated);
 
     return NextResponse.json({
       organization: {
         id: updatedOrg.id,
         name: updatedOrg.name,
         slug: updatedOrg.slug,
+        autoRemindersEnabled: updatedOrg.autoRemindersEnabled,
         createdAt: updatedOrg.createdAt,
         role: context.organization.role,
       },

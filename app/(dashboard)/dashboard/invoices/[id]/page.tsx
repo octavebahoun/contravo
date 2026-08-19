@@ -18,7 +18,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertTriangle, Ban, Download, Loader2, Send, Undo2, Wallet } from 'lucide-react';
+import { AlertTriangle, Ban, BellRing, Download, Loader2, Send, Undo2, Wallet } from 'lucide-react';
 import { Stamp, type StampTone } from '@/components/stamp';
 import { toast } from 'sonner';
 import {
@@ -66,6 +66,14 @@ interface Payment {
   notes?: string | null;
 }
 
+interface Reminder {
+  id: string;
+  stage: number;
+  daysOverdue: number;
+  kind: 'auto' | 'manual';
+  sentAt: string;
+}
+
 interface Invoice {
   id: string;
   projectId?: string | null;
@@ -99,6 +107,14 @@ const INVOICE_STATUS: Record<string, { label: string; tone: StampTone }> = {
   refunded: { label: 'Remboursée', tone: 'warning' },
 };
 
+/** How the dunning template words each rung, so the history reads the same way. */
+const REMINDER_STAGE: Record<number, string> = {
+  0: 'Rappel',
+  7: 'Relance',
+  14: 'Deuxième relance',
+  30: 'Dernière relance',
+};
+
 const PAYMENT_METHOD: Record<string, string> = {
   bank_transfer: 'Virement bancaire',
   mobile_money: 'Mobile Money',
@@ -121,7 +137,13 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     fetcher
   );
 
+  const { data: remindersData, mutate: mutateReminders } = useSWR<{ reminders: Reminder[] }>(
+    `/api/v1/invoices/${id}/reminders`,
+    fetcher
+  );
+
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [isReminding, setIsReminding] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [payment, setPayment] = useState({
@@ -155,6 +177,29 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       toast.error(err.message || 'Transition impossible');
     } finally {
       setPendingAction(null);
+    }
+  };
+
+  /**
+   * Sends one reminder, now, because someone decided to.
+   *
+   * The server does the rest: it moves the invoice to `overdue` if it is not
+   * there yet — that transition being itself the notice — and refuses a second
+   * notice inside 24 h.
+   */
+  const handleRemind = async () => {
+    setIsReminding(true);
+    try {
+      const res = await fetch(`/api/v1/invoices/${id}/reminders`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(readError(data, 'Relance impossible'));
+
+      toast.success(`Relance envoyée au client (${REMINDER_STAGE[data.stage] ?? 'Rappel'}).`);
+      await Promise.all([mutate(), mutateReminders()]);
+    } catch (err: any) {
+      toast.error(err.message || 'Relance impossible');
+    } finally {
+      setIsReminding(false);
     }
   };
 
@@ -229,8 +274,10 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
   const status = INVOICE_STATUS[invoice.status] ?? { label: invoice.status, tone: 'ink' as const };
   const isOpenForPayment = ['sent', 'partial', 'overdue'].includes(invoice.status);
-  const isOverdue =
-    isOpenForPayment && invoice.status !== 'overdue' && new Date(invoice.dueDate) < new Date();
+  const isPastDue = isOpenForPayment && new Date(invoice.dueDate) < new Date();
+  const isOverdue = isPastDue && invoice.status !== 'overdue';
+  const reminders = remindersData?.reminders ?? [];
+  const lastReminder = reminders[0];
 
   return (
     <section className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto space-y-8">
@@ -277,6 +324,21 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                   <Send className="mr-2 h-4 w-4" />
                 )}
                 Envoyer au client
+              </Button>
+            )}
+
+            {isPastDue && (
+              <Button
+                onClick={handleRemind}
+                disabled={isReminding}
+                className="rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-11 px-5"
+              >
+                {isReminding ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <BellRing className="mr-2 h-4 w-4" />
+                )}
+                Relancer le client
               </Button>
             )}
 
@@ -342,17 +404,11 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               L’échéance du {formatDate(invoice.dueDate)} est dépassée et il reste{' '}
               {formatMoney(invoice.amountDueCents, invoice.currency)} à encaisser.
             </p>
-            <Button
-              variant="outline"
-              onClick={() => handleTransition('mark_overdue')}
-              disabled={pendingAction !== null}
-              className="rounded-full text-[11px] font-semibold h-9 px-4 border-destructive/30 text-destructive hover:bg-destructive/10"
-            >
-              {pendingAction === 'mark_overdue' ? (
-                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-              ) : null}
-              Marquer en retard et relancer
-            </Button>
+            <p className="text-[11px] text-muted-foreground">
+              {lastReminder
+                ? `Dernière relance le ${formatDateTime(lastReminder.sentAt)}.`
+                : '« Relancer le client » envoie l’email de relance et bascule la facture en retard.'}
+            </p>
           </div>
         </div>
       )}
@@ -522,6 +578,51 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           )}
         </CardContent>
       </Card>
+
+      {reminders.length > 0 && (
+        <Card className="rounded-xl border border-border bg-card">
+          <CardHeader className="p-5 border-b border-border">
+            <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
+              <BellRing className="h-4 w-4 text-muted-foreground" /> Relances
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground">
+              Ce que ce client a déjà reçu — à consulter avant d’en envoyer une de plus.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="text-xs font-semibold text-foreground">Date</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Palier</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground">Retard</TableHead>
+                  <TableHead className="text-xs font-semibold text-foreground text-right">
+                    Origine
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reminders.map((reminder) => (
+                  <TableRow key={reminder.id} className="border-border">
+                    <TableCell className="text-xs text-muted-foreground">
+                      {formatDateTime(reminder.sentAt)}
+                    </TableCell>
+                    <TableCell className="text-xs text-foreground">
+                      {REMINDER_STAGE[reminder.stage] ?? `J+${reminder.stage}`}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {reminder.daysOverdue} jour(s)
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground text-right">
+                      {reminder.kind === 'manual' ? 'Envoyée à la main' : 'Automatique'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
         <DialogContent className="sm:max-w-[425px] rounded-xl">

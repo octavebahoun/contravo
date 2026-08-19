@@ -558,7 +558,12 @@ export type RetrySweepResult = {
  * endpoint does via Redis (`lib/notifications/redis-idempotency.ts`).
  */
 export async function retryDueDeliveries(limit = 25): Promise<RetrySweepResult> {
-  const claimed = (await db.execute(sql`
+  // `db.execute` does not answer the same shape on both drivers: `postgres-js`
+  // returns the rows as an array, `neon-ws` an object carrying them under
+  // `rows`. Read as an array under `neon-ws`, this claim had length `undefined`,
+  // the dispatch loop never ran, and every leased delivery was silently dropped
+  // — the sweep reported success having sent nothing.
+  const claimedResult = (await db.execute(sql`
     with due as (
       select d.id
       from webhook_deliveries d
@@ -587,12 +592,12 @@ export async function retryDueDeliveries(limit = 25): Promise<RetrySweepResult> 
     from leased l
     join webhook_endpoints e on e.id = l.endpoint_id
     where e.active = true
-  `)) as unknown as Array<{
-    id: string;
-    payload: unknown;
-    url: string;
-    secret: string;
-  }>;
+  `)) as unknown;
+
+  type ClaimedRow = { id: string; payload: unknown; url: string; secret: string };
+  const claimed: ClaimedRow[] = Array.isArray(claimedResult)
+    ? (claimedResult as ClaimedRow[])
+    : ((claimedResult as { rows?: ClaimedRow[] })?.rows ?? []);
 
   let dispatched = 0;
   let failures = 0;

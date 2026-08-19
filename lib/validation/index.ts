@@ -83,8 +83,18 @@ export const createOrgSchema = z.object({
 }).strict();
 
 export const updateOrgSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100),
-}).strict();
+  name: z.string().min(1, 'Name is required').max(100).optional(),
+  /**
+   * Re-arms the J+0/J+7/J+14/J+30 dunning ladder for this organization.
+   *
+   * Optional and off by default: chasing a client is a commercial decision, and
+   * the manual "Relancer" action is the normal path.
+   */
+  autoRemindersEnabled: z.boolean().optional(),
+}).strict().refine(
+  (value) => Object.keys(value).length > 0,
+  { message: 'Aucun champ à mettre à jour' }
+);
 
 export const inviteMemberSchema = z.object({
   email: z.string().email('Invalid email address'),

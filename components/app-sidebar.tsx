@@ -34,6 +34,7 @@ import {
   Shield,
   Layers,
   Code2,
+  Landmark,
 } from "lucide-react"
 import { NavUser } from "@/components/nav-user"
 import { TeamSwitcher } from "@/components/team-switcher"
@@ -53,6 +54,7 @@ const data = {
     { title: "Facturation", url: "/dashboard/billing", icon: CreditCard },
   ],
   settingsNav: [
+    { title: "Encaissement", url: "/dashboard/payments", icon: Landmark },
     { title: "Équipe", url: "/dashboard/team", icon: Users },
     { title: "Développeurs", url: "/dashboard/developer", icon: Code2 },
     { title: "Général", url: "/dashboard/general", icon: Settings },

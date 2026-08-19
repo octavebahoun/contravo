@@ -76,6 +76,16 @@ export const organizations = pgTable('organizations', {
    * reads to send an owner through `/onboarding` before the dashboard.
    */
   onboardingCompletedAt: timestamp('onboarding_completed_at', { withTimezone: true }),
+  /**
+   * Whether the dunning sweep may chase this organization's unpaid invoices.
+   *
+   * Off by default: the J+0/J+7/J+14/J+30 ladder used to fire on its own, and a
+   * provider had no way either to trigger a notice or to hold one back. Chasing
+   * a client is a commercial decision, so it is theirs to make — the manual
+   * "Relancer" action covers the normal case, and this flag re-arms the ladder
+   * for anyone who wants it back.
+   */
+  autoRemindersEnabled: boolean('auto_reminders_enabled').notNull().default(false),
 });
 
 export const files = pgTable('files', {
@@ -578,9 +588,18 @@ export const invoiceReminders = pgTable('invoice_reminders', {
   /** Days actually elapsed when it was sent; may exceed `stage` after an outage. */
   daysOverdue: integer('days_overdue').notNull(),
   amountDueCents: bigint('amount_due_cents', { mode: 'bigint' }).notNull(),
+  /** `auto` for a sweep rung, `manual` for a notice a human sent. */
+  kind: text('kind').notNull().default('auto'),
+  /** Who pressed the button; null for the sweep. */
+  sentByUserId: uuid('sent_by_user_id').references(() => users.id, { onDelete: 'set null' }),
   sentAt: timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
-  uniqueIndex('invoice_reminders_invoice_stage_unique_idx').on(table.invoiceId, table.stage),
+  // Partial on purpose: the unique claim is what makes the sweep idempotent, but
+  // applied to every row it would also forbid a second manual reminder on the
+  // same invoice.
+  uniqueIndex('invoice_reminders_invoice_stage_unique_idx')
+    .on(table.invoiceId, table.stage)
+    .where(sql`kind = 'auto'`),
   index('idx_invoice_reminders_org').on(table.organizationId, table.sentAt),
 ]);
 

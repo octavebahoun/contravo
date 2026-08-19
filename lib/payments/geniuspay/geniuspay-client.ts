@@ -49,6 +49,27 @@ export interface GeniusPayPaymentResponse {
   };
 }
 
+export interface GeniusPayAccountResponse {
+  success: boolean;
+  data?: {
+    /** A uuid in practice, though the documentation shows an integer. */
+    id: string | number;
+    /** What the live API returns; the documentation calls it `business_name`. */
+    name?: string;
+    business_name?: string;
+    email?: string;
+    status?: string;
+    /** `sandbox` or `live` — the gateway's own word on which keys these are. */
+    environment?: string;
+    type?: string;
+    created_at?: string;
+  };
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+
 export class GeniusPayClient {
   private publicKey: string;
   private secretKey: string;
@@ -142,6 +163,19 @@ export class GeniusPayClient {
       method: 'POST',
       body: JSON.stringify(body),
     });
+  }
+
+  /**
+   * Reads the merchant account behind the keys.
+   *
+   * The only harmless call that proves a key pair works, so it doubles as the
+   * check run when an organization connects its gateway: nothing is charged, and
+   * the answer carries the merchant's own name and the environment the gateway
+   * itself considers active — which is the authority on `sandbox` vs `live`,
+   * rather than what the form claimed.
+   */
+  async getAccount(): Promise<GeniusPayAccountResponse> {
+    return this.request<GeniusPayAccountResponse>('/account', { method: 'GET' });
   }
 
   /**

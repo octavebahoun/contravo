@@ -13,6 +13,7 @@
     "n8n:key:issue": "npx tsx lib/db/bootstrap-n8n-key.ts --yes",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:apply": "npx tsx lib/db/apply-migration.ts",
     "db:studio": "drizzle-kit studio",
     "test": "vitest run",
     "video:record": "npx tsx video/capture/record.ts",

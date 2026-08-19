@@ -5,6 +5,29 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — Le portail client peut enfin encaisser : connexion du compte GeniusPay
+- Tout le circuit de paiement existait — `createPaymentIntent`, la redirection vers la page de règlement, le webhook signé qui **re-consulte la transaction chez GeniusPay avant de créditer quoi que ce soit** — mais **rien ne pouvait écrire une ligne dans `payment_gateway_credentials`** : seul le jeu de démonstration en créait. Toute organisation réelle avait donc `onlinePayment: false`, le portail retombait sur les coordonnées bancaires, et le bouton « Payer » n'apparaissait jamais. C'est cette moitié manquante.
+- Écran `/dashboard/payments` (« Encaissement »), réservé aux propriétaires et administrateurs : les clés permettent d'encaisser au nom de l'organisation.
+- Route `GET/PUT/DELETE /api/v1/organizations/[slug]/payment-gateway`. La clé secrète et le secret webhook sont chiffrés (AES-256-GCM, `PAYMENT_CREDENTIALS_KEK`) et **ne ressortent jamais** : la lecture ne renvoie qu'une clé publique masquée.
+- Les identifiants sont **vérifiés auprès de GeniusPay avant d'être enregistrés** (`GET /account`, nouvelle méthode `GeniusPayClient.getAccount()`) : une faute de frappe est refusée ici plutôt que découverte par un client bloqué sur une page de paiement cassée. La réponse fournit aussi le nom du marchand et **l'environnement que la passerelle considère actif** — arbitre du sandbox contre le réel, plutôt que ce que le formulaire prétendait.
+- Au plus une passerelle active par organisation : connecter le réel désactive le bac à sable. Le portail et `createPaymentIntent` choisissent « la ligne geniuspay active » sans nommer d'environnement — en laisser deux aurait fait dépendre le prochain paiement de l'ordre des lignes.
+- Déconnexion = `status: 'disabled'`, jamais une suppression : la ligne est le seul enregistrement du compte marchand qui a encaissé les paiements déjà présents dans `payment_intents`.
+- Vérifié de bout en bout contre le vrai compte : `GET /account` accepté, identifiants enregistrés pour « Excellence team », puis `createPaymentIntent` a rendu une vraie URL de règlement GeniusPay (`SANDBOX_…`). La sonde a été supprimée derrière elle.
+- Deux écarts avec la documentation, relevés sur la réponse réelle : `id` est un uuid et non un entier, et le nom du marchand arrive dans `name`, pas `business_name`. Les deux formes sont acceptées.
+
+### Changed — Les relances passent du planificateur au prestataire
+- L'échelle J+0 / J+7 / J+14 / J+30 partait toute seule, et un prestataire ne pouvait **ni déclencher une relance ni en retenir une**. Relancer un client est une décision commerciale, pas un réglage technique.
+- Nouveau bouton « Relancer le client » sur chaque facture dont l'échéance est dépassée, adossé à `POST /api/v1/invoices/[id]/reminders`. Il réutilise l'événement `invoice.overdue` et donc le même gabarit `email_invoice_overdue_v1`, avec la même escalade de ton par palier : un client relancé à la main ne reçoit pas un email d'une autre facture que celui du planificateur.
+- Refusé avant l'échéance — ce gabarit affirme que la date est passée, l'envoyer plus tôt rendrait le message faux — et refusé deux fois dans les 24 h, pour la raison qu'une personne ne le ferait pas non plus.
+- Carte « Relances » sur la facture : historique commun aux paliers automatiques et aux envois manuels, à consulter avant d'en ajouter un.
+- Le balayage automatique devient **opt-in par organisation** (`organizations.auto_reminders_enabled`, faux par défaut), réarmable depuis « Encaissement ».
+- Migration `0010` : colonnes `kind` (`auto` | `manual`) et `sent_by_user_id` sur `invoice_reminders`. L'index unique `(invoice_id, stage)` — ce qui rend le balayage idempotent — devient **partiel** (`where kind = 'auto'`) : appliqué à toutes les lignes, il aurait interdit une deuxième relance manuelle sur la même facture.
+- Script `npm run db:apply <fichier.sql>` : depuis la 0008 les migrations sont écrites à la main et rendues idempotentes, mais leur application se faisait par copier-coller dans une console SQL, sans trace de ce qui avait tourné.
+
+### Fixed — Le balayage de reprise des webhooks n'envoyait rien sous `neon-ws`
+- `db.execute` ne rend pas la même forme selon le pilote : un tableau sous `postgres-js`, un objet portant `rows` sous `neon-ws`. Lu comme un tableau, le lot réclamé avait une longueur `undefined`, la boucle d'envoi ne tournait jamais — et **le balayage rapportait un succès sans avoir rien envoyé**, tout en ayant posé un bail de 10 minutes sur les lignes.
+- Trouvé en vérifiant la relance manuelle de bout en bout, pas par relecture. Après correction, le même balayage a réclamé et livré les 5 livraisons en attente, toutes en 200 — dont l'email de relance.
+
 ### Fixed — Toute page rendue côté serveur retournait 500 dès que `DB_DRIVER=neon-ws`
 - `ws` charge son accélérateur de masquage par un `require` optionnel. Empaqueté par Next, cet appel se résout sur un module vide et la première trame WebSocket meurt sur `TypeError: b.mask is not a function`, suivie de « Connection terminated unexpectedly ». **L'inscription, le tableau de bord et la mise en route retournaient 500** — sans rien afficher d'utile, Next masquant le détail en production.
 - Le drapeau avait été ajouté pour les scripts, sur un réseau qui bloque le port 5432 ; personne n'avait vérifié ce qu'il faisait à l'application elle-même. `serverExternalPackages: ['ws', '@neondatabase/serverless']` les laisse chargés par `require` au démarrage, comme sous Node.
