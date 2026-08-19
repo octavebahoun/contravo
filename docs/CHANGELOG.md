@@ -5,6 +5,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Security — `GET /api/user` renvoyait l'empreinte du mot de passe au navigateur
+- `getSessionUser` sélectionnait la ligne `users` entière et la retournait telle quelle ; `app/api/user/route.ts` la sérialise directement. **Chaque page du tableau de bord recevait donc l'empreinte argon2 du compte connecté** — inexploitable en l'état, mais elle n'a rien à faire côté client, et une injection de script ou un proxy de journalisation la ramassait avec le reste.
+- La session expose désormais un type `SessionUser` explicite, sans `password_hash`. Le changement de mot de passe et la suppression de compte — les deux seuls appelants qui en avaient besoin, deux actions serveur — la lisent à la demande via `getUserPasswordHash(userId)`.
+- Corrigé à la source plutôt qu'à la sortie : couper la fuite dans `/api/user` seul aurait laissé l'empreinte flotter dans l'objet de session, prête à repartir au prochain `Response.json(user)`. Le compilateur a d'ailleurs pointé lui-même les deux seuls appelants concernés.
+- Vérifié sur l'application construite, avec une vraie session : la réponse ne contient plus que `id`, `email`, `fullName`, `emailVerifiedAt`, `isSuperAdmin`, `createdAt`, `updatedAt`.
+
 ### Added — Promotion super-admin en ligne de commande
 - `npm run db:super-admin <email>` (et `--revoke`). `users.is_super_admin` ouvre `/admin` et alimente l'en-tête `x-is-super-admin` ; **rien dans le produit ne peut le poser**, et c'est voulu — un propriétaire d'organisation ne doit pas pouvoir se promouvoir au niveau plateforme. En pratique cela voulait dire éditer la ligne à la main, et une remise à zéro (`npm run db:reset`) laissait le premier compte sans le drapeau : la section Administration n'apparaissait jamais.
 

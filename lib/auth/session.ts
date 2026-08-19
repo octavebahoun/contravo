@@ -43,13 +43,58 @@ export async function createSession(userId: string, ipAddress?: string, userAgen
   return token;
 }
 
-export async function getSessionUser(token: string) {
+/**
+ * The signed-in user, as everything downstream is allowed to see them.
+ *
+ * Deliberately **not** the whole `users` row: `password_hash` used to travel with
+ * it, and `GET /api/user` serialises this object straight to the browser — so
+ * every dashboard page was handed the account's argon2 hash. Anything needing the
+ * hash asks for it explicitly through {@link getUserPasswordHash}, which is a
+ * server-only path.
+ */
+export type SessionUser = {
+  id: string;
+  email: string;
+  fullName: string;
+  emailVerifiedAt: Date | null;
+  isSuperAdmin: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/**
+ * Reads one account's password hash, by id.
+ *
+ * Separate from the session on purpose: changing a password and deleting an
+ * account are the only two things that need it, both server actions, and both
+ * already load the account. Keeping it out of the session is what makes leaking
+ * it impossible rather than merely unlikely.
+ */
+export async function getUserPasswordHash(userId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ passwordHash: users.passwordHash })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  return row?.passwordHash ?? null;
+}
+
+export async function getSessionUser(token: string): Promise<SessionUser | null> {
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
   const result = await db
     .select({
       session: sessions,
-      user: users,
+      user: {
+        id: users.id,
+        email: users.email,
+        fullName: users.fullName,
+        emailVerifiedAt: users.emailVerifiedAt,
+        isSuperAdmin: users.isSuperAdmin,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+      },
     })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))

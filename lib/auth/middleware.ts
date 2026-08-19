@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { User } from '@/lib/db/schema';
+import type { SessionUser } from '@/lib/auth/session';
 import { getTeamForUser, getUser } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
 
@@ -33,7 +33,9 @@ export function validatedAction<S extends z.ZodType<any, any>, T>(
 type ValidatedActionWithUserFunction<S extends z.ZodType<any, any>, T> = (
   data: z.infer<S>,
   formData: FormData,
-  user: User
+  // Sans `password_hash` : une action qui en a besoin le demande explicitement
+  // via `getUserPasswordHash`.
+  user: SessionUser
 ) => Promise<T>;
 
 export function validatedActionWithUser<S extends z.ZodType<any, any>, T>(

@@ -10,7 +10,7 @@ import {
   memberships,
   invitations,
 } from '@/lib/db/schema';
-import { comparePasswords, hashPassword, createSession, setSessionCookie, deleteSession } from '@/lib/auth/session';
+import { comparePasswords, hashPassword, createSession, setSessionCookie, deleteSession, getUserPasswordHash } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getUser, getUserWithOrganization } from '@/lib/db/queries';
@@ -268,10 +268,12 @@ export const updatePassword = validatedActionWithUser(
   async (data, _, user) => {
     const { currentPassword, newPassword, confirmPassword } = data;
 
-    const isPasswordValid = await comparePasswords(
-      currentPassword,
-      user.passwordHash
-    );
+    // La session ne transporte plus l'empreinte : elle part au navigateur via
+    // `/api/user`. On la lit ici, côté serveur, juste pour cette vérification.
+    const passwordHash = await getUserPasswordHash(user.id);
+    const isPasswordValid = passwordHash
+      ? await comparePasswords(currentPassword, passwordHash)
+      : false;
 
     if (!isPasswordValid) {
       return {
@@ -326,7 +328,10 @@ export const deleteAccount = validatedActionWithUser(
   async (data, _, user) => {
     const { password } = data;
 
-    const isPasswordValid = await comparePasswords(password, user.passwordHash);
+    const passwordHash = await getUserPasswordHash(user.id);
+    const isPasswordValid = passwordHash
+      ? await comparePasswords(password, passwordHash)
+      : false;
     if (!isPasswordValid) {
       return {
         password,
