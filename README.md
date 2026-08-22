@@ -1,119 +1,94 @@
-# Next.js SaaS Starter
+# Contravo
 
-This is a starter template for building a SaaS application using **Next.js** with support for authentication, Stripe integration for payments, and a dashboard for logged-in users.
+**Du devis au paiement, pour les freelances et petites agences d'Afrique de l'Ouest.**
 
-**Demo: [https://next-saas-start.vercel.app/](https://next-saas-start.vercel.app/)**
+Contravo couvre la chaîne complète d'une prestation : devis, contrat signé
+électroniquement, livrables, facturation et encaissement en ligne — en francs CFA
+(XOF), avec les moyens de paiement réellement utilisés dans la région.
 
-## Features
+🔗 **Démonstration : [contravo.excellenceteam.site](https://contravo.excellenceteam.site)**
 
-- Marketing landing page (`/`) with animated Terminal element
-- Pricing page (`/pricing`) which connects to Stripe Checkout
-- Dashboard pages with CRUD operations on users/teams
-- Basic RBAC with Owner and Member roles
-- Subscription management with Stripe Customer Portal
-- Email/password authentication with JWTs stored to cookies
-- Global middleware to protect logged-in routes
-- Local middleware to protect Server Actions or validate Zod schemas
-- Activity logging system for any user events
+---
 
-## Tech Stack
+## Le problème
 
-- **Framework**: [Next.js](https://nextjs.org/)
-- **Database**: [Postgres](https://www.postgresql.org/)
-- **ORM**: [Drizzle](https://orm.drizzle.team/)
-- **Payments**: [Stripe](https://stripe.com/)
-- **UI Library**: [shadcn/ui](https://ui.shadcn.com/)
+Un freelance béninois signe par WhatsApp, facture sous Word, relance par message et
+attend son paiement par Mobile Money sans trace exploitable. Quand le client conteste
+ou tarde, il n'a ni contrat opposable, ni preuve de livraison, ni historique.
 
-## Getting Started
+Les outils occidentaux (Stripe, HelloSign, QuickBooks) ne répondent pas : pas de XOF,
+pas de Mobile Money, pas de cadre juridique local, et des tarifs mensuels en dollars.
 
-```bash
-git clone https://github.com/nextjs/saas-starter
-cd saas-starter
-pnpm install
-```
+## Ce que fait Contravo
 
-## Running Locally
+|                    |                                                                            |
+| ------------------ | -------------------------------------------------------------------------- |
+| **Devis**          | Création, envoi, acceptation en ligne par le client                        |
+| **Contrats**       | Signature électronique, horodatée et archivée                              |
+| **Livrables**      | Dépôt, validation ou demande de correction par le client                   |
+| **Factures**       | Émission, relances (automatiques ou manuelles), suivi des échéances        |
+| **Paiement**       | Encaissement en ligne via GeniusPay — Mobile Money et carte, en XOF        |
+| **Avis**           | Témoignages clients vérifiés, rattachés à une prestation réellement livrée |
+| **Portail client** | Accès sans compte, par lien signé à durée limitée                          |
 
-[Install](https://docs.stripe.com/stripe-cli) and log in to your Stripe account:
+Tout est multi-organisation, avec des rôles (propriétaire, membre) et un portail client
+séparé du tableau de bord prestataire.
 
-```bash
-stripe login
-```
+## La couche IA (en construction)
 
-Use the included setup script to create your `.env` file:
+Le produit ci-dessus est le socle : il produit des données qui n'existent nulle part
+ailleurs dans la région — contrats réellement signés, délais de paiement réellement
+tenus, avis rattachés à une prestation vérifiée.
 
-```bash
-pnpm db:setup
-```
+Deux briques s'appuient dessus :
 
-Run the database migrations and seed the database with a default user and team:
+1. **Pilotage en langage naturel** — décrire une facture plutôt que remplir un formulaire.
+2. **Moteur de mise en relation** — recommander un prestataire à partir du travail livré
+   et payé, non d'un profil auto-déclaré. Et relier les prestataires entre eux, pour que
+   le travail circule dans le réseau.
 
-```bash
-pnpm db:migrate
-pnpm db:seed
-```
+## Contravo Connect (feuille de route)
 
-This will create the following user and team:
+Le cœur émet 41 événements de domaine consommés par un routeur de dispatch : brancher une
+nouvelle destination revient à ajouter un consommateur, pas à toucher à la logique métier.
 
-- User: `test@test.com`
-- Password: `admin123`
+**Contravo Connect** est la couche suivante — un module optionnel, activé par organisation,
+qui relie les comptes externes du prestataire. Premier canal : **WhatsApp Business**, connecté
+via OAuth Meta (aucun copier-coller de jeton).
 
-You can also create new users through the `/sign-up` route.
+> demande sur WhatsApp → devis → facture PDF → relance → notification Telegram → archivage Drive
 
-Finally, run the Next.js development server:
+Un **filtre par mots-clés s'exécute avant tout appel au modèle** : un message contenant « prix »,
+« devis » ou « combien » part directement vers la création de devis ; l'IA n'intervient qu'en
+repli. Moins de latence, moins de coût, et surtout moins de données personnelles envoyées à un
+modèle.
 
-```bash
-pnpm dev
-```
+Telegram et Google Drive sont spécifiés ; exports comptables, synchronisation d'agenda et
+nouveaux moyens de paiement suivent le même schéma.
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to see the app in action.
+## Architecture
 
-You can listen for Stripe webhooks locally through their CLI to handle subscription change events:
+- **Next.js 15** (App Router, React Server Components) · **TypeScript**
+- **PostgreSQL** (Neon) via **Drizzle ORM** — 38 tables, migrations versionnées
+- **Cloudflare R2** pour les fichiers, en URLs présignées (les octets ne transitent pas
+  par le serveur applicatif)
+- **GeniusPay** pour l'encaissement — webhooks signés, vérification côté serveur avant
+  de créditer une facture
+- **n8n** pour l'orchestration événementielle — 19 workflows, 15 modèles d'e-mail
+- **Vitest** — 123 tests
 
-```bash
-stripe listen --forward-to localhost:3000/api/stripe/webhook
-```
+Le cœur métier émet des événements de domaine ; n8n les consomme pour l'envoi d'e-mails
+et les tâches planifiées (relances de factures, réémission des webhooks en échec).
 
-## Testing Payments
+## Documentation
 
-To test Stripe payments, use the following test card details:
+- [`doc/`](doc/) — architecture, sécurité des identifiants de paiement, API
+- API REST documentée en OpenAPI, exposée via Scalar sur `/api/v1/docs`
 
-- Card Number: `4242 4242 4242 4242`
-- Expiration: Any future date
-- CVC: Any 3-digit number
+## Licence
 
-## Going to Production
+Code source **propriétaire**, publié pour évaluation uniquement. Voir [LICENSE](LICENSE).
 
-When you're ready to deploy your SaaS application to production, follow these steps:
+---
 
-### Set up a production Stripe webhook
-
-1. Go to the Stripe Dashboard and create a new webhook for your production environment.
-2. Set the endpoint URL to your production API route (e.g., `https://yourdomain.com/api/stripe/webhook`).
-3. Select the events you want to listen for (e.g., `checkout.session.completed`, `customer.subscription.updated`).
-
-### Deploy to Vercel
-
-1. Push your code to a GitHub repository.
-2. Connect your repository to [Vercel](https://vercel.com/) and deploy it.
-3. Follow the Vercel deployment process, which will guide you through setting up your project.
-
-### Add environment variables
-
-In your Vercel project settings (or during deployment), add all the necessary environment variables. Make sure to update the values for the production environment, including:
-
-1. `BASE_URL`: Set this to your production domain.
-2. `STRIPE_SECRET_KEY`: Use your Stripe secret key for the production environment.
-3. `STRIPE_WEBHOOK_SECRET`: Use the webhook secret from the production webhook you created in step 1.
-4. `POSTGRES_URL`: Set this to your production database URL.
-5. `AUTH_SECRET`: Set this to a random string. `openssl rand -base64 32` will generate one.
-
-## Other Templates
-
-While this template is intentionally minimal and to be used as a learning resource, there are other paid versions in the community which are more full-featured:
-
-- https://achromatic.dev
-- https://shipfa.st
-- https://makerkit.dev
-- https://zerotoshipped.com
-- https://turbostarter.dev
+Développé au Bénin 🇧🇯 pour le marché ouest-africain par Excellence Team , Startup Etudiante.

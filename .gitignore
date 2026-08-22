@@ -57,3 +57,8 @@ postgres_data/
 
 # Bibliothèque audio partagée entre projets vidéo (58 Mo, vit hors du dépôt)
 /video/sounds/
+
+# Dossiers de candidature (privés, hors dépôt public)
+CANDIDATURE-*.md
+PREUVES-*.md
+Contravo-Supporting-Evidence.pdf
