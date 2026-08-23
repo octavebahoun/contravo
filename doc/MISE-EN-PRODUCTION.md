@@ -63,26 +63,33 @@ Vérification : envoyer un devis, puis regarder les exécutions n8n. Le workflow
 
 ---
 
-## 4. Sortir Resend du bac à sable
+## 4. Sortir Resend du bac à sable — ✅ fait le 23/08/2026
 
-Tant que l'expéditeur est `onboarding@resend.dev`, Resend ne livre **qu'au
-titulaire du compte**. Les clients ne reçoivent rien.
+`send.excellenceteam.site` est **vérifié** chez Resend : DKIM, SPF et MX de retour
+(`feedback-smtp.*.amazonses.com`) tous en vert. Les 15 workflows `email_*` envoient
+désormais depuis `Contravo <contravo@send.excellenceteam.site>`.
 
-1. resend.com/domains → ajouter `send.excellenceteam.site` (sous-domaine
-   recommandé : la ligne SPF de la boîte `contact@` n'est pas touchée, et la
-   réputation des envois automatiques reste séparée de celle du courrier
-   humain).
-2. Ajouter le DKIM fourni.
-3. **SPF : fusionner, ne jamais ajouter une seconde ligne.** Deux
-   enregistrements `v=spf1` sur un domaine s'annulent, et tout le courrier
-   part en spam — y compris celui écrit à la main.
-4. DMARC en observation d'abord : `v=DMARC1; p=none;
-   rua=mailto:contact@excellenceteam.site`. Durcir en `quarantine` puis
-   `reject` seulement après lecture des rapports.
-5. Remplacer le `from` dans les workflows n8n `email_*`.
+Tant que l'expéditeur restait `onboarding@resend.dev`, Resend ne livrait **qu'au
+titulaire du compte** : aucun client ne recevait ni devis, ni facture, ni relance.
+C'était silencieux — les workflows n8n rapportaient un succès.
 
-État actuel du domaine (constaté) : MX chez PrivateEmail, SPF
-`include:spf.privateemail.com`, **aucun DMARC**, zone chez Namecheap.
+Le sous-domaine est délibéré : la ligne SPF de la boîte `contact@` n'est pas touchée,
+et la réputation des envois automatiques reste séparée de celle du courrier humain.
+
+**Reste à faire :**
+
+1. **DMARC**, absent à ce jour. En observation d'abord :
+   `v=DMARC1; p=none; rua=mailto:contact@excellenceteam.site`.
+   Durcir en `quarantine` puis `reject` seulement après lecture des rapports.
+2. **SPF : fusionner, ne jamais ajouter une seconde ligne.** Deux enregistrements
+   `v=spf1` sur un même domaine s'annulent et tout le courrier part en spam — y
+   compris celui écrit à la main.
+3. **Réimporter les 15 workflows dans n8n** : les fichiers du dépôt sont à jour, mais
+   l'instance en production tourne encore sur l'ancienne version tant qu'ils n'y sont
+   pas rechargés.
+
+Vérification : envoyer un devis à une adresse **externe** (pas la tienne), et confirmer
+qu'il arrive en boîte de réception, pas en spam.
 
 ---
 

@@ -155,7 +155,7 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ from: \"Contravo <onboarding@resend.dev>\", to: $json.to, subject: $json.subject, html: $json.html, attachments: $json.attachments }) }}",
+        "jsonBody": "={{ JSON.stringify({ from: \"Contravo <contravo@send.excellenceteam.site>\", reply_to: \"contact@excellenceteam.site\", to: $json.to, subject: $json.subject, html: $json.html, attachments: $json.attachments }) }}",
         "options": {},
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth"
