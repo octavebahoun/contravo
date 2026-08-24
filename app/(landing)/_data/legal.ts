@@ -4,30 +4,28 @@
  * Rassemblé ici parce que les mêmes informations apparaissent sur les trois
  * pages : une identité modifiée à un seul endroit ne peut pas se contredire
  * d'une page à l'autre.
- *
- * Les valeurs `À COMPLÉTER` s'affichent telles quelles sur le site. C'est
- * délibéré : une mention légale incomplète doit se voir, pas se deviner.
  */
-const TODO = '[À COMPLÉTER]';
-
 export const publisher = {
   product: 'Contravo',
-  company: 'Excellence Team',
-  /** SARL, SAS, entreprise individuelle… */
-  legalForm: TODO,
-  capital: TODO,
-  /** Registre du Commerce et du Crédit Mobilier. */
-  rccm: TODO,
-  /** Identifiant Fiscal Unique — l'équivalent béninois du NCC ivoirien. */
-  ifu: TODO,
-  address: TODO,
   /**
-   * Les deux numéros qui figuraient ici étaient inventés, sous une hypothèse
-   * de Côte d'Ivoire (+225) que rien ne justifiait : l'éditeur est béninois.
-   * Un numéro faux dans une mention légale vaut moins qu'un champ vide — celui
-   * qui appelle tombe sur un inconnu, et le reste de la page perd son crédit.
+   * L'éditeur est une **personne physique**, pas une société.
+   *
+   * Excellence Team n'est pas immatriculée : sans RCCM, elle n'a ni existence
+   * juridique, ni forme sociale, ni capital à déclarer. Présenter une société
+   * qui n'existe pas serait une fausse déclaration — et les trois champs vides
+   * qu'il aurait fallu afficher (`legalForm`, `capital`, `rccm`) posaient plus
+   * de questions qu'ils n'en réglaient.
+   *
+   * Le nom d'équipe reste employé sur la page publique : c'est celui sous
+   * lequel le produit est construit. Il n'a simplement pas sa place ici.
    */
-  phone: TODO,
+  name: 'Octave Précieux BAHOUN-HOUTOUKPE',
+  status: 'Entrepreneur individuel',
+  teamName: 'Excellence Team',
+  /** Identifiant Fiscal Unique — l'équivalent béninois du NCC ivoirien. */
+  ifu: '0202526565553',
+  address: 'Anivedji, Lokossa, Bénin',
+  phone: '+229 01 47 79 70 82',
   email: 'contact@excellenceteam.site',
   /** Personne physique responsable du contenu publié. */
   publicationDirector: 'Octave Précieux BAHOUN-HOUTOUKPE',

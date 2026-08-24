@@ -14,7 +14,7 @@ export default function ConditionsPage() {
   return (
     <LegalPage
       title="Conditions d’utilisation"
-      intro={`Le contrat entre vous et ${publisher.company} pour l’usage de ${publisher.product}. Créer un compte vaut acceptation.`}
+      intro={`Le contrat entre vous et ${publisher.name} pour l’usage de ${publisher.product}. Créer un compte vaut acceptation.`}
     >
       <Section title="1. Objet">
         <p>
@@ -57,7 +57,7 @@ export default function ConditionsPage() {
 
       <Section title="4. Vos données et vos documents">
         <p>
-          Les documents et fichiers que vous créez vous appartiennent. {publisher.company}{' '}
+          Les documents et fichiers que vous créez vous appartiennent. {publisher.name}{' '}
           n’y accède que dans la mesure nécessaire à l’exploitation du service — assistance
           à votre demande, diagnostic d’incident — et ne les exploite à aucune autre fin.
         </p>
@@ -124,7 +124,7 @@ export default function ConditionsPage() {
           du compte entraîne celle de l’organisation lorsqu’il n’y reste aucun autre membre.
         </p>
         <p>
-          {publisher.company} peut suspendre un compte en cas de défaut de paiement, ou de
+          {publisher.name} peut suspendre un compte en cas de défaut de paiement, ou de
           manquement caractérisé aux engagements de l’article 3. Sauf urgence ou obligation
           légale, la suspension est précédée d’un avertissement laissant un délai
           raisonnable pour régulariser.
@@ -133,7 +133,7 @@ export default function ConditionsPage() {
 
       <Section title="7. Disponibilité">
         <p>
-          {publisher.company} met en œuvre les moyens raisonnables pour maintenir le service
+          {publisher.name} met en œuvre les moyens raisonnables pour maintenir le service
           accessible, sans engagement de niveau de service. Des interruptions peuvent
           survenir pour maintenance, ou du fait d’un prestataire tiers — hébergeur, service
           d’envoi d’emails, passerelle de paiement.
@@ -147,7 +147,7 @@ export default function ConditionsPage() {
           avec vos propres clients.
         </p>
         <p>
-          La responsabilité de {publisher.company} ne peut être engagée pour un préjudice
+          La responsabilité d’{publisher.name} ne peut être engagée pour un préjudice
           indirect — perte d’exploitation, perte de chance, atteinte à l’image. En tout état
           de cause, elle est plafonnée aux sommes effectivement versées au titre de
           l’abonnement au cours des douze mois précédant le fait générateur.

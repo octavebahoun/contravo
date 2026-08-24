@@ -17,12 +17,12 @@ export default function ConfidentialitePage() {
       <Section title="Deux rôles à ne pas confondre">
         <p>
           Pour les données de <strong>votre compte</strong> — votre adresse, votre
-          organisation, votre abonnement — {publisher.company} est responsable de traitement.
+          organisation, votre abonnement — {publisher.name} est responsable de traitement.
         </p>
         <p>
           Pour les données de <strong>vos clients</strong> que vous saisissez dans l’outil,
           c’est vous le responsable de traitement : vous décidez de ce que vous collectez et
-          pourquoi. {publisher.company} n’agit alors que comme sous-traitant, sur vos
+          pourquoi. {publisher.name} n’agit alors que comme sous-traitant, sur vos
           instructions, et n’exploite ces données pour aucune finalité propre.
         </p>
       </Section>

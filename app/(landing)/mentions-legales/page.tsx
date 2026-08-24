@@ -17,12 +17,13 @@ export default function MentionsLegalesPage() {
       <Section title="Éditeur">
         <div>
           <Row label="Service" value={publisher.product} />
-          <Row label="Éditeur" value={publisher.company} />
-          <Row label="Forme juridique" value={publisher.legalForm} />
-          <Row label="Capital social" value={publisher.capital} />
-          <Row label="RCCM" value={publisher.rccm} />
+          <Row label="Éditeur" value={publisher.name} />
+          {/* Ni forme juridique, ni capital, ni RCCM : l'éditeur est une
+              personne physique, pas une société immatriculée. */}
+          <Row label="Statut" value={publisher.status} />
+          <Row label="Équipe" value={publisher.teamName} />
           <Row label="IFU (Identifiant Fiscal Unique)" value={publisher.ifu} />
-          <Row label="Siège social" value={publisher.address} />
+          <Row label="Adresse" value={publisher.address} />
           <Row label="Téléphone" value={publisher.phone} />
           <Row label="Courriel" value={publisher.email} />
           <Row label="Directeur de la publication" value={publisher.publicationDirector} />
@@ -47,7 +48,7 @@ export default function MentionsLegalesPage() {
       <Section title="Propriété intellectuelle">
         <p>
           Le nom {publisher.product}, son identité visuelle, la structure du site et le code
-          de l’application sont la propriété de {publisher.company}. Toute reproduction ou
+          de l’application sont la propriété d’{publisher.name}. Toute reproduction ou
           adaptation, totale ou partielle, sans autorisation écrite préalable est interdite.
         </p>
         <p>
