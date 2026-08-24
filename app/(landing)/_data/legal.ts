@@ -22,10 +22,12 @@ export const publisher = {
   ifu: TODO,
   address: TODO,
   /**
-   * ⚠️ Indicatif ivoirien (+225) alors que l'éditeur est au Bénin (+229).
-   * Numéros à confirmer avant publication — voir la note dans la revue.
+   * Les deux numéros qui figuraient ici étaient inventés, sous une hypothèse
+   * de Côte d'Ivoire (+225) que rien ne justifiait : l'éditeur est béninois.
+   * Un numéro faux dans une mention légale vaut moins qu'un champ vide — celui
+   * qui appelle tombe sur un inconnu, et le reste de la page perd son crédit.
    */
-  phone: '+225 01 50 65 45 75 · +225 01 47 79 70 82',
+  phone: TODO,
   email: 'contact@excellenceteam.site',
   /** Personne physique responsable du contenu publié. */
   publicationDirector: 'Octave Précieux BAHOUN-HOUTOUKPE',
