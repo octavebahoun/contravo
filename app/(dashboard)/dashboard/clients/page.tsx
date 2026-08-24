@@ -177,7 +177,7 @@ export default function ClientsPage() {
                   <div className="grid gap-2">
                     <Label className="text-xs font-medium text-foreground">Téléphone</Label>
                     <Input
-                      placeholder="+225 07 00 00 00 00"
+                      placeholder="+229 01 97 00 00 00"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       className="rounded-xl"

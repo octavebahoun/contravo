@@ -180,8 +180,8 @@ async function main() {
     );
   }
 
-  const fatou = await ensureUser('fatou.diarra@studiobaobab.ci', 'Fatou Diarra', TEAM_PASSWORD);
-  const yao = await ensureUser('yao.kouassi@studiobaobab.ci', 'Yao Kouassi', TEAM_PASSWORD);
+  const fatou = await ensureUser('fatou.diarra@studiobaobab.bj', 'Fatou Diarra', TEAM_PASSWORD);
+  const yao = await ensureUser('yao.kouassi@studiobaobab.bj', 'Yao Kouassi', TEAM_PASSWORD);
 
   // --- Organisation ----------------------------------------------------------
 
@@ -204,12 +204,12 @@ async function main() {
       subscriptionStatus: 'active',
       legalMentions:
         'Studio Baobab SARL — Cocody Riviera Golf, Abidjan, Côte d’Ivoire — ' +
-        'RCCM CI-ABJ-2024-B-14208 — NCC 2402518 F — contact@studiobaobab.ci — +225 27 22 45 18 90',
+        'RCCM RB/COT/24 B 14208 — IFU 3202418120345 — contact@studiobaobab.bj — +229 01 21 30 00 00',
       bankDetails: {
         Banque: 'Ecobank Côte d’Ivoire',
         Titulaire: 'Studio Baobab SARL',
         IBAN: 'CI93 CI16 0010 0100 0123 4567 8901',
-        'Mobile Money': '+225 07 00 12 34 56 (Wave / Orange Money)',
+        'Mobile Money': '+229 01 97 00 00 00 (MTN MoMo / Moov Money)',
       },
       createdAt: at(-190, 9),
     })
@@ -276,7 +276,7 @@ async function main() {
         displayName: 'Pharmacie du Plateau',
         companyName: 'Pharmacie du Plateau SARL',
         email: HERO_CLIENT_EMAIL,
-        phone: '+225 27 20 31 45 78',
+        phone: '+229 01 21 31 45 78',
         vatNumber: 'CI-2201847-K',
         billingAddress: {
           line1: 'Avenue Chardy, Immeuble Alpha 2000',
@@ -317,7 +317,7 @@ async function main() {
         firstName: 'Aïssata',
         lastName: 'Traoré',
         email: 'aissata.traore@cabinet-at.ci',
-        phone: '+225 07 08 55 21 33',
+        phone: '+229 01 97 08 55 21',
         billingAddress: {
           line1: 'Rue des Jardins, Résidence Bimbresso',
           city: 'Abidjan Deux-Plateaux',
@@ -334,7 +334,7 @@ async function main() {
         displayName: 'Fondation Ivoire Éducation',
         companyName: 'Fondation Ivoire Éducation',
         email: 'projets@fondation-ivoire-education.org',
-        phone: '+225 27 22 41 09 66',
+        phone: '+229 01 21 22 41 09',
         billingAddress: {
           line1: 'Boulevard Latrille, Villa 12',
           postalCode: '06 BP 1180',
@@ -723,7 +723,7 @@ async function main() {
       gatewayReference: 'GP-SBX-2026-000148',
       gatewayFeesCents: XOF(21_240),
       netAmountCents: XOF(2_102_760),
-      notes: 'Wave — +225 07 00 12 34 56',
+      notes: 'MTN MoMo — +229 01 97 00 12 34',
     },
     {
       organizationId: org.id,
@@ -828,7 +828,7 @@ async function main() {
       // the whole instance — every tenant's webhooks are sent to the demo URL
       // and silently fail there.
       kind: 'generic',
-      url: 'https://n8n.studiobaobab.ci/webhook/contravo',
+      url: 'https://n8n.studiobaobab.bj/webhook/contravo',
       // Same shape as `generateWebhookSecret` in lib/webhooks, which is internal.
       secret: 'whsec_' + crypto.randomBytes(24).toString('base64url'),
       events: [

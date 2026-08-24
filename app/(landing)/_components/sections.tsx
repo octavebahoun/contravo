@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { FileText, PenLine, Receipt, ArrowRight } from 'lucide-react';
+import { FileText, PenLine, Receipt, ArrowRight, ShieldCheck, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Stamp, type StampTone } from '@/components/stamp';
 import HeroQuoteCard from '@/components/hero-section-demo-1';
@@ -8,10 +8,13 @@ import { Reveal, RevealChild, HoverLift, CountUp, Disclosure, ScrollDrift } from
 import {
   siteDetails,
   heroDetails,
-  proofStats,
+  statusLine,
   problemDetails,
   solutionDetails,
   stepsDetails,
+  proofDetails,
+  pricingDetails,
+  teamDetails,
   faqs,
   ctaDetails,
 } from '../_data/content';
@@ -164,20 +167,24 @@ export function Hero() {
   );
 }
 
-export function ProofBand() {
+/**
+ * Ce qui a remplacé la bande de trois chiffres.
+ *
+ * « 3 documents créés par jour », « 4× plus vite encaissé » : aucun n'était
+ * mesuré, et le premier lecteur curieux aurait demandé la source. Une phase de
+ * test annoncée franchement tient mieux la question.
+ */
+export function StatusBand() {
   return (
     <section className="border-b border-border bg-muted/40">
-      <div className="mx-auto max-w-7xl px-6 py-12">
-        <Reveal className="grid gap-8 sm:grid-cols-3" amount={0.4}>
-          {proofStats.map((stat) => (
-            <RevealChild key={stat.label} className="text-center">
-              <CountUp
-                value={stat.value}
-                className="tabular-mono block font-heading text-3xl font-bold text-foreground sm:text-4xl"
-              />
-              <span className="mt-1 block text-sm text-muted-foreground">{stat.label}</span>
-            </RevealChild>
-          ))}
+      <div className="mx-auto max-w-7xl px-6 py-8">
+        <Reveal className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center" amount={0.4}>
+          <RevealChild>
+            <span className="text-sm font-medium text-foreground">{statusLine.text}</span>
+          </RevealChild>
+          <RevealChild>
+            <span className="text-sm text-muted-foreground">{statusLine.detail}</span>
+          </RevealChild>
         </Reveal>
       </div>
     </section>
@@ -263,6 +270,181 @@ export function Steps() {
           </RevealChild>
         ))}
       </Reveal>
+    </Section>
+  );
+}
+
+/**
+ * Le bloc « Preuve ».
+ *
+ * Placé juste après « Comment ça marche » : le lecteur vient de comprendre le
+ * fonctionnement, la question suivante est « et si ça tourne mal ? ». C'est le
+ * moment de répondre, pas trois sections plus bas.
+ */
+export function Proof() {
+  return (
+    <Section id="preuve">
+      <div className="mx-auto max-w-3xl">
+        <Reveal amount={0.4}>
+          <RevealChild>
+            <SectionLabel>{proofDetails.label}</SectionLabel>
+          </RevealChild>
+          <RevealChild>
+            <h2 className="mt-4 font-heading text-3xl font-bold leading-tight tracking-normal text-foreground sm:text-4xl">
+              {proofDetails.heading}
+            </h2>
+          </RevealChild>
+          <RevealChild>
+            <p className="mt-5 text-base leading-relaxed text-muted-foreground">
+              {proofDetails.intro}
+            </p>
+          </RevealChild>
+          <RevealChild>
+            <p className="mt-4 border-l-2 border-primary pl-4 text-base font-medium leading-relaxed text-foreground">
+              {proofDetails.lead}
+            </p>
+          </RevealChild>
+        </Reveal>
+
+        <Reveal className="mt-10 grid gap-4 sm:grid-cols-3">
+          {proofDetails.points.map((point) => (
+            <RevealChild key={point.title} className="h-full">
+              <HoverLift className="h-full">
+                <div className="flex h-full flex-col gap-3 rounded-xl bg-card p-5 ring-1 ring-border">
+                  <ShieldCheck className="size-5 text-primary" aria-hidden />
+                  <h3 className="font-heading text-base font-bold text-foreground">{point.title}</h3>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {point.description}
+                  </p>
+                </div>
+              </HoverLift>
+            </RevealChild>
+          ))}
+        </Reveal>
+      </div>
+    </Section>
+  );
+}
+
+/**
+ * Tarifs sans grille de prix.
+ *
+ * Voir `pricingDetails` : les montants existent dans le code de facturation
+ * mais rien ne dit encore qu'ils sont les bons, et l'étude de marché en cours
+ * pose exactement cette question.
+ */
+export function Pricing() {
+  return (
+    <Section id="tarifs" muted>
+      <div className="mx-auto max-w-3xl text-center">
+        <Reveal amount={0.4}>
+          <RevealChild>
+            <SectionLabel>{pricingDetails.label}</SectionLabel>
+          </RevealChild>
+          <RevealChild>
+            <h2 className="mt-4 font-heading text-3xl font-bold leading-tight tracking-normal text-foreground sm:text-4xl">
+              {pricingDetails.heading}
+            </h2>
+          </RevealChild>
+          <RevealChild>
+            <p className="mt-5 text-base leading-relaxed text-muted-foreground">
+              {pricingDetails.body}
+            </p>
+          </RevealChild>
+        </Reveal>
+
+        <Reveal className="mt-8 grid gap-3 text-left sm:grid-cols-3">
+          {pricingDetails.points.map((point) => (
+            <RevealChild key={point} className="h-full">
+              <div className="flex h-full items-start gap-3 rounded-xl bg-card p-4 ring-1 ring-border">
+                <span
+                  aria-hidden
+                  className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-md bg-primary/10 font-mono text-xs font-semibold text-primary"
+                >
+                  ✓
+                </span>
+                <span className="text-sm leading-relaxed text-foreground">{point}</span>
+              </div>
+            </RevealChild>
+          ))}
+        </Reveal>
+
+        <Reveal className="mt-6">
+          <RevealChild>
+            <div className="rounded-xl border border-dashed border-border bg-background p-5 text-left">
+              <h3 className="font-heading text-sm font-bold text-foreground">
+                {pricingDetails.fees.title}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                {pricingDetails.fees.description}
+              </p>
+            </div>
+          </RevealChild>
+        </Reveal>
+      </div>
+    </Section>
+  );
+}
+
+/** Qui est derrière — placé avant le CTA final, là où la confiance se décide. */
+export function Team() {
+  return (
+    <Section id="equipe">
+      <div className="mx-auto max-w-3xl">
+        <Reveal amount={0.4}>
+          <RevealChild>
+            <SectionLabel>{teamDetails.label}</SectionLabel>
+          </RevealChild>
+          <RevealChild>
+            <h2 className="mt-4 font-heading text-3xl font-bold leading-tight tracking-normal text-foreground sm:text-4xl">
+              {teamDetails.heading}
+            </h2>
+          </RevealChild>
+          <RevealChild>
+            <p className="mt-5 text-base leading-relaxed text-muted-foreground">
+              {teamDetails.body}
+            </p>
+          </RevealChild>
+        </Reveal>
+
+        <Reveal className="mt-10 grid gap-4 sm:grid-cols-2">
+          {teamDetails.members.map((member) => (
+            <RevealChild key={member.name} className="h-full">
+              <div className="flex h-full items-center gap-4 rounded-xl bg-card p-5 ring-1 ring-border">
+                <span
+                  aria-hidden
+                  className="grid size-11 shrink-0 place-items-center rounded-full bg-primary/10 font-heading text-sm font-bold text-primary"
+                >
+                  {member.name
+                    .split(' ')
+                    .slice(0, 2)
+                    .map((part) => part[0])
+                    .join('')}
+                </span>
+                <div>
+                  <p className="font-heading text-sm font-bold text-foreground">{member.name}</p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">{member.role}</p>
+                </div>
+              </div>
+            </RevealChild>
+          ))}
+        </Reveal>
+
+        <Reveal className="mt-8">
+          <RevealChild>
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
+              <Link
+                href={`mailto:${teamDetails.contact.email}`}
+                className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+              >
+                <Mail className="size-4" aria-hidden />
+                {teamDetails.contact.email}
+              </Link>
+              <span className="text-sm text-muted-foreground">{teamDetails.contact.note}</span>
+            </div>
+          </RevealChild>
+        </Reveal>
+      </div>
     </Section>
   );
 }

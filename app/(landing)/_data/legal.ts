@@ -18,14 +18,18 @@ export const publisher = {
   capital: TODO,
   /** Registre du Commerce et du Crédit Mobilier. */
   rccm: TODO,
-  /** Numéro de Compte Contribuable. */
-  ncc: TODO,
+  /** Identifiant Fiscal Unique — l'équivalent béninois du NCC ivoirien. */
+  ifu: TODO,
   address: TODO,
+  /**
+   * ⚠️ Indicatif ivoirien (+225) alors que l'éditeur est au Bénin (+229).
+   * Numéros à confirmer avant publication — voir la note dans la revue.
+   */
   phone: '+225 01 50 65 45 75 · +225 01 47 79 70 82',
   email: 'contact@excellenceteam.site',
   /** Personne physique responsable du contenu publié. */
   publicationDirector: 'Octave Précieux BAHOUN-HOUTOUKPE',
-  site: 'https://contravo-7g6p.vercel.app',
+  site: 'https://contravo.excellenceteam.site',
 };
 
 export const host = {

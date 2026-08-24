@@ -230,7 +230,7 @@ export function OnboardingFlow({
                   <Field value={data.registration} onChange={(v) => set({ registration: v })} placeholder="RCCM" />
                   <Field value={data.taxId} onChange={(v) => set({ taxId: v })} placeholder="NCC / N° fiscal" />
                 </div>
-                <Field value={data.phone} onChange={(v) => set({ phone: v })} placeholder="Téléphone — +225 27 22 45 18 90" />
+                <Field value={data.phone} onChange={(v) => set({ phone: v })} placeholder="Téléphone — +229 01 21 30 00 00" />
                 {/* Pre-filled from the account, but shown: it is printed on every
                     document, and an address the reader never saw has no business
                     appearing at the bottom of their invoices. */}
@@ -246,10 +246,10 @@ export function OnboardingFlow({
               optional
             >
               <div className="space-y-3">
-                <Field ref={firstFieldRef} value={data.bankName} onChange={(v) => set({ bankName: v })} placeholder="Banque — Ecobank Côte d'Ivoire" />
+                <Field ref={firstFieldRef} value={data.bankName} onChange={(v) => set({ bankName: v })} placeholder="Banque — Ecobank Bénin" />
                 <Field value={data.accountHolder} onChange={(v) => set({ accountHolder: v })} placeholder="Titulaire du compte" />
                 <Field value={data.iban} onChange={(v) => set({ iban: v })} placeholder="IBAN" />
-                <Field value={data.mobileMoney} onChange={(v) => set({ mobileMoney: v })} placeholder="Mobile Money — +225 07 00 12 34 56 (Wave, Orange Money)" />
+                <Field value={data.mobileMoney} onChange={(v) => set({ mobileMoney: v })} placeholder="Mobile Money — +229 01 97 00 00 00 (MTN MoMo, Moov Money)" />
               </div>
             </Question>
           )}

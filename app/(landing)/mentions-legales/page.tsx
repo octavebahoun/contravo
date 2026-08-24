@@ -21,7 +21,7 @@ export default function MentionsLegalesPage() {
           <Row label="Forme juridique" value={publisher.legalForm} />
           <Row label="Capital social" value={publisher.capital} />
           <Row label="RCCM" value={publisher.rccm} />
-          <Row label="Numéro de contribuable" value={publisher.ncc} />
+          <Row label="IFU (Identifiant Fiscal Unique)" value={publisher.ifu} />
           <Row label="Siège social" value={publisher.address} />
           <Row label="Téléphone" value={publisher.phone} />
           <Row label="Courriel" value={publisher.email} />

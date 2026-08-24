@@ -11,9 +11,12 @@ export function LandingFooter() {
             <span className="font-heading text-base font-extrabold tracking-tight text-foreground">
               Contravo
             </span>
+            {/* Le hero promet la signature de devis ; annoncer ici « contrats et
+                factures » élargissait la promesse d'une section à l'autre. */}
             <p className="mt-2 max-w-xs text-sm text-muted-foreground">
-              Devis, contrats et factures signés en ligne, encaissés par mobile money.
+              Faites signer vos devis, encaissez par Mobile Money.
             </p>
+            <p className="mt-3 text-xs text-muted-foreground">{footerDetails.signature}</p>
           </div>
           <div className="flex flex-wrap gap-x-12 gap-y-8">
             {footerDetails.columns.map((column) => (

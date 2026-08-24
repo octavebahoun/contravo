@@ -1,10 +1,13 @@
 import type { Metadata } from 'next';
 import {
   Hero,
-  ProofBand,
+  StatusBand,
   Problem,
   Solution,
   Steps,
+  Proof,
+  Pricing,
+  Team,
   FAQ,
   CTA,
 } from './_components/sections';
@@ -25,11 +28,14 @@ export default function LandingPage() {
   return (
     <>
       <Hero />
-      <ProofBand />
+      <StatusBand />
       <Problem />
       <Solution />
       <Steps />
+      <Proof />
+      <Pricing />
       <FAQ />
+      <Team />
       <CTA />
     </>
   );
